@@ -126,3 +126,142 @@ export const getStats = async () => {
   const response = await api.get('/api/v1/stats')
   return response.data
 }
+
+// === CONTRACTS GAME ===
+
+export interface CreateContractRequest {
+  gift_ids: number[]
+  risk_level: 'safe' | 'normal' | 'risky'
+  client_seed: string
+}
+
+export interface CreateContractResponse {
+  contract_id: string
+  server_seed_hash: string
+  estimated_probability: number
+  potential_payout: string
+}
+
+export interface ExecuteContractResponse {
+  success: boolean
+  won: boolean
+  multiplier: number
+  payout_value: string
+  reward_gift_id?: number
+  server_seed: string
+  proof: {
+    server_seed_hash: string
+    server_seed: string
+    client_seed: string
+    nonce: number
+    risk_level: string
+  }
+}
+
+export interface ContractHistoryItem {
+  id: string
+  risk_level: string
+  won: boolean
+  total_input_value_ton: string
+  payout_value_ton?: string
+  created_at: string
+  resolved_at?: string
+}
+
+export const createContract = async (data: CreateContractRequest): Promise<CreateContractResponse> => {
+  const response = await api.post('/api/contracts/create', data)
+  return response.data
+}
+
+export const executeContract = async (contractId: string): Promise<ExecuteContractResponse> => {
+  const response = await api.post(`/api/contracts/${contractId}/execute`)
+  return response.data
+}
+
+export const getContractHistory = async (params?: {
+  limit?: number
+  offset?: number
+}) => {
+  const response = await api.get('/api/contracts/history', { params })
+  return response.data
+}
+
+export const verifyContract = async (contractId: string) => {
+  const response = await api.get(`/api/contracts/${contractId}/verify`)
+  return response.data
+}
+
+// === UPGRADE GAME ===
+
+export interface CalculateUpgradeRequest {
+  input_gift_id: number
+  target_gift_id: number
+}
+
+export interface CalculateUpgradeResponse {
+  input_value: string
+  target_value: string
+  success_probability: number
+  wheel_sectors: {
+    success_angle: number
+    fail_angle: number
+  }
+  expected_value: string
+}
+
+export interface CreateUpgradeRequest {
+  input_gift_id: number
+  target_gift_id: number
+  client_seed: string
+}
+
+export interface CreateUpgradeResponse {
+  upgrade_id: string
+  server_seed_hash: string
+  probability: number
+  wheel_sectors: {
+    success_angle: number
+    fail_angle: number
+  }
+}
+
+export interface SpinWheelResponse {
+  success: boolean
+  won: boolean
+  result_angle: number
+  server_seed: string
+  animation_duration: number
+}
+
+export interface UpgradeHistoryItem {
+  id: string
+  won: boolean
+  input_gift_value_ton: string
+  target_gift_value_ton: string
+  success_probability: number
+  created_at: string
+  resolved_at?: string
+}
+
+export const calculateUpgrade = async (data: CalculateUpgradeRequest): Promise<CalculateUpgradeResponse> => {
+  const response = await api.post('/api/upgrade/calculate', data)
+  return response.data
+}
+
+export const createUpgrade = async (data: CreateUpgradeRequest): Promise<CreateUpgradeResponse> => {
+  const response = await api.post('/api/upgrade/create', data)
+  return response.data
+}
+
+export const spinWheel = async (upgradeId: string): Promise<SpinWheelResponse> => {
+  const response = await api.post(`/api/upgrade/${upgradeId}/spin`)
+  return response.data
+}
+
+export const getUpgradeHistory = async (params?: {
+  limit?: number
+  offset?: number
+}) => {
+  const response = await api.get('/api/upgrade/history', { params })
+  return response.data
+}

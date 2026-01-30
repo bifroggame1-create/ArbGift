@@ -202,6 +202,54 @@ services:
       - ton-gifts-network
 
   # ===========================================
+  # CONTRACTS GAME SERVICE
+  # ===========================================
+
+  contracts-api:
+    build:
+      context: ./services/contracts
+      dockerfile: Dockerfile
+    container_name: ton-gifts-contracts
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/contracts
+      REDIS_URL: redis://redis:6379/6
+      DEBUG: ${DEBUG:-false}
+      JWT_SECRET_KEY: ${CONTRACTS_SECRET_KEY:-change-me-in-production}
+    ports:
+      - "8004:8000"
+    depends_on:
+      - postgres
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    networks:
+      - ton-gifts-network
+
+  # ===========================================
+  # UPGRADE GAME SERVICE
+  # ===========================================
+
+  upgrade-api:
+    build:
+      context: ./services/upgrade
+      dockerfile: Dockerfile
+    container_name: ton-gifts-upgrade
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/upgrade
+      REDIS_URL: redis://redis:6379/7
+      DEBUG: ${DEBUG:-false}
+      JWT_SECRET_KEY: ${UPGRADE_SECRET_KEY:-change-me-in-production}
+    ports:
+      - "8005:8000"
+    depends_on:
+      - postgres
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    networks:
+      - ton-gifts-network
+
+  # ===========================================
   # FRONTEND (Telegram Mini App)
   # ===========================================
 
@@ -242,6 +290,8 @@ services:
       - aviator-api
       - roulette-api
       - stars-api
+      - contracts-api
+      - upgrade-api
     restart: unless-stopped
     networks:
       - ton-gifts-network
