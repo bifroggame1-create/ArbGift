@@ -6,7 +6,12 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: () => import('../views/HomeView.vue'),
+      redirect: '/market',
+    },
+    {
+      path: '/market',
+      name: 'market',
+      component: () => import('../views/MarketView.vue'),
     },
     {
       path: '/gift/:id',
@@ -27,6 +32,16 @@ const router = createRouter({
       path: '/profile',
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
+    },
+    {
+      path: '/earn',
+      name: 'earn',
+      component: () => import('../views/EarnView.vue'),
+    },
+    {
+      path: '/pvp',
+      name: 'pvp',
+      component: () => import('../views/PvPView.vue'),
     },
     // Gaming Hub
     {
