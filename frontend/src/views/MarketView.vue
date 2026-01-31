@@ -339,9 +339,8 @@ const getPriceColor = (price: string): string => {
   return 'price-orange'
 }
 
-const getMarketIcon = (market: string): string | null => {
-  // Could return actual icon URLs here
-  return null
+const getMarketIcon = (_market: string): string | undefined => {
+  return undefined
 }
 
 const applyFilters = () => {
@@ -366,9 +365,8 @@ const openListing = (listing: ListingItem) => {
   }
 }
 
-const addToCart = (listing: ListingItem) => {
+const addToCart = (_listing: ListingItem) => {
   hapticImpact('heavy')
-  // TODO: cart functionality
 }
 
 onMounted(() => {
