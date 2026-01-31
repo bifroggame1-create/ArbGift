@@ -100,8 +100,8 @@ const canvasHeight = 360
 const ROWS = 12
 const PEG_RADIUS = 4.5
 const BALL_RADIUS = 7
-const GRAVITY = 0.38
-const BOUNCE_DAMPING = 0.42
+const GRAVITY = 0.32
+const COR = 0.52 // coefficient of restitution
 
 const SLOT_LABELS = ['💀', '🎁', '2.0x', '0.7x', '0.6x', '0.7x', '2.0x', '🎁', '💀']
 const SLOT_MULTIPLIERS = [0, 0, 2.0, 0.7, 0.6, 0.7, 2.0, 0, 0]
@@ -143,6 +143,14 @@ let animPhase = 0 // 0=idle, 1=dropping, 2=result
 let animationId: number | null = null
 let resultTimeout: number | null = null
 let nonce = Date.now()
+
+// Visual effects
+interface TrailPoint { x: number; y: number }
+interface HitPeg extends PegPos { time: number }
+interface Particle { x: number; y: number; vx: number; vy: number; life: number; color: string }
+let trail: TrailPoint[] = []
+let hitPegs: HitPeg[] = []
+let particles: Particle[] = []
 
 function selectBet(amount: number) {
   if (!isPlaying.value) selectedBet.value = amount
@@ -193,25 +201,60 @@ async function playGame() {
   computeRowTargets(targetSlot)
 
   // Spawn ball at drop box
-  const startX = canvasWidth / 2 + (Math.random() - 0.5) * 6
-  ball = { x: startX, y: TOP_Y - 18, vx: (Math.random() - 0.5) * 0.6, vy: 1.5 }
+  const startX = canvasWidth / 2 + (Math.random() - 0.5) * 16
+  ball = { x: startX, y: TOP_Y - 18, vx: (Math.random() - 0.5) * 1.2, vy: 2.5 }
   lastBounceRow = -1
   animPhase = 1
+  trail = []
+  hitPegs = []
+  particles = []
   animationId = requestAnimationFrame(physicsLoop)
 }
 
 function physicsLoop() {
   if (!ball) return
 
+  // Update particles
+  if (particles.length > 0) {
+    particles.forEach(p => {
+      p.vy += 0.18
+      p.x += p.vx
+      p.y += p.vy
+      p.life -= 0.03
+    })
+    particles = particles.filter(p => p.life > 0)
+  }
+
+  // If result phase, just animate particles
+  if (animPhase === 2) {
+    draw()
+    if (particles.length > 0) {
+      animationId = requestAnimationFrame(physicsLoop)
+    }
+    return
+  }
+
   // Gravity
   ball.vy += GRAVITY
   ball.x += ball.vx
   ball.y += ball.vy
 
+  // Track trail
+  trail.push({ x: ball.x, y: ball.y })
+  if (trail.length > 10) trail.shift()
+
+  // Clean old hit markers
+  const now = Date.now()
+  hitPegs = hitPegs.filter(h => now - h.time < 250)
+
   // Determine which row we're in
   const rowIdx = Math.floor((ball.y - TOP_Y) / ROW_HEIGHT)
 
-  // Peg collision — check current and nearby rows
+  // Find NEAREST peg only (prevents multi-collision sticking)
+  let nearestPeg: PegPos | null = null
+  let nearestDist = Infinity
+  const minDist = PEG_RADIUS + BALL_RADIUS
+
   for (let r = Math.max(0, rowIdx - 1); r <= Math.min(ROWS - 1, rowIdx + 1); r++) {
     const pegs = pegRows[r]
     if (!pegs) continue
@@ -219,25 +262,38 @@ function physicsLoop() {
       const dx = ball.x - peg.x
       const dy = ball.y - peg.y
       const dist = Math.sqrt(dx * dx + dy * dy)
-      const minDist = PEG_RADIUS + BALL_RADIUS
-      if (dist < minDist && dist > 0) {
-        // Push ball out
-        const nx = dx / dist
-        const ny = dy / dist
-        ball.x = peg.x + nx * minDist
-        ball.y = peg.y + ny * minDist
-
-        // Reflect velocity + dampen
-        const dot = ball.vx * nx + ball.vy * ny
-        ball.vx -= 2 * dot * nx
-        ball.vy -= 2 * dot * ny
-        ball.vx *= BOUNCE_DAMPING
-        ball.vy *= BOUNCE_DAMPING
-
-        // After bounce, add some speed back (gravity feel)
-        ball.vy += 0.8
+      if (dist < nearestDist) {
+        nearestDist = dist
+        nearestPeg = peg
       }
     }
+  }
+
+  // Process collision with nearest peg only
+  if (nearestPeg && nearestDist < minDist && nearestDist > 0.01) {
+    const dx = ball.x - nearestPeg.x
+    const dy = ball.y - nearestPeg.y
+    const nx = dx / nearestDist
+    const ny = dy / nearestDist
+
+    // Push ball out with buffer
+    ball.x = nearestPeg.x + nx * (minDist + 1)
+    ball.y = nearestPeg.y + ny * (minDist + 1)
+
+    // Only reflect if moving TOWARD peg
+    const dot = ball.vx * nx + ball.vy * ny
+    if (dot < 0) {
+      ball.vx -= 2 * dot * nx
+      ball.vy -= 2 * dot * ny
+      ball.vx *= COR
+      ball.vy *= COR
+    }
+
+    // Ensure ball always has enough downward velocity
+    if (ball.vy < 1.8) ball.vy = 1.8
+
+    // Mark peg as hit
+    hitPegs.push({ x: nearestPeg.x, y: nearestPeg.y, time: now })
   }
 
   // Steering: if we just passed into a new row, nudge toward target
@@ -245,23 +301,34 @@ function physicsLoop() {
     lastBounceRow = rowIdx
     const target = rowTargets[rowIdx]
     const diff = target - ball.x
-    // Gentle horizontal nudge
-    ball.vx += diff * 0.12
-    // Add small random jitter for realism
-    ball.vx += (Math.random() - 0.5) * 0.6
+    ball.vx += diff * 0.08
+    ball.vx += (Math.random() - 0.5) * 0.8
   }
 
   // Clamp X
-  if (ball.x < BALL_RADIUS) { ball.x = BALL_RADIUS; ball.vx = Math.abs(ball.vx) * 0.5 }
-  if (ball.x > canvasWidth - BALL_RADIUS) { ball.x = canvasWidth - BALL_RADIUS; ball.vx = -Math.abs(ball.vx) * 0.5 }
+  if (ball.x < BALL_RADIUS) { ball.x = BALL_RADIUS; ball.vx = Math.abs(ball.vx) * 0.6 }
+  if (ball.x > canvasWidth - BALL_RADIUS) { ball.x = canvasWidth - BALL_RADIUS; ball.vx = -Math.abs(ball.vx) * 0.6 }
 
   // Check if ball reached bottom
   if (ball.y > BOTTOM_Y) {
     ball.y = BOTTOM_Y
     ball.vy = 0
     ball.vx = 0
-    // Snap to target slot center
     ball.x = targetSlot * SLOT_WIDTH + SLOT_WIDTH / 2
+
+    // Spawn landing particles
+    const colors = ['#facc15', '#fbbf24', '#f59e0b', '#fff']
+    for (let i = 0; i < 15; i++) {
+      particles.push({
+        x: ball.x,
+        y: ball.y,
+        vx: (Math.random() - 0.5) * 7,
+        vy: -Math.random() * 5 - 1,
+        life: 1,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      })
+    }
+
     animPhase = 2
     draw()
     showResult()
@@ -314,6 +381,7 @@ function draw() {
   ctx.fillText('▼', canvasWidth / 2, 24)
 
   // Pegs
+  const now = Date.now()
   pegRows.forEach((row, rowIdx) => {
     const t = rowIdx / ROWS
     const r = Math.round(139 + (34 - 139) * t)
@@ -322,9 +390,23 @@ function draw() {
     const color = `rgb(${r},${g},${b})`
 
     row.forEach(peg => {
-      ctx.shadowColor = color + '66'
-      ctx.shadowBlur = 5
-      ctx.fillStyle = color
+      // Check if peg was recently hit
+      const hit = hitPegs.find(h => Math.abs(h.x - peg.x) < 0.1 && Math.abs(h.y - peg.y) < 0.1)
+      const flashAge = hit ? now - hit.time : 999
+      const flashAlpha = hit && flashAge < 250 ? (1 - flashAge / 250) * 0.9 : 0
+
+      if (flashAlpha > 0.1) {
+        // Flash effect
+        ctx.shadowColor = `rgba(255, 255, 255, ${flashAlpha})`
+        ctx.shadowBlur = 12
+        ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha * 0.6})`
+      } else {
+        // Normal glow
+        ctx.shadowColor = color + '66'
+        ctx.shadowBlur = 5
+        ctx.fillStyle = color
+      }
+
       ctx.beginPath()
       ctx.arc(peg.x, peg.y, PEG_RADIUS, 0, Math.PI * 2)
       ctx.fill()
@@ -374,6 +456,18 @@ function draw() {
     ctx.fillText(SLOT_LABELS[i], x + SLOT_WIDTH / 2, slotY + slotH / 2)
   }
 
+  // Ball trail
+  if (trail.length > 1) {
+    for (let i = 0; i < trail.length; i++) {
+      const alpha = (i / trail.length) * 0.35
+      const radius = BALL_RADIUS * (i / trail.length) * 0.7
+      ctx.fillStyle = `rgba(250, 204, 21, ${alpha})`
+      ctx.beginPath()
+      ctx.arc(trail[i].x, trail[i].y, radius, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
   // Ball
   if (ball) {
     ctx.shadowColor = 'rgba(250, 204, 21, 0.7)'
@@ -389,6 +483,17 @@ function draw() {
     ctx.beginPath()
     ctx.arc(ball.x - 2.5, ball.y - 2.5, BALL_RADIUS * 0.38, 0, Math.PI * 2)
     ctx.fill()
+  }
+
+  // Landing particles
+  if (particles.length > 0) {
+    particles.forEach(p => {
+      const alpha = Math.max(0, p.life)
+      ctx.fillStyle = p.color + Math.floor(alpha * 255).toString(16).padStart(2, '0')
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, 2.5 * alpha, 0, Math.PI * 2)
+      ctx.fill()
+    })
   }
 
   // Result overlay
