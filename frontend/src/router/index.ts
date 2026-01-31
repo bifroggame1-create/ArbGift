@@ -75,6 +75,32 @@ const router = createRouter({
       name: 'stars',
       component: () => import('../views/StarsView.vue'),
     },
+    // Solo Games
+    {
+      path: '/trading',
+      name: 'trading',
+      component: () => import('../views/TradingView.vue'),
+    },
+    {
+      path: '/plinko',
+      name: 'plinko',
+      component: () => import('../views/PlinkoView.vue'),
+    },
+    {
+      path: '/gonka',
+      name: 'gonka',
+      component: () => import('../views/GonkaView.vue'),
+    },
+    {
+      path: '/ball-escape',
+      name: 'ball-escape',
+      component: () => import('../views/BallEscapeView.vue'),
+    },
+    {
+      path: '/rocket',
+      name: 'rocket',
+      component: () => import('../views/RocketView.vue'),
+    },
   ],
 })
 
