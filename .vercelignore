@@ -1,0 +1,13 @@
+requirements.txt
+services/
+backend/
+*.py
+__pycache__/
+*.pyc
+.pytest_cache/
+docker-compose*.yml
+Dockerfile
+.dockerignore
+alembic/
+migrations/
+tests/
