@@ -1,78 +1,78 @@
 <template>
-  <div class="ball-escape-view min-h-screen flex flex-col" style="background: #0a0c14;">
-    <!-- Top Bar -->
-    <div class="flex items-center justify-between px-4 pt-3 pb-2">
-      <button @click="router.back()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-        </svg>
-      </button>
-      <div class="flex items-center gap-2">
-        <span class="text-white/50 text-xs">💎</span>
-        <span class="text-white font-bold text-sm">{{ balance.toFixed(2) }}</span>
+  <div class="ball-escape-view min-h-screen flex flex-col" style="background: #000; padding-bottom: 16px;">
+    <div class="px-3 pt-3 flex flex-col gap-2">
+      <!-- Tournament Banner -->
+      <div class="rounded-xl px-4 py-2.5 flex items-center justify-between"
+        style="background: linear-gradient(135deg, #ca8a04 0%, #22c55e 60%, #4ade80 100%);">
+        <span class="text-white font-bold text-sm">Giftomania</span>
+        <span class="text-white/70 text-xs font-mono">3:04:57:06</span>
       </div>
-      <button class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-lg">+</button>
-    </div>
-
-    <!-- Max Prize Badge -->
-    <div class="flex justify-center px-4 py-1">
-      <div class="bg-white/8 rounded-full px-4 py-1 flex items-center gap-2">
-        <span class="text-white/60 text-xs">Max Prize</span>
-        <span class="text-white font-bold text-sm">💎 30</span>
+      <!-- Header Row -->
+      <div class="flex items-center justify-between">
+        <div class="flex gap-2">
+          <button class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.06);">
+            <svg class="w-4 h-4" fill="none" stroke="rgba(255,255,255,0.45)" viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="1.5"/>
+              <path d="M16 2v4M8 2v4M3 10h18" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <div class="flex items-center gap-1 rounded-full px-3 py-1" style="background: rgba(255,255,255,0.08);">
+            <span class="text-white/50 text-xs">Max Prize</span>
+            <span class="text-white/40 text-xs">▼</span>
+            <span class="text-white font-bold text-sm">30</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button class="flex items-center gap-1.5 rounded-full px-3 py-1.5" style="background: rgba(255,255,255,0.08);">
+            <span class="text-white/45 text-xs">▼</span>
+            <span class="text-white font-bold text-sm">{{ balance.toFixed(2) }}</span>
+          </button>
+          <button class="w-7 h-7 rounded-full flex items-center justify-center text-white/50 text-sm" style="background: rgba(255,255,255,0.12);">+</button>
+        </div>
       </div>
     </div>
 
     <!-- Game Arena -->
-    <div class="flex-1 flex items-center justify-center px-4" style="min-height: 320px;">
-      <div class="relative" style="width: 280px; height: 280px;">
-        <canvas
-          ref="gameCanvas"
-          class="absolute inset-0 w-full h-full cursor-pointer"
-          :width="280"
-          :height="280"
-          @click="onTap"
-        ></canvas>
+    <div class="mx-3 mt-2 flex-1 flex items-center justify-center" style="min-height: 300px;">
+      <div class="relative" style="width: 300px; height: 300px;">
+        <canvas ref="gameCanvas" class="absolute inset-0 w-full h-full cursor-pointer"
+          :width="300" :height="300" @click="onTap"></canvas>
       </div>
     </div>
 
     <!-- Bottom Controls -->
-    <div class="px-4 py-3">
-      <!-- Bet Amounts -->
+    <div class="px-3 py-3">
       <div class="flex gap-2 mb-3">
-        <button
-          v-for="amount in betAmounts"
-          :key="amount"
-          @click="selectBet(amount)"
-          class="flex-1 py-2 rounded-lg text-sm font-bold transition-all"
-          :class="selectedBet === amount
-            ? 'bg-cyan-500 text-white'
-            : 'bg-white/8 text-white/60 hover:bg-white/12'"
-        >
-          {{ amount }} 💎
+        <button v-for="amount in betAmounts" :key="amount" @click="selectBet(amount)"
+          class="flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1 transition-all"
+          :style="selectedBet === amount
+            ? { background: 'rgba(34,211,238,0.2)', border: '1px solid rgba(34,211,238,0.4)' }
+            : { background: 'rgba(255,255,255,0.06)', border: '1px solid transparent' }">
+          <span class="text-white/75 text-sm">{{ amount }}</span>
+          <span class="text-white/30 text-xs">▼</span>
         </button>
       </div>
-
-      <!-- Action Row -->
       <div class="flex items-center gap-2">
-        <button class="flex items-center gap-1 px-3 py-2 rounded-lg bg-white/8 text-white/60 text-xs">💎 ☆</button>
-
-        <button
-          @click="startGame"
-          :disabled="gameState === 'playing' || balance < selectedBet"
-          class="flex-1 py-3 rounded-xl font-bold text-base transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          style="background: linear-gradient(135deg, #22d3ee, #06b6d4);"
-        >
-          <span class="text-white">
-            {{ gameState === 'playing' ? 'Tap to escape!' : `Play 💎 ${selectedBet}` }}
-          </span>
+        <button class="flex flex-col items-center gap-0.5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.06);">
+            <div class="w-5 h-5 rounded-full flex items-center justify-center" style="background: #3b82f6;">
+              <span class="text-white text-xs font-bold">▼</span>
+            </div>
+          </div>
+          <span class="text-white/35 text-xs">Swap ☆</span>
         </button>
-
-        <button class="flex items-center gap-1 px-3 py-2 rounded-lg bg-white/8 text-white/60 text-xs">+ Deposit</button>
+        <button @click="startGame" :disabled="gameState === 'playing' || balance < selectedBet"
+          class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          style="background: linear-gradient(135deg, #22d3ee, #06b6d4);">
+          {{ gameState === 'playing' ? 'Tap to escape!' : `Play ▼ ${selectedBet}` }}
+        </button>
+        <button class="flex flex-col items-center gap-0.5">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center text-white/50 text-lg" style="background: rgba(255,255,255,0.10);">+</div>
+          <span class="text-white/35 text-xs">Deposit</span>
+        </button>
       </div>
-
-      <!-- Hash -->
       <div class="text-center mt-2">
-        <span class="text-white/30 text-xs">⏱ Hash: {{ currentHash }}</span>
+        <span class="text-white/20 text-xs">⏱ Hash: {{ currentHash }}</span>
       </div>
     </div>
   </div>
@@ -80,36 +80,30 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, useTemplateRef } from 'vue'
-import { useRouter } from 'vue-router'
 import { escapePlay } from '../api/client'
 
-const router = useRouter()
 const gameCanvas = useTemplateRef<HTMLCanvasElement>('gameCanvas')
 
-// State
 const balance = ref(3.16)
 const betAmounts = [1, 3, 10, 30, 50]
 const selectedBet = ref(1)
 const gameState = ref<'idle' | 'playing' | 'won' | 'lost'>('idle')
 const currentHash = ref('502d...1c83')
 
-// Game constants
-const SIZE = 280
+const SIZE = 300
 const CENTER = SIZE / 2
-const RING_RADIUS = 115
-const RING_WIDTH = 12
-const CHAR_RADIUS = 28
+const RING_RADIUS = 105
+const RING_WIDTH = 14
+const CHAR_RADIUS = 22
+const RING_CY = CENTER - 18 // ring center Y (shifted up to make room for bottom bars)
 
-// Game state
 let animationId: number | null = null
-let progress = 0 // 0 to 1 (how far around the ring)
+let progress = 0
 let multiplier = 1.0
-let charAngle = -Math.PI / 2 // character position on ring (radians)
+let charAngle = -Math.PI / 2
 let targetAngle = -Math.PI / 2
 let resultTimeout: number | null = null
-
-const GREEN_START = Math.PI
-const RED_START = 0
+let nonce = Date.now()
 
 function selectBet(amount: number) {
   if (gameState.value !== 'idle') return
@@ -122,12 +116,8 @@ function generateHash(): string {
 
 function onTap() {
   if (gameState.value !== 'playing') return
-
-  // Move character to a random position on ring
   targetAngle = charAngle + (Math.random() - 0.3) * Math.PI * 0.8
 }
-
-let nonce = Date.now()
 
 async function startGame() {
   if (gameState.value === 'playing' || balance.value < selectedBet.value) return
@@ -139,7 +129,6 @@ async function startGame() {
   charAngle = -Math.PI / 2 + (Math.random() - 0.5) * 0.5
   targetAngle = charAngle
 
-  // Get server-determined result (kept hidden until animation ends)
   let willEscape = Math.random() < 0.35
   let gameDuration = 3000 + Math.random() * 2000
   let serverMultiplier = 3.75
@@ -165,32 +154,23 @@ async function startGame() {
   function gameLoop() {
     const elapsed = Date.now() - startTime
     progress = Math.min(elapsed / gameDuration, 1)
-    multiplier = 1.0 + progress * 2.75 // grows from 1.0x to 3.75x
+    multiplier = 1.0 + progress * (serverMultiplier - 1.0)
 
-    // Character movement — drifts randomly
     charAngle += (targetAngle - charAngle) * 0.08
     charAngle += (Math.random() - 0.5) * 0.05
 
-    // If game ending, determine escape
     if (progress >= 1) {
       multiplier = serverMultiplier
       if (willEscape) {
-        // Character escapes to green zone
-        charAngle = GREEN_START + Math.PI * 0.3 + Math.random() * 0.5
+        charAngle = Math.PI + 0.4 + Math.random() * 0.3
         gameState.value = 'won'
         balance.value += selectedBet.value * serverMultiplier
       } else {
-        // Character caught in red zone
-        charAngle = RED_START + Math.PI * 0.3 + Math.random() * 0.3
+        charAngle = -0.1 - Math.random() * 0.3
         gameState.value = 'lost'
       }
-
       draw()
-
-      resultTimeout = setTimeout(() => {
-        gameState.value = 'idle'
-        progress = 0
-      }, 2000) as unknown as number
+      resultTimeout = setTimeout(() => { gameState.value = 'idle'; progress = 0 }, 2000) as unknown as number
       return
     }
 
@@ -208,129 +188,127 @@ function draw() {
   if (!ctx) return
 
   ctx.clearRect(0, 0, SIZE, SIZE)
-
-  // Background
   ctx.fillStyle = '#0a0c14'
   ctx.fillRect(0, 0, SIZE, SIZE)
 
-  // --- Green zone arc (bottom half = safe) ---
+  // --- Bottom zone bars ---
+  const barY = SIZE - 50
+  const barH = 44
+  const greenW = Math.floor(SIZE * 0.62)
+
+  ctx.fillStyle = 'rgba(34, 197, 94, 0.2)'
   ctx.beginPath()
-  ctx.arc(CENTER, CENTER, RING_RADIUS + RING_WIDTH * 0.7, Math.PI, 2 * Math.PI)
-  ctx.arc(CENTER, CENTER, RING_RADIUS - RING_WIDTH * 0.7, 2 * Math.PI, Math.PI, true)
-  ctx.closePath()
-  ctx.fillStyle = 'rgba(34, 197, 94, 0.25)'
+  ctx.roundRect(4, barY, greenW - 6, barH, [8, 0, 0, 8])
   ctx.fill()
 
-  // --- Red zone arc (top half = danger) ---
+  ctx.fillStyle = 'rgba(239, 68, 68, 0.2)'
   ctx.beginPath()
-  ctx.arc(CENTER, CENTER, RING_RADIUS + RING_WIDTH * 0.7, 0, Math.PI)
-  ctx.arc(CENTER, CENTER, RING_RADIUS - RING_WIDTH * 0.7, Math.PI, 0, true)
-  ctx.closePath()
-  ctx.fillStyle = 'rgba(239, 68, 68, 0.25)'
+  ctx.roundRect(greenW + 2, barY, SIZE - greenW - 6, barH, [0, 8, 8, 0])
   ctx.fill()
 
   // Zone emojis
-  ctx.font = '18px sans-serif'
+  ctx.font = '15px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  // Green zone emojis
-  ctx.fillText('🍬', CENTER - 55, CENTER + 75)
-  ctx.fillText('👑', CENTER + 55, CENTER + 75)
-  // Red zone emojis
-  ctx.fillText('💀', CENTER - 40, CENTER - 75)
-  ctx.fillText('💀', CENTER + 40, CENTER - 75)
+  const barCY = barY + barH / 2
+  ctx.fillText('🚀', 28, barCY)
+  ctx.fillText('👑', greenW / 2, barCY)
+  ctx.fillText('🎁', greenW - 22, barCY)
+  ctx.fillText('💀', greenW + (SIZE - greenW) / 2, barCY)
 
-  // --- Progress ring (purple glow) ---
-  const progressAngle = -Math.PI / 2 + progress * 2 * Math.PI
-
-  // Ring background (dark)
+  // --- Ring background ---
   ctx.beginPath()
-  ctx.arc(CENTER, CENTER, RING_RADIUS, 0, 2 * Math.PI)
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)'
+  ctx.arc(CENTER, RING_CY, RING_RADIUS, 0, 2 * Math.PI)
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)'
   ctx.lineWidth = RING_WIDTH
   ctx.stroke()
 
-  // Progress arc (purple glow)
+  // --- Progress ring (MAGENTA) ---
+  const progressAngle = -Math.PI / 2 + progress * 2 * Math.PI
   if (gameState.value === 'playing' || gameState.value === 'won' || gameState.value === 'lost') {
-    ctx.shadowColor = 'rgba(168, 85, 247, 0.6)'
-    ctx.shadowBlur = 15
-
+    ctx.shadowColor = 'rgba(217, 70, 239, 0.55)'
+    ctx.shadowBlur = 18
     ctx.beginPath()
-    ctx.arc(CENTER, CENTER, RING_RADIUS, -Math.PI / 2, progressAngle)
-    ctx.strokeStyle = '#a855f7'
+    ctx.arc(CENTER, RING_CY, RING_RADIUS, -Math.PI / 2, progressAngle)
+    ctx.strokeStyle = '#d946ef'
     ctx.lineWidth = RING_WIDTH
     ctx.lineCap = 'round'
     ctx.stroke()
     ctx.shadowBlur = 0
   }
 
-  // --- Character (creature with helmet) ---
-  const cx = CENTER + Math.cos(charAngle) * (RING_RADIUS - RING_WIDTH * 0.5)
-  const cy = CENTER + Math.sin(charAngle) * (RING_RADIUS - RING_WIDTH * 0.5)
+  // --- Character ---
+  const cx = CENTER + Math.cos(charAngle) * (RING_RADIUS - RING_WIDTH * 0.3)
+  const cy = RING_CY + Math.sin(charAngle) * (RING_RADIUS - RING_WIDTH * 0.3)
 
-  // Character glow
-  ctx.shadowColor = gameState.value === 'won' ? 'rgba(34,197,94,0.5)' : 'rgba(168,85,247,0.4)'
-  ctx.shadowBlur = 12
+  ctx.shadowColor = gameState.value === 'won' ? 'rgba(34,197,94,0.5)' : 'rgba(217,70,239,0.4)'
+  ctx.shadowBlur = 14
 
-  // Body (green blob)
+  // Body
   ctx.fillStyle = '#4ade80'
   ctx.beginPath()
-  ctx.arc(cx, cy, CHAR_RADIUS * 0.6, 0, Math.PI * 2)
+  ctx.arc(cx, cy, CHAR_RADIUS * 0.65, 0, Math.PI * 2)
   ctx.fill()
-
-  // Helmet (blue dome)
+  // Helmet
   ctx.fillStyle = '#60a5fa'
   ctx.beginPath()
-  ctx.arc(cx, cy - 4, CHAR_RADIUS * 0.5, Math.PI, 0)
+  ctx.arc(cx, cy - 3, CHAR_RADIUS * 0.55, Math.PI, 0)
   ctx.fill()
-
-  // Visor (darker blue)
+  // Visor
   ctx.fillStyle = '#1e3a5f'
   ctx.beginPath()
-  ctx.arc(cx, cy - 2, CHAR_RADIUS * 0.35, Math.PI + 0.2, -0.2)
+  ctx.arc(cx, cy - 1, CHAR_RADIUS * 0.38, Math.PI + 0.25, -0.25)
+  ctx.fill()
+  // Eyes
+  ctx.fillStyle = '#fff'
+  ctx.beginPath()
+  ctx.arc(cx - 4, cy + 2, 2.5, 0, Math.PI * 2)
+  ctx.arc(cx + 4, cy + 2, 2.5, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = '#000'
+  ctx.beginPath()
+  ctx.arc(cx - 4, cy + 2.5, 1.2, 0, Math.PI * 2)
+  ctx.arc(cx + 4, cy + 2.5, 1.2, 0, Math.PI * 2)
   ctx.fill()
 
   ctx.shadowBlur = 0
 
-  // --- Center multiplier text ---
+  // --- Center content ---
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
   if (gameState.value === 'idle') {
-    ctx.fillStyle = 'rgba(255,255,255,0.7)'
-    ctx.font = 'bold 16px -apple-system, sans-serif'
-    ctx.fillText('Tap to play', CENTER, CENTER - 8)
-    ctx.fillStyle = 'rgba(255,255,255,0.35)'
-    ctx.font = '12px -apple-system, sans-serif'
-    ctx.fillText('Press Play below', CENTER, CENTER + 14)
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'
+    ctx.font = 'bold 15px -apple-system, sans-serif'
+    ctx.fillText('This is Preview', CENTER, RING_CY - 2)
+    ctx.fillStyle = 'rgba(255,255,255,0.28)'
+    ctx.font = '11px -apple-system, sans-serif'
+    ctx.fillText('Tap button below to play', CENTER, RING_CY + 18)
   } else {
-    // Multiplier
-    const color = gameState.value === 'won' ? '#4ade80' : gameState.value === 'lost' ? '#ef4444' : '#a855f7'
+    const color = gameState.value === 'won' ? '#4ade80' : gameState.value === 'lost' ? '#ef4444' : '#4ade80'
     ctx.fillStyle = color
     ctx.font = 'bold 30px -apple-system, sans-serif'
-    ctx.fillText(`${multiplier.toFixed(2)}x`, CENTER, CENTER - 4)
+    ctx.fillText(`${multiplier.toFixed(2)}x`, CENTER, RING_CY - 6)
 
     if (gameState.value === 'won') {
       ctx.fillStyle = '#4ade80'
-      ctx.font = 'bold 16px -apple-system, sans-serif'
-      ctx.fillText('Escaped!', CENTER, CENTER + 26)
-      ctx.fillStyle = 'rgba(255,255,255,0.6)'
-      ctx.font = '12px -apple-system, sans-serif'
-      ctx.fillText(`+${(selectedBet.value * multiplier).toFixed(2)} 💎`, CENTER, CENTER + 46)
+      ctx.font = 'bold 14px -apple-system, sans-serif'
+      ctx.fillText('Escaped!', CENTER, RING_CY + 22)
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'
+      ctx.font = '11px -apple-system, sans-serif'
+      ctx.fillText(`+${(selectedBet.value * multiplier).toFixed(2)} ▼`, CENTER, RING_CY + 40)
     } else if (gameState.value === 'lost') {
       ctx.fillStyle = '#ef4444'
-      ctx.font = 'bold 16px -apple-system, sans-serif'
-      ctx.fillText('Caught!', CENTER, CENTER + 26)
-      ctx.fillStyle = 'rgba(255,255,255,0.5)'
-      ctx.font = '12px -apple-system, sans-serif'
-      ctx.fillText(`-${selectedBet.value.toFixed(2)} 💎`, CENTER, CENTER + 46)
+      ctx.font = 'bold 14px -apple-system, sans-serif'
+      ctx.fillText('Caught!', CENTER, RING_CY + 22)
+      ctx.fillStyle = 'rgba(255,255,255,0.4)'
+      ctx.font = '11px -apple-system, sans-serif'
+      ctx.fillText(`-${selectedBet.value.toFixed(2)} ▼`, CENTER, RING_CY + 40)
     }
   }
 }
 
-onMounted(() => {
-  draw()
-})
+onMounted(() => { draw() })
 
 onUnmounted(() => {
   if (animationId) cancelAnimationFrame(animationId)

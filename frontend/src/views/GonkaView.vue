@@ -1,23 +1,35 @@
 <template>
-  <div class="gonka-view min-h-screen flex flex-col" style="background: #0a0e1a;">
-    <!-- Top Bar -->
-    <div class="flex items-center justify-between px-4 pt-3 pb-2">
-      <button @click="router.back()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-        </svg>
-      </button>
-      <div class="flex items-center gap-2">
-        <span class="text-white/50 text-xs">💎</span>
-        <span class="text-white font-bold text-sm">{{ balance.toFixed(2) }}</span>
+  <div class="gonka-view min-h-screen flex flex-col" style="background: #000; padding-bottom: 16px;">
+    <div class="px-3 pt-3 flex flex-col gap-2">
+      <!-- Tournament Banner -->
+      <div class="rounded-xl px-4 py-2.5 flex items-center justify-between"
+        style="background: linear-gradient(135deg, #ca8a04 0%, #22c55e 60%, #4ade80 100%);">
+        <span class="text-white font-bold text-sm">Giftomania</span>
+        <span class="text-white/70 text-xs font-mono">3:04:57:06</span>
       </div>
-      <button class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white text-lg">+</button>
-    </div>
-
-    <!-- Max Prize Header -->
-    <div class="text-center px-4 pt-2 pb-1">
-      <div class="text-white/40 text-xs">Max Prize</div>
-      <div class="text-white text-3xl font-bold">2 TON</div>
+      <!-- Header Row -->
+      <div class="flex items-center justify-between">
+        <div class="flex gap-2">
+          <button class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.06);">
+            <svg class="w-4 h-4" fill="none" stroke="rgba(255,255,255,0.45)" viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="1.5"/>
+              <path d="M16 2v4M8 2v4M3 10h18" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <div class="flex items-center gap-1 rounded-full px-3 py-1" style="background: rgba(255,255,255,0.08);">
+            <span class="text-white/50 text-xs">Max Prize</span>
+            <span class="text-white/40 text-xs">▼</span>
+            <span class="text-white font-bold text-sm">30</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button class="flex items-center gap-1.5 rounded-full px-3 py-1.5" style="background: rgba(255,255,255,0.08);">
+            <span class="text-white/45 text-xs">▼</span>
+            <span class="text-white font-bold text-sm">{{ balance.toFixed(2) }}</span>
+          </button>
+          <button class="w-7 h-7 rounded-full flex items-center justify-center text-white/50 text-sm" style="background: rgba(255,255,255,0.12);">+</button>
+        </div>
+      </div>
     </div>
 
     <!-- Lite / Hard Toggle -->
@@ -70,41 +82,38 @@
     </div>
 
     <!-- Bottom Controls -->
-    <div class="px-4 py-3 mt-1">
-      <!-- Bet Amounts -->
+    <div class="px-3 py-3">
       <div class="flex gap-2 mb-3">
-        <button
-          v-for="amount in betAmounts"
-          :key="amount"
-          @click="selectBet(amount)"
-          class="flex-1 py-2 rounded-lg text-sm font-bold transition-all"
-          :class="selectedBet === amount
-            ? 'bg-cyan-500 text-white'
-            : 'bg-white/8 text-white/60 hover:bg-white/12'"
-        >
-          {{ amount }} 💎
+        <button v-for="amount in betAmounts" :key="amount" @click="selectBet(amount)"
+          class="flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1 transition-all"
+          :style="selectedBet === amount
+            ? { background: 'rgba(34,211,238,0.2)', border: '1px solid rgba(34,211,238,0.4)' }
+            : { background: 'rgba(255,255,255,0.06)', border: '1px solid transparent' }">
+          <span class="text-white/75 text-sm">{{ amount }}</span>
+          <span class="text-white/30 text-xs">▼</span>
         </button>
       </div>
-
-      <!-- Action Row -->
       <div class="flex items-center gap-2">
-        <button class="flex items-center gap-1 px-3 py-2 rounded-lg bg-white/8 text-white/60 text-xs">💎 ☆</button>
-
-        <button
-          @click="playGame"
-          :disabled="isPlaying || balance < selectedBet"
-          class="flex-1 py-3 rounded-xl font-bold text-base transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          style="background: linear-gradient(135deg, #22d3ee, #06b6d4);"
-        >
-          <span class="text-white">Play 💎 {{ selectedBet }}</span>
+        <button class="flex flex-col items-center gap-0.5">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.06);">
+            <div class="w-5 h-5 rounded-full flex items-center justify-center" style="background: #3b82f6;">
+              <span class="text-white text-xs font-bold">▼</span>
+            </div>
+          </div>
+          <span class="text-white/35 text-xs">Swap ☆</span>
         </button>
-
-        <button class="flex items-center gap-1 px-3 py-2 rounded-lg bg-white/8 text-white/60 text-xs">+ Deposit</button>
+        <button @click="playGame" :disabled="isPlaying || balance < selectedBet"
+          class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          style="background: linear-gradient(135deg, #22d3ee, #06b6d4);">
+          {{ isPlaying ? 'Playing...' : `Play ▼ ${selectedBet}` }}
+        </button>
+        <button class="flex flex-col items-center gap-0.5">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center text-white/50 text-lg" style="background: rgba(255,255,255,0.10);">+</div>
+          <span class="text-white/35 text-xs">Deposit</span>
+        </button>
       </div>
-
-      <!-- Hash -->
       <div class="text-center mt-2">
-        <span class="text-white/30 text-xs">⏱ Hash: {{ currentHash }}</span>
+        <span class="text-white/20 text-xs">⏱ Hash: {{ currentHash }}</span>
       </div>
     </div>
   </div>
@@ -112,10 +121,8 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, useTemplateRef, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { gonkaPlay } from '../api/client'
 
-const router = useRouter()
 const gameCanvas = useTemplateRef<HTMLCanvasElement>('gameCanvas')
 
 // State
