@@ -89,24 +89,18 @@
     <div v-else class="px-2 pt-2 pb-24">
       <div class="grid grid-cols-3 gap-1.5">
         <div
-          v-for="listing in displayedListings"
-          :key="listing.id"
+          v-for="item in displayedListings"
+          :key="item.address"
           class="nft-card"
-          @click="openListing(listing)"
+          @click="openListing(item)"
         >
           <!-- Market Badge (top-left) -->
           <div class="market-badge">
-            <img
-              v-if="getMarketIcon(listing.market)"
-              :src="getMarketIcon(listing.market)"
-              class="w-4 h-4"
-              :alt="listing.market"
-            />
-            <span v-else class="market-dot" :class="listing.market"></span>
+            <span class="market-dot" :class="item.market_type || 'getgems'"></span>
           </div>
 
           <!-- Cart Button (top-right) -->
-          <button class="cart-btn" @click.stop="addToCart(listing)">
+          <button class="cart-btn" @click.stop="addToCart(item)">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/>
             </svg>
@@ -115,9 +109,9 @@
           <!-- NFT Image -->
           <div class="nft-image-container">
             <img
-              v-if="listing.nft_image"
-              :src="listing.nft_image"
-              :alt="listing.nft_name"
+              v-if="item.image"
+              :src="item.image"
+              :alt="item.name"
               class="nft-image"
               loading="lazy"
             />
@@ -127,8 +121,8 @@
           </div>
 
           <!-- Price Badge -->
-          <div class="price-badge" :class="getPriceColor(listing.price)">
-            <span class="price-text">{{ formatPrice(listing.price) }}</span>
+          <div class="price-badge" :class="getPriceColor(item.min_bid)">
+            <span class="price-text">{{ formatPrice(item.min_bid) }}</span>
             <span class="ton-icon">💎</span>
           </div>
         </div>
@@ -162,7 +156,8 @@ import axios from 'axios'
 
 const { hapticImpact } = useTelegram()
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+// Major.tg public API - works without auth, no backend needed
+const MAJOR_API = 'https://major.tg/api/v1'
 
 // Loading
 const loading = ref(true)
@@ -182,27 +177,27 @@ const activeDropdown = ref<string | null>(null)
 const sortOrder = ref('price_asc')
 
 // Data
-interface ListingItem {
-  id: number
-  nft_address: string
-  market: string
-  price: string
-  price_usd: string | null
-  seller: string
-  listing_url: string
-  nft_name: string
-  nft_image: string
-  collection_name: string
-  is_active: boolean
+interface MajorNFT {
+  address: string
+  name: string
+  slug: string
+  image: string
+  min_bid: number
+  max_bid: number
+  market_type: string
+  is_on_sale: boolean
+  currency: string
+  description: string
+  owner: string
 }
 
-const listings = ref<ListingItem[]>([])
+const listings = ref<MajorNFT[]>([])
 
-// Unique collections/models from data
-const collections = computed(() => {
+// Unique models from data
+const models = computed(() => {
   const names = new Set<string>()
   listings.value.forEach(l => {
-    const base = l.nft_name?.replace(/#\d+$/, '').trim()
+    const base = l.name?.replace(/#\d+$/, '').trim()
     if (base) names.add(base)
   })
   return Array.from(names).sort()
@@ -214,7 +209,7 @@ const displayedListings = computed(() => {
 
   if (selectedModel.value) {
     filtered = filtered.filter(l =>
-      l.nft_name?.startsWith(selectedModel.value)
+      l.name?.startsWith(selectedModel.value)
     )
   }
 
@@ -226,13 +221,13 @@ const dropdownOptions = computed(() => {
   if (activeDropdown.value === 'collection') {
     return [
       { label: 'Все', value: '' },
-      ...collections.value.map(c => ({ label: c, value: c }))
+      ...models.value.map(c => ({ label: c, value: c }))
     ]
   }
   if (activeDropdown.value === 'model') {
     return [
       { label: 'Любой', value: '' },
-      ...collections.value.map(c => ({ label: c, value: c }))
+      ...models.value.map(c => ({ label: c, value: c }))
     ]
   }
   if (activeDropdown.value === 'background') {
@@ -281,7 +276,7 @@ const selectOption = (value: string) => {
   activeDropdown.value = null
 }
 
-// API
+// Fetch directly from Major.tg API
 const fetchListings = async (append = false) => {
   try {
     if (!append) {
@@ -291,23 +286,23 @@ const fetchListings = async (append = false) => {
       loadingMore.value = true
     }
 
-    const response = await axios.get(`${API_BASE}/api/listings`, {
+    const response = await axios.get(`${MAJOR_API}/nft/list/`, {
       params: {
+        order_by: sortOrder.value,
         limit: limit.value,
         offset: offset.value,
-        sort: sortOrder.value,
       }
     })
 
-    const newListings: ListingItem[] = response.data.listings || []
+    const items: MajorNFT[] = response.data.items || []
 
     if (append) {
-      listings.value.push(...newListings)
+      listings.value.push(...items)
     } else {
-      listings.value = newListings
+      listings.value = items
     }
 
-    hasMore.value = newListings.length >= limit.value
+    hasMore.value = items.length >= limit.value
   } catch (error) {
     console.error('Fetch error:', error)
   } finally {
@@ -323,24 +318,18 @@ const loadMore = () => {
 }
 
 // Helpers
-const formatPrice = (price: string): string => {
-  const num = parseFloat(price)
-  if (num >= 1000) return num.toLocaleString('ru-RU', { maximumFractionDigits: 0 })
-  if (num >= 100) return num.toFixed(0)
-  if (num >= 10) return num.toFixed(2)
-  return num.toFixed(2)
+const formatPrice = (price: number): string => {
+  if (price >= 1000) return price.toLocaleString('ru-RU', { maximumFractionDigits: 0 })
+  if (price >= 100) return price.toFixed(0)
+  if (price >= 10) return price.toFixed(2)
+  return price.toFixed(2)
 }
 
-const getPriceColor = (price: string): string => {
-  const num = parseFloat(price)
-  if (num < 5) return 'price-green'
-  if (num < 25) return 'price-blue'
-  if (num < 100) return 'price-purple'
+const getPriceColor = (price: number): string => {
+  if (price < 5) return 'price-green'
+  if (price < 25) return 'price-blue'
+  if (price < 100) return 'price-purple'
   return 'price-orange'
-}
-
-const getMarketIcon = (_market: string): string | undefined => {
-  return undefined
 }
 
 const applyFilters = () => {
@@ -358,14 +347,12 @@ const resetFilters = () => {
   fetchListings()
 }
 
-const openListing = (listing: ListingItem) => {
+const openListing = (item: MajorNFT) => {
   hapticImpact('medium')
-  if (listing.listing_url) {
-    window.open(listing.listing_url, '_blank')
-  }
+  window.open(`https://major.tg/nft/${item.slug}`, '_blank')
 }
 
-const addToCart = (_listing: ListingItem) => {
+const addToCart = (_item: MajorNFT) => {
   hapticImpact('heavy')
 }
 
