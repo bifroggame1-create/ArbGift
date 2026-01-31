@@ -167,12 +167,12 @@ const upgradeResult = ref<any>(null)
 // Computed
 const inputValue = computed(() => {
   if (!inputGift.value) return 0
-  return parseFloat(String(inputGift.value.min_price_ton || inputGift.value.lowest_price_ton || 0))
+  return parseFloat(String(inputGift.value.min_price_ton || 0))
 })
 
 const targetValue = computed(() => {
   if (!targetGift.value) return 0
-  return parseFloat(String(targetGift.value.min_price_ton || targetGift.value.lowest_price_ton || 0))
+  return parseFloat(String(targetGift.value.min_price_ton || 0))
 })
 
 const probability = computed(() => {

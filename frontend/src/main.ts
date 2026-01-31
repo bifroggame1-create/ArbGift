@@ -7,7 +7,7 @@ import './style.css'
 // Telegram WebApp initialization
 declare global {
   interface Window {
-    Telegram: {
+    Telegram?: {
       WebApp: TelegramWebApp
     }
   }

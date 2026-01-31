@@ -74,12 +74,14 @@ const { hapticImpact } = useTelegram()
 
 // Rarity computation
 const rarity = computed(() => {
-  // Try to determine rarity from gift metadata or attributes
-  const r = props.gift.rarity || props.gift.metadata?.rarity || 'common'
+  // Try to determine rarity from gift attributes
+  const r = props.gift.rarity || 'common'
   return String(r).toLowerCase()
 })
 
-const rarityConfig = {
+type RarityType = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic'
+
+const rarityConfig: Record<RarityType, { gradient: string; badge: string | null }> = {
   common: {
     gradient: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
     badge: null,
@@ -107,14 +109,14 @@ const rarityConfig = {
 }
 
 const cardStyle = computed(() => {
-  const config = rarityConfig[rarity.value] || rarityConfig.common
+  const config = rarityConfig[rarity.value as RarityType] || rarityConfig.common
   return {
     background: config.gradient
   }
 })
 
 const rarityBadge = computed(() => {
-  const config = rarityConfig[rarity.value] || rarityConfig.common
+  const config = rarityConfig[rarity.value as RarityType] || rarityConfig.common
   return config.badge
 })
 
@@ -129,7 +131,7 @@ const serialNumber = computed(() => {
 })
 
 const formattedPrice = computed(() => {
-  const price = props.gift.min_price_ton || props.gift.lowest_price_ton || 0
+  const price = props.gift.min_price_ton || 0
   return parseFloat(String(price)).toFixed(2)
 })
 

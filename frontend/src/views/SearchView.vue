@@ -77,7 +77,7 @@ const results = ref<Gift[]>([])
 const suggestions = ref<string[]>([])
 const loading = ref(false)
 
-let searchTimeout: NodeJS.Timeout
+let searchTimeout: ReturnType<typeof setTimeout>
 
 const onSearchInput = () => {
   // Clear previous timeout

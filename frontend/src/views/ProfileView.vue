@@ -104,9 +104,9 @@ import SettingButton from '../components/SettingButton.vue'
 const { hapticImpact, user } = useTelegram()
 
 // User info
-const username = ref(user?.username || 'Anonymous')
-const userId = ref(user?.id || '0')
-const userInitial = ref((user?.username || 'A')[0].toUpperCase())
+const username = ref(user.value?.username || 'Anonymous')
+const userId = ref(user.value?.id || '0')
+const userInitial = ref((user.value?.username || 'A')[0].toUpperCase())
 const totalBalance = ref(0)
 
 // Stats

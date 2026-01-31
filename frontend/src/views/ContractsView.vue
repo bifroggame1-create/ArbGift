@@ -69,7 +69,7 @@
           <div class="text-5xl">🏆</div>
         </div>
         <div class="mt-3 text-xs text-yellow-300">
-          {{ (selectedRiskLevel?.probability * 100).toFixed(1) }}% chance to win
+          {{ selectedRiskLevel ? (selectedRiskLevel.probability * 100).toFixed(1) : '0.0' }}% chance to win
         </div>
       </div>
     </div>
@@ -204,7 +204,7 @@ const contractResult = ref<any>(null)
 const totalValue = computed(() => {
   return selectedGifts.value.reduce((sum, id) => {
     const gift = userGifts.value.find(g => g.id === id)
-    const price = parseFloat(String(gift?.min_price_ton || gift?.lowest_price_ton || 0))
+    const price = parseFloat(String(gift?.min_price_ton || 0))
     return sum + price
   }, 0)
 })

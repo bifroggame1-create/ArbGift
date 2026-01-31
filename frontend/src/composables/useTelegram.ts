@@ -1,15 +1,7 @@
 /**
  * Telegram WebApp integration composable
  */
-import { ref, onMounted } from 'vue'
-
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp: any
-    }
-  }
-}
+import { ref } from 'vue'
 
 export function useTelegram() {
   const webApp = ref<any>(null)
