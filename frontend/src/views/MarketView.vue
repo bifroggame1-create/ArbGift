@@ -1,240 +1,287 @@
 <template>
-  <div class="market-view min-h-screen bg-[#0e0f14] pb-20">
-    <!-- Header (Portals-style) -->
-    <div class="bg-[#1a1b23] px-4 pt-4 pb-3 sticky top-0 z-10 border-b border-[#2a2b35]">
-      <div class="flex items-center justify-between mb-3">
-        <h1 class="text-2xl font-bold text-white">Маркет</h1>
-        <div class="flex items-center gap-2">
-          <div class="flex items-center gap-1.5 bg-[#2a2b35] px-3 py-1.5 rounded-full">
-            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span class="text-xs text-gray-400">{{ onlineCount }} онлайн</span>
+  <div class="market-view min-h-screen bg-[#1a1a2e]">
+    <!-- Header -->
+    <div class="header-section px-4 pt-3 pb-2">
+      <!-- Filter Dropdowns Row 1 -->
+      <div class="grid grid-cols-2 gap-2 mb-2">
+        <div class="filter-dropdown" @click="toggleDropdown('collection')">
+          <span class="filter-label">Коллекции</span>
+          <div class="filter-value">
+            <span v-if="selectedCollection">{{ selectedCollection }}</span>
+            <span v-else class="text-gray-500">Все</span>
+            <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
+        </div>
+        <div class="filter-dropdown" @click="toggleDropdown('model')">
+          <span class="filter-label">Модель</span>
+          <div class="filter-value">
+            <span v-if="selectedModel">{{ selectedModel }}</span>
+            <span v-else class="text-gray-500">Люб</span>
+            <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
           </div>
         </div>
       </div>
 
-      <!-- Search Bar (Portals-style) -->
-      <div class="relative mb-3">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Поиск по имени или адресу..."
-          class="w-full bg-[#2a2b35] text-white px-4 py-2.5 rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          @input="onSearchInput"
-        />
-        <svg class="w-5 h-5 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      <!-- Filter Dropdowns Row 2 -->
+      <div class="grid grid-cols-2 gap-2 mb-3">
+        <div class="filter-dropdown" @click="toggleDropdown('background')">
+          <span class="filter-label">Фон</span>
+          <div class="filter-value">
+            <span v-if="selectedBg">{{ selectedBg }}</span>
+            <span v-else class="text-gray-500">Люб</span>
+            <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
+        </div>
+        <div class="filter-dropdown" @click="toggleDropdown('symbol')">
+          <span class="filter-label">Символ</span>
+          <div class="filter-value">
+            <span v-if="selectedSymbol">{{ selectedSymbol }}</span>
+            <span v-else class="text-gray-500">Люб</span>
+            <svg class="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter & Reset Buttons -->
+      <button class="filter-btn w-full mb-2" @click="applyFilters">
+        <span>Фильтры</span>
+        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
         </svg>
-      </div>
+      </button>
+      <button class="reset-btn w-full" @click="resetFilters">
+        <span>Сбросить фильтры</span>
+        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    </div>
 
-      <!-- Filters Row (Portals-style) -->
-      <div class="flex gap-2 overflow-x-auto scrollbar-hide">
-        <button
-          v-for="filter in filters"
-          :key="filter.id"
-          @click="toggleFilter(filter.id)"
-          :class="[
-            'px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all',
-            activeFilters.includes(filter.id)
-              ? 'bg-blue-600 text-white'
-              : 'bg-[#2a2b35] text-gray-400 hover:bg-[#353642]'
-          ]"
+    <!-- Dropdown Overlay -->
+    <div v-if="activeDropdown" class="dropdown-overlay" @click="activeDropdown = null">
+      <div class="dropdown-menu" @click.stop>
+        <div
+          v-for="option in dropdownOptions"
+          :key="option.value"
+          class="dropdown-item"
+          :class="{ active: isOptionSelected(option.value) }"
+          @click="selectOption(option.value)"
         >
-          {{ filter.label }}
-        </button>
+          {{ option.label }}
+        </div>
       </div>
     </div>
 
-    <!-- Tabs (Portals-style) -->
-    <div class="sticky top-[180px] bg-[#0e0f14] z-10 px-4 py-2">
-      <div class="flex gap-6">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          @click="activeTab = tab.id"
-          :class="[
-            'py-2 font-semibold transition-all relative text-sm',
-            activeTab === tab.id
-              ? 'text-white'
-              : 'text-gray-500'
-          ]"
-        >
-          {{ tab.label }}
-          <div
-            v-if="activeTab === tab.id"
-            class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"
-          ></div>
-        </button>
-      </div>
+    <!-- Loading -->
+    <div v-if="loading" class="flex items-center justify-center py-20">
+      <div class="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="px-4 py-12 text-center">
-      <div class="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      <p class="text-gray-400 mt-3">Загрузка...</p>
-    </div>
-
-    <!-- Gifts Grid (Portals 1:1 Design) -->
-    <div v-else class="px-4 pt-3">
-      <div class="grid grid-cols-2 gap-3">
+    <!-- NFT Grid -->
+    <div v-else class="px-2 pt-2 pb-24">
+      <div class="grid grid-cols-3 gap-1.5">
         <div
           v-for="listing in displayedListings"
-          :key="`${listing.nft_address}-${listing.market}`"
-          class="gift-card rounded-2xl overflow-hidden cursor-pointer transform hover:scale-[1.02] active:scale-[0.98] transition-all"
-          :style="{ background: getGiftBackground(listing) }"
-          @click="openGift(listing)"
+          :key="listing.id"
+          class="nft-card"
+          @click="openListing(listing)"
         >
-          <!-- Gift Visual (3D Icon/Image) -->
-          <div class="aspect-square flex items-center justify-center p-6 relative">
-            <!-- 3D Model or Image -->
+          <!-- Market Badge (top-left) -->
+          <div class="market-badge">
             <img
-              v-if="listing.image_url"
-              :src="listing.image_url"
-              :alt="listing.name"
-              class="w-full h-full object-contain drop-shadow-2xl"
+              v-if="getMarketIcon(listing.market)"
+              :src="getMarketIcon(listing.market)"
+              class="w-4 h-4"
+              :alt="listing.market"
             />
-            <div v-else class="text-7xl drop-shadow-2xl">
-              {{ getGiftIcon(listing) }}
-            </div>
+            <span v-else class="market-dot" :class="listing.market"></span>
+          </div>
 
-            <!-- Market Badge (top-right corner) -->
-            <div class="absolute top-2 right-2 px-2 py-1 bg-black/50 backdrop-blur-sm rounded-md">
-              <span class="text-[10px] font-semibold text-white uppercase">{{ listing.market }}</span>
+          <!-- Cart Button (top-right) -->
+          <button class="cart-btn" @click.stop="addToCart(listing)">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/>
+            </svg>
+          </button>
+
+          <!-- NFT Image -->
+          <div class="nft-image-container">
+            <img
+              v-if="listing.nft_image"
+              :src="listing.nft_image"
+              :alt="listing.nft_name"
+              class="nft-image"
+              loading="lazy"
+            />
+            <div v-else class="nft-placeholder">
+              <span class="text-4xl">🎁</span>
             </div>
           </div>
 
-          <!-- Gift Info Footer -->
-          <div class="p-3 bg-black/30 backdrop-blur-md">
-            <div class="text-white font-bold text-sm mb-0.5 truncate">{{ listing.name || 'Unknown Gift' }}</div>
-            <div class="text-white/50 text-xs mb-2">#{{ getSerialNumber(listing.nft_address) }}</div>
-
-            <!-- Price Badge (Portals-style) -->
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-1.5 bg-blue-600/90 hover:bg-blue-600 px-3 py-2 rounded-lg flex-1 justify-center">
-                <span class="text-white font-bold text-sm">{{ formatPrice(listing.price) }}</span>
-                <span class="text-xs text-white/80">TON</span>
-              </div>
-
-              <!-- Quick Buy Button -->
-              <button
-                class="w-9 h-9 bg-green-600/90 hover:bg-green-600 rounded-lg flex items-center justify-center"
-                @click.stop="quickBuy(listing)"
-              >
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                </svg>
-              </button>
-            </div>
+          <!-- Price Badge -->
+          <div class="price-badge" :class="getPriceColor(listing.price)">
+            <span class="price-text">{{ formatPrice(listing.price) }}</span>
+            <span class="ton-icon">💎</span>
           </div>
         </div>
       </div>
 
-      <!-- Load More Button -->
-      <div v-if="hasMore" class="mt-6 pb-4 text-center">
+      <!-- Load More -->
+      <div v-if="hasMore && !loading" class="flex justify-center mt-4 mb-4">
         <button
           @click="loadMore"
           :disabled="loadingMore"
-          class="bg-[#2a2b35] hover:bg-[#353642] disabled:opacity-50 text-white px-8 py-3 rounded-xl font-semibold text-sm"
+          class="load-more-btn"
         >
           {{ loadingMore ? 'Загрузка...' : 'Загрузить ещё' }}
         </button>
       </div>
 
       <!-- Empty State -->
-      <div v-if="!loading && displayedListings.length === 0" class="py-16 text-center">
-        <div class="text-6xl mb-4">🎁</div>
-        <p class="text-gray-400 text-lg">Нет доступных NFT</p>
-        <p class="text-gray-500 text-sm mt-2">Попробуйте изменить фильтры</p>
+      <div v-if="!loading && displayedListings.length === 0" class="empty-state">
+        <span class="text-5xl mb-3">🎁</span>
+        <p class="text-gray-400">Нет доступных гифтов</p>
+        <p class="text-gray-500 text-sm mt-1">Попробуйте изменить фильтры</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
 import { useTelegram } from '../composables/useTelegram'
 import axios from 'axios'
 
-const router = useRouter()
 const { hapticImpact } = useTelegram()
 
-// State
-const searchQuery = ref('')
-const activeTab = ref('all')
-const activeFilters = ref<string[]>([])
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
+// Loading
 const loading = ref(true)
 const loadingMore = ref(false)
 const hasMore = ref(true)
-const onlineCount = ref(42)
 
 // Pagination
-const limit = ref(20)
+const limit = ref(30)
 const offset = ref(0)
 
+// Filters
+const selectedCollection = ref('')
+const selectedModel = ref('')
+const selectedBg = ref('')
+const selectedSymbol = ref('')
+const activeDropdown = ref<string | null>(null)
+const sortOrder = ref('price_asc')
+
 // Data
-interface Listing {
+interface ListingItem {
+  id: number
   nft_address: string
   market: string
   price: string
+  price_usd: string | null
   seller: string
   listing_url: string
-  name?: string
-  image_url?: string
-  collection_name?: string
+  nft_name: string
+  nft_image: string
+  collection_name: string
+  is_active: boolean
 }
 
-const listings = ref<Listing[]>([])
+const listings = ref<ListingItem[]>([])
 
-// Tabs Configuration (Portals-style)
-const tabs = [
-  { id: 'all', label: 'Все' },
-  { id: 'getgems', label: 'GetGems' },
-  { id: 'fragment', label: 'Fragment' },
-  { id: 'major', label: 'Major' },
-  { id: 'portals', label: 'Portals' },
-]
-
-// Filters Configuration
-const filters = [
-  { id: 'price_asc', label: '💰 Цена ↑' },
-  { id: 'price_desc', label: '💰 Цена ↓' },
-  { id: 'recent', label: '🆕 Новые' },
-  { id: 'on_sale', label: '🔥 На продаже' },
-]
+// Unique collections/models from data
+const collections = computed(() => {
+  const names = new Set<string>()
+  listings.value.forEach(l => {
+    const base = l.nft_name?.replace(/#\d+$/, '').trim()
+    if (base) names.add(base)
+  })
+  return Array.from(names).sort()
+})
 
 // Computed
 const displayedListings = computed(() => {
   let filtered = [...listings.value]
 
-  // Filter by market tab
-  if (activeTab.value !== 'all') {
-    filtered = filtered.filter(l => l.market === activeTab.value)
-  }
-
-  // Filter by search query
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase()
+  if (selectedModel.value) {
     filtered = filtered.filter(l =>
-      (l.name?.toLowerCase().includes(query)) ||
-      l.nft_address.toLowerCase().includes(query) ||
-      (l.collection_name?.toLowerCase().includes(query))
+      l.nft_name?.startsWith(selectedModel.value)
     )
-  }
-
-  // Sort by active filters
-  if (activeFilters.value.includes('price_asc')) {
-    filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price))
-  } else if (activeFilters.value.includes('price_desc')) {
-    filtered.sort((a, b) => parseFloat(b.price) - parseFloat(a.price))
   }
 
   return filtered
 })
 
-// API Base URL
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+// Dropdown logic
+const dropdownOptions = computed(() => {
+  if (activeDropdown.value === 'collection') {
+    return [
+      { label: 'Все', value: '' },
+      ...collections.value.map(c => ({ label: c, value: c }))
+    ]
+  }
+  if (activeDropdown.value === 'model') {
+    return [
+      { label: 'Любой', value: '' },
+      ...collections.value.map(c => ({ label: c, value: c }))
+    ]
+  }
+  if (activeDropdown.value === 'background') {
+    return [
+      { label: 'Любой', value: '' },
+      { label: 'Зелёный', value: 'green' },
+      { label: 'Синий', value: 'blue' },
+      { label: 'Красный', value: 'red' },
+      { label: 'Фиолетовый', value: 'purple' },
+      { label: 'Оранжевый', value: 'orange' },
+    ]
+  }
+  if (activeDropdown.value === 'symbol') {
+    return [
+      { label: 'Любой', value: '' },
+    ]
+  }
+  return []
+})
 
-// Fetch Listings from Backend
+const toggleDropdown = (type: string) => {
+  hapticImpact('light')
+  activeDropdown.value = activeDropdown.value === type ? null : type
+}
+
+const isOptionSelected = (value: string) => {
+  const map: Record<string, any> = {
+    collection: selectedCollection,
+    model: selectedModel,
+    background: selectedBg,
+    symbol: selectedSymbol,
+  }
+  return map[activeDropdown.value!]?.value === value
+}
+
+const selectOption = (value: string) => {
+  const map: Record<string, any> = {
+    collection: selectedCollection,
+    model: selectedModel,
+    background: selectedBg,
+    symbol: selectedSymbol,
+  }
+  if (map[activeDropdown.value!]) {
+    map[activeDropdown.value!].value = value
+  }
+  activeDropdown.value = null
+}
+
+// API
 const fetchListings = async (append = false) => {
   try {
     if (!append) {
@@ -244,51 +291,31 @@ const fetchListings = async (append = false) => {
       loadingMore.value = true
     }
 
-    const response = await axios.get(`${API_BASE}/api/nfts`, {
+    const response = await axios.get(`${API_BASE}/api/listings`, {
       params: {
-        on_sale: true,
         limit: limit.value,
         offset: offset.value,
+        sort: sortOrder.value,
       }
     })
 
-    const newListings = response.data.nfts || []
-
-    // Extract listings from NFTs
-    const extractedListings: Listing[] = []
-    for (const nft of newListings) {
-      if (nft.listings && nft.listings.length > 0) {
-        for (const listing of nft.listings) {
-          extractedListings.push({
-            nft_address: nft.address,
-            market: listing.market,
-            price: listing.price,
-            seller: listing.seller,
-            listing_url: listing.listing_url,
-            name: nft.name,
-            image_url: nft.image_url,
-            collection_name: nft.collection_name,
-          })
-        }
-      }
-    }
+    const newListings: ListingItem[] = response.data.listings || []
 
     if (append) {
-      listings.value.push(...extractedListings)
+      listings.value.push(...newListings)
     } else {
-      listings.value = extractedListings
+      listings.value = newListings
     }
 
     hasMore.value = newListings.length >= limit.value
   } catch (error) {
-    console.error('Error fetching listings:', error)
+    console.error('Fetch error:', error)
   } finally {
     loading.value = false
     loadingMore.value = false
   }
 }
 
-// Load More
 const loadMore = () => {
   hapticImpact('light')
   offset.value += limit.value
@@ -296,108 +323,307 @@ const loadMore = () => {
 }
 
 // Helpers
-const getGiftBackground = (listing: Listing): string => {
-  // Generate gradient based on market or price
-  const gradients: Record<string, string> = {
-    getgems: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-    fragment: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-    major: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    portals: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
-    'ton.diamonds': 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-  }
-
-  return gradients[listing.market] || 'linear-gradient(135deg, #64748b 0%, #475569 100%)'
-}
-
-const getGiftIcon = (listing: Listing): string => {
-  // Default icons by market
-  const icons: Record<string, string> = {
-    getgems: '💎',
-    fragment: '👤',
-    major: '🎮',
-    portals: '🎁',
-    'ton.diamonds': '💍',
-  }
-
-  return icons[listing.market] || '🎁'
-}
-
-const getSerialNumber = (address: string): string => {
-  // Extract last 6 chars as serial
-  return address.slice(-6).toUpperCase()
-}
-
 const formatPrice = (price: string): string => {
   const num = parseFloat(price)
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K'
-  if (num >= 1) return num.toFixed(2)
-  return num.toFixed(4)
+  if (num >= 1000) return num.toLocaleString('ru-RU', { maximumFractionDigits: 0 })
+  if (num >= 100) return num.toFixed(0)
+  if (num >= 10) return num.toFixed(2)
+  return num.toFixed(2)
 }
 
-// Actions
-const toggleFilter = (filterId: string) => {
-  hapticImpact('light')
-
-  // Only one sort filter at a time
-  if (filterId.startsWith('price_') || filterId === 'recent') {
-    activeFilters.value = activeFilters.value.filter(f => !f.startsWith('price_') && f !== 'recent')
-  }
-
-  const index = activeFilters.value.indexOf(filterId)
-  if (index > -1) {
-    activeFilters.value.splice(index, 1)
-  } else {
-    activeFilters.value.push(filterId)
-  }
+const getPriceColor = (price: string): string => {
+  const num = parseFloat(price)
+  if (num < 5) return 'price-green'
+  if (num < 25) return 'price-blue'
+  if (num < 100) return 'price-purple'
+  return 'price-orange'
 }
 
-const onSearchInput = () => {
-  // Debounce search would go here
+const getMarketIcon = (market: string): string | null => {
+  // Could return actual icon URLs here
+  return null
 }
 
-const openGift = (listing: Listing) => {
+const applyFilters = () => {
   hapticImpact('medium')
-  router.push(`/gift/${listing.nft_address}`)
+  fetchListings()
 }
 
-const quickBuy = (listing: Listing) => {
-  hapticImpact('heavy')
-  // Open listing URL in new tab or modal
-  window.open(listing.listing_url, '_blank')
-}
-
-// Watch tab changes
-watch(activeTab, () => {
+const resetFilters = () => {
   hapticImpact('light')
-})
+  selectedCollection.value = ''
+  selectedModel.value = ''
+  selectedBg.value = ''
+  selectedSymbol.value = ''
+  sortOrder.value = 'price_asc'
+  fetchListings()
+}
 
-// Initialize
+const openListing = (listing: ListingItem) => {
+  hapticImpact('medium')
+  if (listing.listing_url) {
+    window.open(listing.listing_url, '_blank')
+  }
+}
+
+const addToCart = (listing: ListingItem) => {
+  hapticImpact('heavy')
+  // TODO: cart functionality
+}
+
 onMounted(() => {
   fetchListings()
-
-  // Simulate online count updates
-  setInterval(() => {
-    onlineCount.value = Math.floor(Math.random() * 20) + 30
-  }, 10000)
 })
 </script>
 
 <style scoped>
 .market-view {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
 }
 
-.gift-card {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  will-change: transform;
+/* Filter Dropdowns */
+.filter-dropdown {
+  background: #252540;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.filter-dropdown:active {
+  background: #2d2d50;
+}
+.filter-label {
+  display: block;
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 2px;
+}
+.filter-value {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #fff;
 }
 
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+/* Filter/Reset Buttons */
+.filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #252540;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.filter-btn:active {
+  background: #2d2d50;
+}
+.reset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(180, 40, 40, 0.3);
+  color: #e74c4c;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.reset-btn:active {
+  background: rgba(180, 40, 40, 0.5);
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+/* Dropdown Overlay */
+.dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.dropdown-menu {
+  background: #252540;
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.dropdown-item {
+  padding: 14px 20px;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dropdown-item:active,
+.dropdown-item.active {
+  background: #3a3a60;
+  color: #4fc3f7;
+}
+
+/* NFT Card */
+.nft-card {
+  position: relative;
+  background: #252540;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.nft-card:active {
+  transform: scale(0.97);
+}
+
+/* Market Badge */
+.market-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.market-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.market-dot.getgems {
+  background: #4fc3f7;
+}
+.market-dot.fragment {
+  background: #ab47bc;
+}
+.market-dot.major {
+  background: #66bb6a;
+}
+
+/* Cart Button */
+.cart-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cart-btn:active {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+
+/* NFT Image */
+.nft-image-container {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+.nft-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.nft-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Price Badge */
+.price-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 8px 8px 8px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.price-text {
+  color: #fff;
+}
+.ton-icon {
+  font-size: 11px;
+}
+.price-green {
+  background: #2e7d32;
+}
+.price-blue {
+  background: #1565c0;
+}
+.price-purple {
+  background: #7b1fa2;
+}
+.price-orange {
+  background: #e65100;
+}
+
+/* Load More */
+.load-more-btn {
+  background: #252540;
+  color: #fff;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.load-more-btn:active {
+  background: #2d2d50;
+}
+.load-more-btn:disabled {
+  opacity: 0.5;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 </style>

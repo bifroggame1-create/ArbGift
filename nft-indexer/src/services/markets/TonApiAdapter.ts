@@ -171,6 +171,12 @@ export class TonApiAdapter {
       }
     }
 
+    // Если не удалось получить данные с TonAPI — не деактивируем ничего
+    if (activeSales.size === 0) {
+      console.log(`[TonApiAdapter] ⚠️ No active sales data from API, skipping deactivation`);
+      return;
+    }
+
     // Деактивируем listings которых нет в active sales
     const dbListings = await DB.query<{ nft_address: string; sale_contract_address: string }>(
       `SELECT nft_address, sale_contract_address
