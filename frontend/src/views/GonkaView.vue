@@ -113,6 +113,7 @@
 <script setup lang="ts">
 import { ref, onUnmounted, useTemplateRef, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { gonkaPlay } from '../api/client'
 
 const router = useRouter()
 const gameCanvas = useTemplateRef<HTMLCanvasElement>('gameCanvas')
@@ -172,17 +173,7 @@ function generateHash(): string {
   return Math.random().toString(36).substring(2, 6) + '...' + Math.random().toString(36).substring(2, 6)
 }
 
-// Simulate drop — weighted by ball counts (more balls = higher probability)
-function simulateDrop(): number {
-  const cells = gridCells.value
-  const totalBalls = cells.reduce((sum, c) => sum + c.balls, 0)
-  let r = Math.random() * totalBalls
-  for (let i = 0; i < cells.length; i++) {
-    r -= cells[i].balls
-    if (r <= 0) return i
-  }
-  return cells.length - 1
-}
+let nonce = Date.now()
 
 // Animation
 let animationId: number | null = null
@@ -193,10 +184,28 @@ async function playGame() {
 
   isPlaying.value = true
   balance.value -= selectedBet.value
-  currentHash.value = generateHash()
   highlightedCell.value = -1
 
-  const resultCell = simulateDrop()
+  let resultCell = 4 // fallback center
+  try {
+    nonce++
+    const serverResult = await gonkaPlay({
+      amount: selectedBet.value,
+      mode: mode.value,
+      client_seed: generateHash(),
+      nonce,
+      user_id: 'anonymous'
+    })
+    resultCell = serverResult.cell_index
+    currentHash.value = serverResult.server_seed_hash
+  } catch {
+    // Fallback: client-side weighted drop
+    const cells = gridCells.value
+    const totalBalls = cells.reduce((sum, c) => sum + c.balls, 0)
+    let r = Math.random() * totalBalls
+    for (let i = 0; i < cells.length; i++) { r -= cells[i].balls; if (r <= 0) { resultCell = i; break } }
+    currentHash.value = generateHash()
+  }
 
   // Wait for canvas to render
   await new Promise(r => setTimeout(r, 50))

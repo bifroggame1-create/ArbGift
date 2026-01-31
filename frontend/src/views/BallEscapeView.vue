@@ -81,6 +81,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
+import { escapePlay } from '../api/client'
 
 const router = useRouter()
 const gameCanvas = useTemplateRef<HTMLCanvasElement>('gameCanvas')
@@ -126,21 +127,39 @@ function onTap() {
   targetAngle = charAngle + (Math.random() - 0.3) * Math.PI * 0.8
 }
 
-function startGame() {
+let nonce = Date.now()
+
+async function startGame() {
   if (gameState.value === 'playing' || balance.value < selectedBet.value) return
 
   balance.value -= selectedBet.value
   gameState.value = 'playing'
-  currentHash.value = generateHash()
   progress = 0
   multiplier = 1.0
   charAngle = -Math.PI / 2 + (Math.random() - 0.5) * 0.5
   targetAngle = charAngle
 
-  // Pre-determine result based on house edge
-  // ~35% chance to escape (win), 65% chance caught (lose)
-  const willEscape = Math.random() < 0.35
-  const gameDuration = 3000 + Math.random() * 2000 // 3-5 seconds
+  // Get server-determined result (kept hidden until animation ends)
+  let willEscape = Math.random() < 0.35
+  let gameDuration = 3000 + Math.random() * 2000
+  let serverMultiplier = 3.75
+
+  try {
+    nonce++
+    const serverResult = await escapePlay({
+      amount: selectedBet.value,
+      client_seed: generateHash(),
+      nonce,
+      user_id: 'anonymous'
+    })
+    willEscape = serverResult.escaped
+    gameDuration = serverResult.duration_ms
+    serverMultiplier = serverResult.multiplier
+    currentHash.value = serverResult.server_seed_hash
+  } catch {
+    currentHash.value = generateHash()
+  }
+
   const startTime = Date.now()
 
   function gameLoop() {
@@ -154,11 +173,12 @@ function startGame() {
 
     // If game ending, determine escape
     if (progress >= 1) {
+      multiplier = serverMultiplier
       if (willEscape) {
         // Character escapes to green zone
         charAngle = GREEN_START + Math.PI * 0.3 + Math.random() * 0.5
         gameState.value = 'won'
-        balance.value += selectedBet.value * multiplier
+        balance.value += selectedBet.value * serverMultiplier
       } else {
         // Character caught in red zone
         charAngle = RED_START + Math.PI * 0.3 + Math.random() * 0.3

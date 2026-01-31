@@ -75,6 +75,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
+import { plinkoPlay } from '../api/client'
 
 const router = useRouter()
 const gameCanvas = useTemplateRef<HTMLCanvasElement>('gameCanvas')
@@ -122,17 +123,7 @@ function generateHash(): string {
   return Math.random().toString(36).substring(2, 6) + '...' + Math.random().toString(36).substring(2, 6)
 }
 
-// Simulate server-side drop result
-function simulateDrop(): number {
-  // Weighted random — center slots more likely (like real plinko physics)
-  const weights = [0.02, 0.03, 0.1, 0.15, 0.2, 0.15, 0.1, 0.03, 0.02]
-  let r = Math.random()
-  for (let i = 0; i < weights.length; i++) {
-    r -= weights[i]
-    if (r <= 0) return i
-  }
-  return 4
-}
+let nonce = Date.now()
 
 function computePegLayout() {
   pegPositions = []
@@ -205,12 +196,30 @@ async function playGame() {
 
   isPlaying.value = true
   balance.value -= selectedBet.value
-  currentHash.value = generateHash()
 
-  // Determine result
-  targetSlot = simulateDrop()
+  let serverResult: any = null
+  try {
+    nonce++
+    serverResult = await plinkoPlay({
+      amount: selectedBet.value,
+      client_seed: generateHash(),
+      nonce,
+      user_id: 'anonymous'
+    })
+    targetSlot = serverResult.landing_slot
+    currentHash.value = serverResult.server_seed_hash
+    resultMultiplier = serverResult.multiplier
+  } catch {
+    // Fallback: client-side weighted drop if backend unavailable
+    const weights = [0.02, 0.03, 0.1, 0.15, 0.2, 0.15, 0.1, 0.03, 0.02]
+    let r = Math.random()
+    targetSlot = 4
+    for (let i = 0; i < weights.length; i++) { r -= weights[i]; if (r <= 0) { targetSlot = i; break } }
+    currentHash.value = generateHash()
+    resultMultiplier = SLOT_MULTIPLIERS[targetSlot]
+  }
+
   ballPath = generateBallPath(targetSlot)
-  resultMultiplier = SLOT_MULTIPLIERS[targetSlot]
 
   // Animate ball
   animPhase = 1
