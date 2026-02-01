@@ -34,8 +34,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
 COPY app ./app
-COPY alembic ./alembic
-COPY alembic.ini .
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash appuser
