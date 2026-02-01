@@ -26,7 +26,7 @@ class Base(DeclarativeBase):
 
 # Create async engine
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    settings.database_url_async,
     pool_size=settings.DATABASE_POOL_SIZE,
     max_overflow=settings.DATABASE_MAX_OVERFLOW,
     echo=settings.DEBUG,
@@ -46,8 +46,8 @@ async def init_db():
         # Import all models to register them
         from app.models import Collection, NFT, Listing, Market, Sale  # noqa
 
-        # Create tables (for development - use Alembic in production)
-        # await conn.run_sync(Base.metadata.create_all)
+        # Create tables automatically
+        await conn.run_sync(Base.metadata.create_all)
 
     logger.info("Database initialized")
 

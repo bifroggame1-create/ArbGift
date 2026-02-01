@@ -22,6 +22,16 @@ class Settings(BaseSettings):
     # DATABASE
     # ============================================================
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/ton_gifts"
+
+    @property
+    def database_url_async(self) -> str:
+        """Convert DATABASE_URL to asyncpg format (Render gives postgres://)."""
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
 

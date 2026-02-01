@@ -13,8 +13,19 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.core.database import init_db, close_db
 from app.api.v1.gifts import router as gifts_router
-from app.api.v1.search import router as search_router
-from app.api.websocket import router as websocket_router
+
+# Optional dependencies: search (Meilisearch) and websocket (Redis)
+try:
+    from app.api.v1.search import router as search_router
+except Exception:
+    search_router = None
+    logging.getLogger(__name__).warning("Search router unavailable (Meilisearch not configured)")
+
+try:
+    from app.api.websocket import router as websocket_router
+except Exception:
+    websocket_router = None
+    logging.getLogger(__name__).warning("WebSocket router unavailable (Redis not configured)")
 
 # Configure logging
 logging.basicConfig(
@@ -113,17 +124,19 @@ app.include_router(
     tags=["Gifts"],
 )
 
-app.include_router(
-    search_router,
-    prefix="/api/v1",
-    tags=["Search"],
-)
+if search_router:
+    app.include_router(
+        search_router,
+        prefix="/api/v1",
+        tags=["Search"],
+    )
 
-app.include_router(
-    websocket_router,
-    prefix="/ws",
-    tags=["WebSocket"],
-)
+if websocket_router:
+    app.include_router(
+        websocket_router,
+        prefix="/ws",
+        tags=["WebSocket"],
+    )
 
 
 # Markets endpoint
@@ -203,40 +216,36 @@ async def get_stats():
 # Admin endpoints (protected in production)
 @app.post("/api/v1/admin/index-collection", tags=["Admin"])
 async def trigger_index_collection(collection_address: str):
-    """
-    Trigger collection indexing.
-
-    In production, this should be protected with authentication.
-    """
-    from app.workers.tasks.index_collection import index_collection
-
-    task = index_collection.delay(collection_address)
-    return {
-        "task_id": task.id,
-        "status": "queued",
-        "collection_address": collection_address,
-    }
+    """Trigger collection indexing (requires Celery/Redis)."""
+    try:
+        from app.workers.tasks.index_collection import index_collection
+        task = index_collection.delay(collection_address)
+        return {
+            "task_id": task.id,
+            "status": "queued",
+            "collection_address": collection_address,
+        }
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"detail": f"Celery unavailable: {e}"})
 
 
 @app.post("/api/v1/admin/sync-listings", tags=["Admin"])
 async def trigger_sync_listings(market_slug: str = None):
-    """
-    Trigger listings sync.
-
-    In production, this should be protected with authentication.
-    """
-    if market_slug:
-        from app.workers.tasks.sync_listings import sync_single_market
-        task = sync_single_market.delay(market_slug)
-    else:
-        from app.workers.tasks.sync_listings import sync_all_listings
-        task = sync_all_listings.delay()
-
-    return {
-        "task_id": task.id,
-        "status": "queued",
-        "market": market_slug or "all",
-    }
+    """Trigger listings sync (requires Celery/Redis)."""
+    try:
+        if market_slug:
+            from app.workers.tasks.sync_listings import sync_single_market
+            task = sync_single_market.delay(market_slug)
+        else:
+            from app.workers.tasks.sync_listings import sync_all_listings
+            task = sync_all_listings.delay()
+        return {
+            "task_id": task.id,
+            "status": "queued",
+            "market": market_slug or "all",
+        }
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"detail": f"Celery unavailable: {e}"})
 
 
 if __name__ == "__main__":

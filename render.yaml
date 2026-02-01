@@ -1,0 +1,37 @@
+databases:
+  - name: ton-gifts-db
+    plan: free
+    databaseName: ton_gifts
+    user: ton_gifts_user
+
+services:
+  # Main API
+  - type: web
+    name: ton-gifts-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ton-gifts-db
+          property: connectionString
+      - key: REDIS_URL
+        value: ""
+      - key: CELERY_BROKER_URL
+        value: ""
+      - key: CELERY_RESULT_BACKEND
+        value: ""
+      - key: MEILISEARCH_URL
+        value: ""
+      - key: TONAPI_KEY
+        sync: false
+      - key: DEBUG
+        value: "true"
+      - key: LOG_LEVEL
+        value: "DEBUG"
+      - key: DATABASE_POOL_SIZE
+        value: "5"
+      - key: DATABASE_MAX_OVERFLOW
+        value: "3"
+    healthCheckPath: /health
