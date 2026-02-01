@@ -1,540 +1,955 @@
 <template>
-  <div class="plinko-view min-h-screen flex flex-col" style="background: #000; padding-bottom: 16px;">
-    <div class="px-3 pt-3 flex flex-col gap-2">
-      <!-- Tournament Banner -->
-      <div class="rounded-xl px-4 py-2.5 flex items-center justify-between"
-        style="background: linear-gradient(135deg, #ca8a04 0%, #22c55e 60%, #4ade80 100%);">
-        <span class="text-white font-bold text-sm">Giftomania</span>
-        <span class="text-white/70 text-xs font-mono">3:04:57:06</span>
+  <div class="plinko-view">
+    <!-- Animated stars background -->
+    <div class="stars-bg">
+      <div v-for="i in 20" :key="i" class="star" :style="getStarStyle(i)"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="plinko-header">
+      <button class="header-back" @click="$router.push('/solo')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+      <div class="header-title">
+        <span class="title-main">Plinko</span>
+        <span class="title-badge">x1000</span>
       </div>
-      <!-- Header Row -->
-      <div class="flex items-center justify-between">
-        <div class="flex gap-2">
-          <button class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.06);">
-            <svg class="w-4 h-4" fill="none" stroke="rgba(255,255,255,0.45)" viewBox="0 0 24 24">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="1.5"/>
-              <path d="M16 2v4M8 2v4M3 10h18" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <div class="flex items-center gap-1 rounded-full px-3 py-1" style="background: rgba(255,255,255,0.08);">
-            <span class="text-white/50 text-xs">Max Prize</span>
-            <span class="text-white/40 text-xs">▼</span>
-            <span class="text-white font-bold text-sm">30</span>
-          </div>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <button class="flex items-center gap-1.5 rounded-full px-3 py-1.5" style="background: rgba(255,255,255,0.08);">
-            <span class="text-white/45 text-xs">▼</span>
-            <span class="text-white font-bold text-sm">{{ balance.toFixed(2) }}</span>
-          </button>
-          <button class="w-7 h-7 rounded-full flex items-center justify-center text-white/50 text-sm" style="background: rgba(255,255,255,0.12);">+</button>
-        </div>
+      <div class="header-balance">
+        <span class="balance-icon">💎</span>
+        <span class="balance-value">{{ balance.toFixed(2) }}</span>
+        <button class="balance-add">+</button>
+      </div>
+    </header>
+
+    <!-- Game Info Bar -->
+    <div class="game-info-bar">
+      <div class="info-item">
+        <span class="info-label">ИГРА</span>
+        <span class="info-value">#{{ gameNumber }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">РИСК</span>
+        <select v-model="riskLevel" class="risk-select">
+          <option value="low">Низкий</option>
+          <option value="medium">Средний</option>
+          <option value="high">Высокий</option>
+        </select>
+      </div>
+      <div class="info-item">
+        <span class="info-label">РЯДЫ</span>
+        <select v-model="rowCount" class="rows-select">
+          <option :value="8">8</option>
+          <option :value="12">12</option>
+          <option :value="16">16</option>
+        </select>
       </div>
     </div>
 
-    <!-- Game Canvas Area -->
-    <div class="mx-3 mt-2 flex-1 flex items-center justify-center" style="min-height: 360px;">
+    <!-- Game Canvas -->
+    <div class="game-container">
       <canvas
         ref="gameCanvas"
-        class="w-full"
-        style="max-width: 380px;"
+        class="game-canvas"
         :width="canvasWidth"
         :height="canvasHeight"
       ></canvas>
+
+      <!-- Result Overlay -->
+      <div v-if="showResult" class="result-overlay" :class="{ win: lastWin > 0, lose: lastWin <= 0 }">
+        <div class="result-multiplier">{{ lastMultiplier }}x</div>
+        <div class="result-amount" :class="{ positive: lastWin > 0 }">
+          {{ lastWin > 0 ? '+' : '' }}{{ lastWin.toFixed(2) }} TON
+        </div>
+      </div>
     </div>
 
-    <!-- Bottom Controls -->
-    <div class="px-3 py-3">
-      <div class="flex gap-2 mb-3">
-        <button v-for="amount in betAmounts" :key="amount" @click="selectBet(amount)"
-          class="flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1 transition-all"
-          :style="selectedBet === amount
-            ? { background: 'rgba(34,211,238,0.2)', border: '1px solid rgba(34,211,238,0.4)' }
-            : { background: 'rgba(255,255,255,0.06)', border: '1px solid transparent' }">
-          <span class="text-white/75 text-sm">{{ amount }}</span>
-          <span class="text-white/30 text-xs">▼</span>
-        </button>
-      </div>
-      <div class="flex items-center gap-2">
-        <button class="flex flex-col items-center gap-0.5">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.06);">
-            <div class="w-5 h-5 rounded-full flex items-center justify-center" style="background: #3b82f6;">
-              <span class="text-white text-xs font-bold">▼</span>
-            </div>
-          </div>
-          <span class="text-white/35 text-xs">Swap ☆</span>
-        </button>
-        <button @click="playGame" :disabled="isPlaying || balance < selectedBet"
-          class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          style="background: linear-gradient(135deg, #22d3ee, #06b6d4);">
-          {{ isPlaying ? 'Dropping...' : `Play ▼ ${selectedBet}` }}
-        </button>
-        <button class="flex flex-col items-center gap-0.5">
-          <div class="w-10 h-10 rounded-full flex items-center justify-center text-white/50 text-lg" style="background: rgba(255,255,255,0.10);">+</div>
-          <span class="text-white/35 text-xs">Deposit</span>
-        </button>
-      </div>
-      <div class="text-center mt-2">
-        <span class="text-white/20 text-xs">⏱ Hash: {{ currentHash }}</span>
+    <!-- Multiplier Slots Preview -->
+    <div class="multipliers-row">
+      <div
+        v-for="(mult, i) in currentMultipliers"
+        :key="i"
+        :class="['mult-slot', getMultiplierClass(mult)]"
+      >
+        {{ mult }}x
       </div>
     </div>
+
+    <!-- Bet Controls -->
+    <div class="bet-section">
+      <div class="bet-amounts">
+        <button
+          v-for="amount in betAmounts"
+          :key="amount"
+          :class="['bet-btn', { active: selectedBet === amount }]"
+          @click="selectedBet = amount"
+          :disabled="isPlaying"
+        >
+          {{ amount }} 💎
+        </button>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-half" @click="halveBet" :disabled="isPlaying">½</button>
+        <button
+          class="btn-play"
+          @click="playGame"
+          :disabled="isPlaying || balance < selectedBet"
+        >
+          <span v-if="isPlaying" class="loading-spinner"></span>
+          <span v-else>{{ isPlaying ? 'Игра...' : `Играть ${selectedBet} TON` }}</span>
+        </button>
+        <button class="btn-double" @click="doubleBet" :disabled="isPlaying">2x</button>
+      </div>
+
+      <div class="auto-play">
+        <label class="auto-label">
+          <input type="checkbox" v-model="autoPlay" :disabled="isPlaying" />
+          <span>Авто-игра</span>
+        </label>
+        <input
+          v-if="autoPlay"
+          type="number"
+          v-model.number="autoPlayCount"
+          class="auto-count"
+          min="1"
+          max="100"
+          placeholder="Кол-во"
+        />
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="history-section">
+      <div class="history-header">
+        <span>История</span>
+        <span class="history-clear" @click="history = []">Очистить</span>
+      </div>
+      <div class="history-list">
+        <div
+          v-for="(item, i) in history.slice(0, 10)"
+          :key="i"
+          :class="['history-item', { win: item.win > 0 }]"
+        >
+          <span class="history-mult">{{ item.multiplier }}x</span>
+          <span class="history-amount">{{ item.win > 0 ? '+' : '' }}{{ item.win.toFixed(2) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <router-link to="/pvp" class="nav-item">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4l4 4m8 8l4 4M4 20l4-4m8-8l4-4M12 12l-8 8m16 0l-8-8m0 0l8-8M4 4l8 8"/>
+        </svg>
+        <span>ПвП</span>
+      </router-link>
+      <router-link to="/solo" class="nav-item active">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <span>Соло</span>
+      </router-link>
+      <router-link to="/inventory" class="nav-item">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+        <span>Инвентарь</span>
+      </router-link>
+      <router-link to="/shop" class="nav-item">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Магазин</span>
+      </router-link>
+      <router-link to="/profile" class="nav-item">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>Профиль</span>
+      </router-link>
+    </nav>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, useTemplateRef } from 'vue'
-import { plinkoPlay } from '../api/client'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 
-const gameCanvas = useTemplateRef<HTMLCanvasElement>('gameCanvas')
+interface HistoryItem {
+  multiplier: number
+  win: number
+  bet: number
+}
 
+// Game state
 const balance = ref(5.16)
-const betAmounts = [1, 3, 10, 30, 50]
-const selectedBet = ref(1)
+const gameNumber = ref(48291)
 const isPlaying = ref(false)
-const currentHash = ref('624a...a8fa')
+const showResult = ref(false)
+const lastMultiplier = ref(0)
+const lastWin = ref(0)
 
-const canvasWidth = 380
-const canvasHeight = 360
+// Settings
+const riskLevel = ref<'low' | 'medium' | 'high'>('medium')
+const rowCount = ref(12)
+const betAmounts = [0.5, 1, 2, 5, 10]
+const selectedBet = ref(1)
+const autoPlay = ref(false)
+const autoPlayCount = ref(10)
+const history = ref<HistoryItem[]>([])
 
-// Peg grid
-const ROWS = 12
-const PEG_RADIUS = 4.5
-const BALL_RADIUS = 7
-const GRAVITY = 0.32
-const COR = 0.52 // coefficient of restitution
+// Canvas
+const gameCanvas = ref<HTMLCanvasElement | null>(null)
+const canvasWidth = 340
+const canvasHeight = 280
 
-const SLOT_LABELS = ['💀', '🎁', '2.0x', '0.7x', '0.6x', '0.7x', '2.0x', '🎁', '💀']
-const SLOT_MULTIPLIERS = [0, 0, 2.0, 0.7, 0.6, 0.7, 2.0, 0, 0]
-const SLOT_COLORS = ['#ef4444', '#f59e0b', '#22d3ee', '#a78bfa', '#6366f1', '#a78bfa', '#22d3ee', '#f59e0b', '#ef4444']
-
-// Layout constants
-const TOP_Y = 52
-const BOTTOM_Y = canvasHeight - 58
-const ROW_HEIGHT = (BOTTOM_Y - TOP_Y) / ROWS
-const COL_SPACING = 18
-const NUM_SLOTS = 9
-const SLOT_WIDTH = canvasWidth / NUM_SLOTS
-
-// Peg positions per row
-interface PegPos { x: number; y: number }
-let pegRows: PegPos[][] = []
-
-function computeLayout() {
-  pegRows = []
-  const centerX = canvasWidth / 2
-  for (let row = 0; row < ROWS; row++) {
-    const numPegs = row + 3
-    const rowPegs: PegPos[] = []
-    const totalSpan = (numPegs - 1) * COL_SPACING
-    const startX = centerX - totalSpan / 2
-    for (let col = 0; col < numPegs; col++) {
-      rowPegs.push({ x: startX + col * COL_SPACING, y: TOP_Y + row * ROW_HEIGHT })
-    }
-    pegRows.push(rowPegs)
+// Multipliers based on risk
+const multiplierSets = {
+  low: {
+    8: [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6],
+    12: [8.9, 3, 1.4, 1.1, 1, 0.5, 1, 1.1, 1.4, 3, 8.9],
+    16: [16, 9, 2, 1.4, 1.1, 1, 0.5, 1, 1.1, 1.4, 2, 9, 16]
+  },
+  medium: {
+    8: [13, 3, 1.3, 0.7, 0.4, 0.7, 1.3, 3, 13],
+    12: [33, 11, 4, 2, 1.1, 0.6, 0.3, 0.6, 1.1, 2, 4, 11, 33],
+    16: [110, 41, 10, 5, 3, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 3, 5, 10, 41, 110]
+  },
+  high: {
+    8: [29, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 29],
+    12: [170, 24, 8.1, 2, 0.7, 0.2, 0.2, 0.7, 2, 8.1, 24, 170],
+    16: [1000, 130, 26, 9, 4, 2, 0.2, 0.2, 0.2, 0.2, 2, 4, 9, 26, 130, 1000]
   }
 }
 
-// Physics ball state
-let ball: { x: number; y: number; vx: number; vy: number } | null = null
-let targetSlot = 4
-let rowTargets: number[] = [] // X target per row for steering
-let lastBounceRow = -1
-let animPhase = 0 // 0=idle, 1=dropping, 2=result
+const currentMultipliers = computed(() => {
+  const set = multiplierSets[riskLevel.value]
+  return set[rowCount.value as keyof typeof set] || set[12]
+})
+
+// Plinko physics
+const PEG_RADIUS = 4
+const BALL_RADIUS = 6
+const GRAVITY = 0.25
+const BOUNCE = 0.7
+
+interface Ball {
+  x: number
+  y: number
+  vx: number
+  vy: number
+}
+
+interface Peg {
+  x: number
+  y: number
+}
+
+let ball: Ball | null = null
+let pegs: Peg[] = []
 let animationId: number | null = null
-let resultTimeout: number | null = null
-let nonce = Date.now()
+let targetSlot = 0
 
-// Visual effects
-interface TrailPoint { x: number; y: number }
-interface HitPeg extends PegPos { time: number }
-interface Particle { x: number; y: number; vx: number; vy: number; life: number; color: string }
-let trail: TrailPoint[] = []
-let hitPegs: HitPeg[] = []
-let particles: Particle[] = []
+// Stars background
+const getStarStyle = (i: number) => ({
+  left: `${Math.random() * 100}%`,
+  top: `${Math.random() * 100}%`,
+  width: `${Math.random() * 2 + 1}px`,
+  height: `${Math.random() * 2 + 1}px`,
+  animationDelay: `${Math.random() * 3}s`,
+  animationDuration: `${Math.random() * 2 + 2}s`
+})
 
-function selectBet(amount: number) {
-  if (!isPlaying.value) selectedBet.value = amount
+const getMultiplierClass = (mult: number) => {
+  if (mult >= 10) return 'high'
+  if (mult >= 2) return 'medium'
+  if (mult >= 1) return 'low'
+  return 'lose'
 }
 
-function generateHash(): string {
-  return Math.random().toString(36).substring(2, 6) + '...' + Math.random().toString(36).substring(2, 6)
+const halveBet = () => {
+  selectedBet.value = Math.max(0.1, selectedBet.value / 2)
 }
 
-// Pre-compute row-by-row X targets guiding ball toward final slot
-function computeRowTargets(slot: number) {
+const doubleBet = () => {
+  selectedBet.value = Math.min(balance.value, selectedBet.value * 2)
+}
+
+const computePegs = () => {
+  pegs = []
+  const rows = rowCount.value
+  const topY = 40
+  const bottomY = canvasHeight - 50
+  const rowHeight = (bottomY - topY) / rows
   const centerX = canvasWidth / 2
-  const targetX = slot * SLOT_WIDTH + SLOT_WIDTH / 2
-  rowTargets = []
-  for (let row = 0; row < ROWS; row++) {
-    const t = (row + 1) / ROWS
-    // ease-in so steering is subtle at top, stronger near bottom
-    const eased = t * t
-    rowTargets.push(centerX + (targetX - centerX) * eased)
-  }
-}
 
-async function playGame() {
-  if (isPlaying.value || balance.value < selectedBet.value) return
-  isPlaying.value = true
-  balance.value -= selectedBet.value
+  for (let row = 0; row < rows; row++) {
+    const numPegs = row + 3
+    const spacing = 20
+    const startX = centerX - ((numPegs - 1) * spacing) / 2
 
-  // Call server
-  try {
-    nonce++
-    const serverResult = await plinkoPlay({
-      amount: selectedBet.value,
-      client_seed: generateHash(),
-      nonce,
-      user_id: 'anonymous'
-    })
-    targetSlot = serverResult.landing_slot
-    currentHash.value = serverResult.server_seed_hash
-  } catch {
-    // Fallback client-side
-    const weights = [0.02, 0.03, 0.1, 0.15, 0.2, 0.15, 0.1, 0.03, 0.02]
-    let r = Math.random()
-    targetSlot = 4
-    for (let i = 0; i < weights.length; i++) { r -= weights[i]; if (r <= 0) { targetSlot = i; break } }
-    currentHash.value = generateHash()
-  }
-
-  computeRowTargets(targetSlot)
-
-  // Spawn ball at drop box
-  const startX = canvasWidth / 2 + (Math.random() - 0.5) * 16
-  ball = { x: startX, y: TOP_Y - 18, vx: (Math.random() - 0.5) * 1.2, vy: 2.5 }
-  lastBounceRow = -1
-  animPhase = 1
-  trail = []
-  hitPegs = []
-  particles = []
-  animationId = requestAnimationFrame(physicsLoop)
-}
-
-function physicsLoop() {
-  if (!ball) return
-
-  // Update particles
-  if (particles.length > 0) {
-    particles.forEach(p => {
-      p.vy += 0.18
-      p.x += p.vx
-      p.y += p.vy
-      p.life -= 0.03
-    })
-    particles = particles.filter(p => p.life > 0)
-  }
-
-  // If result phase, just animate particles
-  if (animPhase === 2) {
-    draw()
-    if (particles.length > 0) {
-      animationId = requestAnimationFrame(physicsLoop)
-    }
-    return
-  }
-
-  // Gravity
-  ball.vy += GRAVITY
-  ball.x += ball.vx
-  ball.y += ball.vy
-
-  // Track trail
-  trail.push({ x: ball.x, y: ball.y })
-  if (trail.length > 10) trail.shift()
-
-  // Clean old hit markers
-  const now = Date.now()
-  hitPegs = hitPegs.filter(h => now - h.time < 250)
-
-  // Determine which row we're in
-  const rowIdx = Math.floor((ball.y - TOP_Y) / ROW_HEIGHT)
-
-  // Find NEAREST peg only (prevents multi-collision sticking)
-  let nearestPeg: PegPos | null = null
-  let nearestDist = Infinity
-  const minDist = PEG_RADIUS + BALL_RADIUS
-
-  for (let r = Math.max(0, rowIdx - 1); r <= Math.min(ROWS - 1, rowIdx + 1); r++) {
-    const pegs = pegRows[r]
-    if (!pegs) continue
-    for (const peg of pegs) {
-      const dx = ball.x - peg.x
-      const dy = ball.y - peg.y
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist < nearestDist) {
-        nearestDist = dist
-        nearestPeg = peg
-      }
-    }
-  }
-
-  // Process collision with nearest peg only
-  if (nearestPeg && nearestDist < minDist && nearestDist > 0.01) {
-    const dx = ball.x - nearestPeg.x
-    const dy = ball.y - nearestPeg.y
-    const nx = dx / nearestDist
-    const ny = dy / nearestDist
-
-    // Push ball out with buffer
-    ball.x = nearestPeg.x + nx * (minDist + 1)
-    ball.y = nearestPeg.y + ny * (minDist + 1)
-
-    // Only reflect if moving TOWARD peg
-    const dot = ball.vx * nx + ball.vy * ny
-    if (dot < 0) {
-      ball.vx -= 2 * dot * nx
-      ball.vy -= 2 * dot * ny
-      ball.vx *= COR
-      ball.vy *= COR
-    }
-
-    // Ensure ball always has enough downward velocity
-    if (ball.vy < 1.8) ball.vy = 1.8
-
-    // Mark peg as hit
-    hitPegs.push({ x: nearestPeg.x, y: nearestPeg.y, time: now })
-  }
-
-  // Steering: if we just passed into a new row, nudge toward target
-  if (rowIdx >= 0 && rowIdx < ROWS && rowIdx !== lastBounceRow) {
-    lastBounceRow = rowIdx
-    const target = rowTargets[rowIdx]
-    const diff = target - ball.x
-    ball.vx += diff * 0.08
-    ball.vx += (Math.random() - 0.5) * 0.8
-  }
-
-  // Clamp X
-  if (ball.x < BALL_RADIUS) { ball.x = BALL_RADIUS; ball.vx = Math.abs(ball.vx) * 0.6 }
-  if (ball.x > canvasWidth - BALL_RADIUS) { ball.x = canvasWidth - BALL_RADIUS; ball.vx = -Math.abs(ball.vx) * 0.6 }
-
-  // Check if ball reached bottom
-  if (ball.y > BOTTOM_Y) {
-    ball.y = BOTTOM_Y
-    ball.vy = 0
-    ball.vx = 0
-    ball.x = targetSlot * SLOT_WIDTH + SLOT_WIDTH / 2
-
-    // Spawn landing particles
-    const colors = ['#facc15', '#fbbf24', '#f59e0b', '#fff']
-    for (let i = 0; i < 15; i++) {
-      particles.push({
-        x: ball.x,
-        y: ball.y,
-        vx: (Math.random() - 0.5) * 7,
-        vy: -Math.random() * 5 - 1,
-        life: 1,
-        color: colors[Math.floor(Math.random() * colors.length)]
+    for (let col = 0; col < numPegs; col++) {
+      pegs.push({
+        x: startX + col * spacing,
+        y: topY + row * rowHeight
       })
     }
-
-    animPhase = 2
-    draw()
-    showResult()
-    return
   }
-
-  draw()
-  animationId = requestAnimationFrame(physicsLoop)
 }
 
-function showResult() {
-  const mult = SLOT_MULTIPLIERS[targetSlot]
-  if (mult > 0) {
-    balance.value += selectedBet.value * mult
+const playGame = async () => {
+  if (isPlaying.value || balance.value < selectedBet.value) return
+
+  isPlaying.value = true
+  showResult.value = false
+  balance.value -= selectedBet.value
+  gameNumber.value++
+
+  // Determine outcome
+  const mults = currentMultipliers.value
+  const weights = mults.map(m => 1 / (m + 0.1)) // Lower multipliers more likely
+  const totalWeight = weights.reduce((a, b) => a + b, 0)
+  let r = Math.random() * totalWeight
+  targetSlot = Math.floor(mults.length / 2)
+
+  for (let i = 0; i < weights.length; i++) {
+    r -= weights[i]
+    if (r <= 0) {
+      targetSlot = i
+      break
+    }
   }
-  resultTimeout = setTimeout(() => {
-    ball = null
-    animPhase = 0
-    isPlaying.value = false
-    draw()
-  }, 1800) as unknown as number
+
+  // Start ball
+  ball = {
+    x: canvasWidth / 2 + (Math.random() - 0.5) * 10,
+    y: 20,
+    vx: (Math.random() - 0.5) * 2,
+    vy: 2
+  }
+
+  computePegs()
+  animate()
 }
 
-function draw() {
+const animate = () => {
+  if (!ball) return
+
   const canvas = gameCanvas.value
   if (!canvas) return
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+  // Physics
+  ball.vy += GRAVITY
+  ball.x += ball.vx
+  ball.y += ball.vy
 
-  // Background
-  ctx.fillStyle = '#0a0c14'
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+  // Peg collisions
+  for (const peg of pegs) {
+    const dx = ball.x - peg.x
+    const dy = ball.y - peg.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    const minDist = PEG_RADIUS + BALL_RADIUS
 
-  // Drop box (top center)
-  ctx.fillStyle = '#1e3a5f'
-  ctx.beginPath()
-  ctx.roundRect(canvasWidth / 2 - 30, 6, 60, 28, 5)
-  ctx.fill()
-  ctx.fillStyle = '#3b82f6'
-  ctx.beginPath()
-  ctx.roundRect(canvasWidth / 2 - 30, 6, 60, 10, [5, 5, 0, 0])
-  ctx.fill()
-  // Arrow down
-  ctx.fillStyle = 'rgba(255,255,255,0.5)'
-  ctx.font = '12px sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('▼', canvasWidth / 2, 24)
+    if (dist < minDist && dist > 0) {
+      const nx = dx / dist
+      const ny = dy / dist
 
-  // Pegs
-  const now = Date.now()
-  pegRows.forEach((row, rowIdx) => {
-    const t = rowIdx / ROWS
-    const r = Math.round(139 + (34 - 139) * t)
-    const g = Math.round(92 + (211 - 92) * t)
-    const b = Math.round(246 + (238 - 246) * t)
-    const color = `rgb(${r},${g},${b})`
+      ball.x = peg.x + nx * (minDist + 1)
+      ball.y = peg.y + ny * (minDist + 1)
 
-    row.forEach(peg => {
-      // Check if peg was recently hit
-      const hit = hitPegs.find(h => Math.abs(h.x - peg.x) < 0.1 && Math.abs(h.y - peg.y) < 0.1)
-      const flashAge = hit ? now - hit.time : 999
-      const flashAlpha = hit && flashAge < 250 ? (1 - flashAge / 250) * 0.9 : 0
-
-      if (flashAlpha > 0.1) {
-        // Flash effect
-        ctx.shadowColor = `rgba(255, 255, 255, ${flashAlpha})`
-        ctx.shadowBlur = 12
-        ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha * 0.6})`
-      } else {
-        // Normal glow
-        ctx.shadowColor = color + '66'
-        ctx.shadowBlur = 5
-        ctx.fillStyle = color
+      const dot = ball.vx * nx + ball.vy * ny
+      if (dot < 0) {
+        ball.vx -= 2 * dot * nx * BOUNCE
+        ball.vy -= 2 * dot * ny * BOUNCE
       }
 
-      ctx.beginPath()
-      ctx.arc(peg.x, peg.y, PEG_RADIUS, 0, Math.PI * 2)
-      ctx.fill()
+      // Steer toward target
+      const mults = currentMultipliers.value
+      const slotWidth = canvasWidth / mults.length
+      const targetX = targetSlot * slotWidth + slotWidth / 2
+      ball.vx += (targetX - ball.x) * 0.01
+      ball.vx += (Math.random() - 0.5) * 0.5
+    }
+  }
+
+  // Wall collisions
+  if (ball.x < BALL_RADIUS) {
+    ball.x = BALL_RADIUS
+    ball.vx = Math.abs(ball.vx) * BOUNCE
+  }
+  if (ball.x > canvasWidth - BALL_RADIUS) {
+    ball.x = canvasWidth - BALL_RADIUS
+    ball.vx = -Math.abs(ball.vx) * BOUNCE
+  }
+
+  // Draw
+  draw(ctx)
+
+  // Check if ball reached bottom
+  if (ball.y > canvasHeight - 30) {
+    const mults = currentMultipliers.value
+    const slotWidth = canvasWidth / mults.length
+    const landedSlot = Math.floor(ball.x / slotWidth)
+    const finalSlot = Math.max(0, Math.min(mults.length - 1, landedSlot))
+
+    lastMultiplier.value = mults[finalSlot]
+    lastWin.value = selectedBet.value * mults[finalSlot] - selectedBet.value
+    balance.value += selectedBet.value * mults[finalSlot]
+
+    history.value.unshift({
+      multiplier: mults[finalSlot],
+      win: lastWin.value,
+      bet: selectedBet.value
     })
-  })
+
+    showResult.value = true
+    ball = null
+    isPlaying.value = false
+
+    setTimeout(() => {
+      showResult.value = false
+      if (autoPlay.value && autoPlayCount.value > 0) {
+        autoPlayCount.value--
+        if (autoPlayCount.value > 0 && balance.value >= selectedBet.value) {
+          playGame()
+        }
+      }
+    }, 1500)
+    return
+  }
+
+  animationId = requestAnimationFrame(animate)
+}
+
+const draw = (ctx: CanvasRenderingContext2D) => {
+  // Clear
+  ctx.fillStyle = '#0a1628'
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+
+  // Draw pegs
+  const rows = rowCount.value
+  for (let i = 0; i < pegs.length; i++) {
+    const peg = pegs[i]
+    const row = Math.floor((-3 + Math.sqrt(9 + 8 * i)) / 2)
+    const t = row / rows
+
+    // Gradient from blue to cyan
+    const r = Math.round(59 + (34 - 59) * t)
+    const g = Math.round(130 + (211 - 130) * t)
+    const b = Math.round(246 + (238 - 246) * t)
+
+    ctx.fillStyle = `rgb(${r},${g},${b})`
+    ctx.shadowColor = `rgba(${r},${g},${b},0.5)`
+    ctx.shadowBlur = 6
+    ctx.beginPath()
+    ctx.arc(peg.x, peg.y, PEG_RADIUS, 0, Math.PI * 2)
+    ctx.fill()
+  }
   ctx.shadowBlur = 0
 
-  // Slot zones
-  const slotY = canvasHeight - 56
-  const slotH = 52
-  for (let i = 0; i < NUM_SLOTS; i++) {
-    const x = i * SLOT_WIDTH
-    const isActive = animPhase === 2 && i === targetSlot
-
-    // Background
-    ctx.fillStyle = i === 0 || i === 8 ? 'rgba(239,68,68,0.22)'
-      : i === 1 || i === 7 ? 'rgba(245,158,11,0.18)'
-      : i === 2 || i === 6 ? 'rgba(34,211,238,0.18)'
-      : 'rgba(99,102,241,0.14)'
-
-    ctx.beginPath()
-    if (i === 0) {
-      ctx.roundRect(x + 1, slotY, SLOT_WIDTH - 2, slotH, [6, 0, 0, 6])
-    } else if (i === NUM_SLOTS - 1) {
-      ctx.roundRect(x + 1, slotY, SLOT_WIDTH - 2, slotH, [0, 6, 6, 0])
-    } else {
-      ctx.fillRect(x + 1, slotY, SLOT_WIDTH - 2, slotH)
-      ctx.beginPath() // reset path for non-rounded
-    }
-    ctx.fill()
-
-    // Active highlight
-    if (isActive) {
-      ctx.shadowColor = SLOT_COLORS[i]
-      ctx.shadowBlur = 14
-      ctx.strokeStyle = SLOT_COLORS[i]
-      ctx.lineWidth = 2
-      ctx.strokeRect(x + 1, slotY, SLOT_WIDTH - 2, slotH)
-      ctx.shadowBlur = 0
-    }
-
-    // Label
-    ctx.fillStyle = '#fff'
-    ctx.font = 'bold 11px -apple-system, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(SLOT_LABELS[i], x + SLOT_WIDTH / 2, slotY + slotH / 2)
-  }
-
-  // Ball trail
-  if (trail.length > 1) {
-    for (let i = 0; i < trail.length; i++) {
-      const alpha = (i / trail.length) * 0.35
-      const radius = BALL_RADIUS * (i / trail.length) * 0.7
-      ctx.fillStyle = `rgba(250, 204, 21, ${alpha})`
-      ctx.beginPath()
-      ctx.arc(trail[i].x, trail[i].y, radius, 0, Math.PI * 2)
-      ctx.fill()
-    }
-  }
-
-  // Ball
+  // Draw ball
   if (ball) {
-    ctx.shadowColor = 'rgba(250, 204, 21, 0.7)'
+    ctx.fillStyle = '#ec4899'
+    ctx.shadowColor = 'rgba(236,72,153,0.7)'
     ctx.shadowBlur = 12
-    ctx.fillStyle = '#facc15'
     ctx.beginPath()
     ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2)
     ctx.fill()
     ctx.shadowBlur = 0
 
-    // Specular highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'
     ctx.beginPath()
-    ctx.arc(ball.x - 2.5, ball.y - 2.5, BALL_RADIUS * 0.38, 0, Math.PI * 2)
+    ctx.arc(ball.x - 2, ball.y - 2, BALL_RADIUS * 0.4, 0, Math.PI * 2)
     ctx.fill()
   }
 
-  // Landing particles
-  if (particles.length > 0) {
-    particles.forEach(p => {
-      const alpha = Math.max(0, p.life)
-      ctx.fillStyle = p.color + Math.floor(alpha * 255).toString(16).padStart(2, '0')
-      ctx.beginPath()
-      ctx.arc(p.x, p.y, 2.5 * alpha, 0, Math.PI * 2)
-      ctx.fill()
-    })
-  }
+  // Draw slot zones
+  const mults = currentMultipliers.value
+  const slotWidth = canvasWidth / mults.length
+  const slotY = canvasHeight - 28
 
-  // Result overlay
-  if (animPhase === 2) {
-    const mult = SLOT_MULTIPLIERS[targetSlot]
-    const label = SLOT_LABELS[targetSlot]
+  mults.forEach((mult, i) => {
+    const x = i * slotWidth
 
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'
-    ctx.fillRect(0, canvasHeight / 2 - 48, canvasWidth, 96)
+    // Color based on multiplier
+    let color = 'rgba(99,102,241,0.3)'
+    if (mult >= 10) color = 'rgba(34,197,94,0.4)'
+    else if (mult >= 2) color = 'rgba(34,211,238,0.3)'
+    else if (mult < 1) color = 'rgba(239,68,68,0.3)'
 
-    if (mult > 0) {
-      ctx.fillStyle = '#22d3ee'
-      ctx.font = 'bold 34px -apple-system, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText(label, canvasWidth / 2, canvasHeight / 2 - 10)
+    ctx.fillStyle = color
+    ctx.fillRect(x + 1, slotY, slotWidth - 2, 26)
 
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'
-      ctx.font = '14px -apple-system, sans-serif'
-      ctx.fillText(`+${(selectedBet.value * mult).toFixed(2)}`, canvasWidth / 2, canvasHeight / 2 + 18)
-    } else {
-      ctx.fillStyle = '#ef4444'
-      ctx.font = 'bold 34px -apple-system, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText(label, canvasWidth / 2, canvasHeight / 2 - 10)
-
-      ctx.fillStyle = 'rgba(255,255,255,0.5)'
-      ctx.font = '14px -apple-system, sans-serif'
-      ctx.fillText(`-${selectedBet.value.toFixed(2)}`, canvasWidth / 2, canvasHeight / 2 + 18)
-    }
-  }
+    ctx.fillStyle = '#fff'
+    ctx.font = 'bold 9px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText(`${mult}x`, x + slotWidth / 2, slotY + 16)
+  })
 }
 
+watch([riskLevel, rowCount], () => {
+  computePegs()
+  if (gameCanvas.value) {
+    const ctx = gameCanvas.value.getContext('2d')
+    if (ctx) draw(ctx)
+  }
+})
+
 onMounted(() => {
-  computeLayout()
-  draw()
+  computePegs()
+  if (gameCanvas.value) {
+    const ctx = gameCanvas.value.getContext('2d')
+    if (ctx) draw(ctx)
+  }
 })
 
 onUnmounted(() => {
   if (animationId) cancelAnimationFrame(animationId)
-  if (resultTimeout) clearTimeout(resultTimeout)
 })
 </script>
+
+<style scoped>
+.plinko-view {
+  min-height: 100vh;
+  background: #000;
+  color: #fff;
+  position: relative;
+  overflow-x: hidden;
+  padding-bottom: 90px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+}
+
+/* Stars */
+.stars-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.star {
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: twinkle 3s infinite ease-in-out;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.3); }
+}
+
+/* Header */
+.plinko-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  position: relative;
+  z-index: 10;
+}
+
+.header-back {
+  width: 40px;
+  height: 40px;
+  background: #1c1c1e;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-main {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.title-badge {
+  background: #22c55e;
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.header-balance {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1c1c1e;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+
+.balance-icon { font-size: 14px; }
+.balance-value { font-size: 14px; font-weight: 600; }
+
+.balance-add {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid #4b5563;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+}
+
+/* Game Info Bar */
+.game-info-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 16px;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 10;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.info-value {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.risk-select, .rows-select {
+  background: #1c1c1e;
+  border: 1px solid #3a3a3c;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #fff;
+  outline: none;
+}
+
+/* Game Container */
+.game-container {
+  margin: 0 16px;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+  background: #0a1628;
+}
+
+.game-canvas {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+/* Result Overlay */
+.result-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  padding: 20px 40px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  animation: popIn 0.3s ease;
+}
+
+@keyframes popIn {
+  from { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.result-overlay.win { border: 2px solid #22c55e; }
+.result-overlay.lose { border: 2px solid #ef4444; }
+
+.result-multiplier {
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.result-amount {
+  font-size: 16px;
+  color: #ef4444;
+  margin-top: 4px;
+}
+
+.result-amount.positive {
+  color: #4ade80;
+}
+
+/* Multipliers Row */
+.multipliers-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 16px;
+  position: relative;
+  z-index: 10;
+  overflow-x: auto;
+}
+
+.mult-slot {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mult-slot.high {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+.mult-slot.medium {
+  background: rgba(34, 211, 238, 0.2);
+  color: #22d3ee;
+}
+
+.mult-slot.low {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+
+.mult-slot.lose {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+/* Bet Section */
+.bet-section {
+  padding: 0 16px;
+  position: relative;
+  z-index: 10;
+}
+
+.bet-amounts {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+.bet-btn {
+  flex: 1;
+  min-width: 60px;
+  padding: 10px 8px;
+  background: #1c1c1e;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.bet-btn.active {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.bet-btn:disabled {
+  opacity: 0.5;
+}
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.btn-half, .btn-double {
+  width: 50px;
+  height: 50px;
+  background: #1c1c1e;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.btn-half:disabled, .btn-double:disabled {
+  opacity: 0.4;
+}
+
+.btn-play {
+  flex: 1;
+  height: 50px;
+  background: linear-gradient(135deg, #3b82f6, #22d3ee);
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-play:disabled {
+  opacity: 0.5;
+}
+
+.loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Auto Play */
+.auto-play {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #1c1c1e;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.auto-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.auto-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3b82f6;
+}
+
+.auto-count {
+  width: 60px;
+  background: #27272a;
+  border: 1px solid #3a3a3c;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #fff;
+  outline: none;
+}
+
+/* History */
+.history-section {
+  padding: 0 16px;
+  position: relative;
+  z-index: 10;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.history-clear {
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.history-list {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.history-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.15);
+  border-radius: 10px;
+  min-width: 60px;
+}
+
+.history-item.win {
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.history-mult {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.history-amount {
+  font-size: 10px;
+  color: #f87171;
+}
+
+.history-item.win .history-amount {
+  color: #4ade80;
+}
+
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #000;
+  border-top: 1px solid #1c1c1e;
+  display: flex;
+  padding: 8px 0 24px;
+  z-index: 100;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 10px;
+}
+
+.nav-item.active { color: #fff; }
+.nav-item svg { width: 22px; height: 22px; }
+</style>

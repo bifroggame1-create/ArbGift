@@ -43,6 +43,31 @@ const router = createRouter({
       name: 'pvp',
       component: () => import('../views/PvPView.vue'),
     },
+    {
+      path: '/solo',
+      name: 'solo',
+      component: () => import('../views/SoloView.vue'),
+    },
+    {
+      path: '/inventory',
+      name: 'inventory',
+      component: () => import('../views/InventoryView.vue'),
+    },
+    {
+      path: '/shop',
+      name: 'shop',
+      component: () => import('../views/ShopView.vue'),
+    },
+    {
+      path: '/lucky',
+      name: 'lucky',
+      component: () => import('../views/LuckyView.vue'),
+    },
+    {
+      path: '/roll',
+      name: 'roll',
+      component: () => import('../views/RollView.vue'),
+    },
     // Gaming Hub
     {
       path: '/topup',
