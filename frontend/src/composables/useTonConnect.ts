@@ -4,10 +4,26 @@
  * Provides wallet connection for TON blockchain.
  */
 import { ref, computed } from 'vue'
-import { TonConnectUI, type ConnectedWallet } from '@tonconnect/ui'
 
-// Singleton instance
-let tonConnectUI: TonConnectUI | null = null
+// TonConnect types (inline to avoid module resolution issues)
+interface WalletAccount {
+  address: string
+  chain: string
+}
+
+interface WalletDevice {
+  appName: string
+  platform: string
+}
+
+interface ConnectedWallet {
+  account: WalletAccount
+  device: WalletDevice
+  imageUrl?: string
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let tonConnectUI: any = null
 
 // Reactive state
 const wallet = ref<ConnectedWallet | null>(null)
@@ -41,36 +57,42 @@ export function useTonConnect() {
     }
   })
 
-  // Initialize TON Connect
-  const init = (botUsername?: string) => {
+  // Initialize TON Connect (async to handle dynamic import)
+  const init = async (botUsername?: string) => {
     if (tonConnectUI) return tonConnectUI
 
-    const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`
+    try {
+      // Dynamic import to avoid build-time module resolution
+      const module = await (Function('return import("@tonconnect/ui")')() as Promise<{ TonConnectUI: new (opts: { manifestUrl: string }) => unknown }>)
+      const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`
 
-    tonConnectUI = new TonConnectUI({
-      manifestUrl,
-    })
+      tonConnectUI = new module.TonConnectUI({
+        manifestUrl,
+      })
 
-    // Set TMA return URL if in Telegram
-    if (botUsername && window.Telegram?.WebApp) {
-      // TonConnect UI options - return URL handled by manifest
-      console.log('TonConnect initialized for bot:', botUsername)
+      // Set TMA return URL if in Telegram
+      if (botUsername && window.Telegram?.WebApp) {
+        console.log('TonConnect initialized for bot:', botUsername)
+      }
+
+      // Subscribe to wallet changes
+      tonConnectUI.onStatusChange((w: ConnectedWallet | null) => {
+        wallet.value = w
+        isConnected.value = !!w
+        isConnecting.value = false
+      })
+
+      // Check if already connected
+      if (tonConnectUI.wallet) {
+        wallet.value = tonConnectUI.wallet
+        isConnected.value = true
+      }
+
+      return tonConnectUI
+    } catch (error) {
+      console.warn('TonConnect UI not available:', error)
+      return null
     }
-
-    // Subscribe to wallet changes
-    tonConnectUI.onStatusChange((w: ConnectedWallet | null) => {
-      wallet.value = w
-      isConnected.value = !!w
-      isConnecting.value = false
-    })
-
-    // Check if already connected
-    if (tonConnectUI.wallet) {
-      wallet.value = tonConnectUI.wallet as ConnectedWallet
-      isConnected.value = true
-    }
-
-    return tonConnectUI
   }
 
   // Connect wallet

@@ -1,22 +1,29 @@
 <template>
   <!--
-    PIXEL-PERFECT копия Trading Game из myballs.io
-    CSS: bg-[#0E0F14], border-[#191919], rounded-4xl (32px)
-    Uses TradingView Lightweight Charts
+    Trading Game (Crash) - MyBalls.io style
+    CSS-only visualization without external chart library
   -->
   <div class="trading-game">
     <!-- Game Container -->
     <div class="game-container">
       <div class="chart-wrapper">
         <div class="chart-frame">
-          <!-- TradingView Chart -->
-          <div ref="chartContainer" class="chart-area"></div>
+          <!-- CSS Chart -->
+          <div class="chart-area">
+            <svg class="chart-line" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path :d="chartPath" fill="none" stroke="#00ff88" stroke-width="0.5" />
+              <path :d="chartPath" fill="url(#gradient)" opacity="0.3" />
+              <defs>
+                <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#00ff88" />
+                  <stop offset="100%" stop-color="transparent" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
 
           <!-- Current Multiplier Overlay -->
-          <div
-            class="multiplier-overlay"
-            :class="multiplierClass"
-          >
+          <div class="multiplier-overlay" :class="multiplierClass">
             {{ displayMultiplier }}x
           </div>
 
@@ -35,22 +42,11 @@
         <label class="bet-label">Ставка</label>
         <div class="bet-input-wrapper">
           <button class="bet-adjust" @click="decreaseBet">-</button>
-          <input
-            v-model.number="betAmount"
-            type="number"
-            class="bet-input"
-            min="0.1"
-            step="0.1"
-          />
+          <input v-model.number="betAmount" type="number" class="bet-input" min="0.1" step="0.1" />
           <button class="bet-adjust" @click="increaseBet">+</button>
         </div>
         <div class="quick-bets">
-          <button
-            v-for="amount in quickBets"
-            :key="amount"
-            class="quick-bet-btn"
-            @click="betAmount = amount"
-          >
+          <button v-for="amount in quickBets" :key="amount" class="quick-bet-btn" @click="betAmount = amount">
             {{ amount }}
           </button>
         </div>
@@ -74,31 +70,15 @@
     </div>
 
     <!-- Action Button -->
-    <button
-      class="action-btn"
-      :class="actionButtonClass"
-      :disabled="!canAct"
-      @click="handleAction"
-    >
-      <span v-if="gameStatus === 'waiting'">
-        Ставка {{ betAmount }} TON
-      </span>
-      <span v-else-if="gameStatus === 'playing'">
-        Вывести {{ potentialWin.toFixed(2) }} TON
-      </span>
-      <span v-else>
-        Ожидание...
-      </span>
+    <button class="action-btn" :class="actionButtonClass" :disabled="!canAct" @click="handleAction">
+      <span v-if="gameStatus === 'waiting'">Ставка {{ betAmount }} TON</span>
+      <span v-else-if="gameStatus === 'playing'">Вывести {{ potentialWin.toFixed(2) }} TON</span>
+      <span v-else>Ожидание...</span>
     </button>
 
     <!-- Recent Results -->
     <div class="recent-results">
-      <div
-        v-for="(result, index) in recentResults"
-        :key="index"
-        class="result-badge"
-        :class="getResultClass(result)"
-      >
+      <div v-for="(result, index) in recentResults" :key="index" class="result-badge" :class="getResultClass(result)">
         {{ result.toFixed(2) }}x
       </div>
     </div>
@@ -110,20 +90,13 @@
         <span class="bets-count">{{ liveBets.length }}</span>
       </div>
       <div class="bets-list">
-        <div
-          v-for="bet in liveBets"
-          :key="bet.id"
-          class="bet-item"
-          :class="{ cashed: bet.cashedOut }"
-        >
+        <div v-for="bet in liveBets" :key="bet.id" class="bet-item" :class="{ cashed: bet.cashedOut }">
           <div class="bet-user">
             <img :src="bet.avatar" :alt="bet.name" class="bet-avatar" />
             <span class="bet-name">{{ bet.name }}</span>
           </div>
           <div class="bet-amount">{{ bet.amount }} TON</div>
-          <div v-if="bet.cashedOut" class="bet-cashout">
-            {{ bet.multiplier.toFixed(2) }}x
-          </div>
+          <div v-if="bet.cashedOut" class="bet-cashout">{{ bet.multiplier.toFixed(2) }}x</div>
         </div>
       </div>
     </div>
@@ -132,15 +105,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { createChart, type IChartApi, type ISeriesApi } from 'lightweight-charts'
 import { useTelegram } from '../composables/useTelegram'
 
 const { hapticImpact } = useTelegram()
 
-// Chart
-const chartContainer = ref<HTMLElement | null>(null)
-let chart: IChartApi | null = null
-let lineSeries: ISeriesApi<'Line'> | null = null
+// Chart data points
+const chartPoints = ref<number[]>([])
 
 // Game state
 const gameStatus = ref<'waiting' | 'starting' | 'playing' | 'crashed'>('waiting')
@@ -167,10 +137,22 @@ const liveBets = ref([
   { id: 3, name: 'John', avatar: 'https://i.pravatar.cc/40?u=3', amount: 10, cashedOut: true, multiplier: 1.89 },
 ])
 
-// Computed
-const displayMultiplier = computed(() => {
-  return currentMultiplier.value.toFixed(2)
+// SVG chart path
+const chartPath = computed(() => {
+  if (chartPoints.value.length < 2) return 'M 0 100'
+
+  const maxY = Math.max(...chartPoints.value, 5)
+  const points = chartPoints.value.map((y, i) => {
+    const x = (i / (chartPoints.value.length - 1)) * 100
+    const yNorm = 100 - (y / maxY) * 90
+    return `${x},${yNorm}`
+  })
+
+  return `M 0,100 L ${points.join(' L ')} L 100,100 Z`
 })
+
+// Computed
+const displayMultiplier = computed(() => currentMultiplier.value.toFixed(2))
 
 const multiplierClass = computed(() => {
   if (gameStatus.value === 'crashed') return 'crashed'
@@ -181,17 +163,20 @@ const multiplierClass = computed(() => {
 
 const statusText = computed(() => {
   switch (gameStatus.value) {
-    case 'waiting': return 'Принимаются ставки'
-    case 'starting': return 'Запуск...'
-    case 'playing': return 'Идёт игра'
-    case 'crashed': return `Краш на ${crashPoint.value.toFixed(2)}x`
-    default: return ''
+    case 'waiting':
+      return 'Принимаются ставки'
+    case 'starting':
+      return 'Запуск...'
+    case 'playing':
+      return 'Идёт игра'
+    case 'crashed':
+      return `Краш на ${crashPoint.value.toFixed(2)}x`
+    default:
+      return ''
   }
 })
 
-const potentialWin = computed(() => {
-  return betAmount.value * currentMultiplier.value
-})
+const potentialWin = computed(() => betAmount.value * currentMultiplier.value)
 
 const canAct = computed(() => {
   if (gameStatus.value === 'waiting' && !hasBet.value) return true
@@ -200,9 +185,7 @@ const canAct = computed(() => {
 })
 
 const actionButtonClass = computed(() => {
-  if (gameStatus.value === 'playing' && hasBet.value && !hasCashedOut.value) {
-    return 'cashout'
-  }
+  if (gameStatus.value === 'playing' && hasBet.value && !hasCashedOut.value) return 'cashout'
   return 'bet'
 })
 
@@ -230,62 +213,17 @@ const handleAction = () => {
 const placeBet = () => {
   hasBet.value = true
   hapticImpact('medium')
-  // Send bet to server via WebSocket
 }
 
 const cashOut = () => {
   hasCashedOut.value = true
   hapticImpact('heavy')
-  // Send cashout to server
 }
 
 const getResultClass = (result: number) => {
   if (result < 1.5) return 'low'
   if (result < 3) return 'medium'
   return 'high'
-}
-
-// Chart setup
-const initChart = () => {
-  if (!chartContainer.value) return
-
-  chart = createChart(chartContainer.value, {
-    width: chartContainer.value.clientWidth,
-    height: chartContainer.value.clientHeight,
-    layout: {
-      background: { color: '#0E0F14' },
-      textColor: '#6d6d71',
-    },
-    grid: {
-      vertLines: { color: '#191919' },
-      horzLines: { color: '#191919' },
-    },
-    rightPriceScale: {
-      borderColor: '#191919',
-    },
-    timeScale: {
-      borderColor: '#191919',
-      timeVisible: false,
-    },
-  })
-
-  lineSeries = chart.addSeries({
-    type: 'Line',
-    color: '#00ff88',
-    lineWidth: 2,
-    priceLineVisible: false,
-    lastValueVisible: false,
-  })
-
-  // Initial data
-  const data = []
-  for (let i = 0; i < 100; i++) {
-    data.push({
-      time: i as any,
-      value: 1 + Math.random() * 0.1 * i,
-    })
-  }
-  lineSeries?.setData(data)
 }
 
 // Simulate game (demo)
@@ -295,26 +233,27 @@ const startGameSimulation = () => {
   gameStatus.value = 'playing'
   currentMultiplier.value = 1.0
   crashPoint.value = 1 + Math.random() * 10
+  chartPoints.value = [1]
 
   gameInterval = setInterval(() => {
     if (currentMultiplier.value >= crashPoint.value) {
       gameStatus.value = 'crashed'
       clearInterval(gameInterval)
 
-      // Reset after 3 seconds
       setTimeout(() => {
         gameStatus.value = 'waiting'
         hasBet.value = false
         hasCashedOut.value = false
         currentMultiplier.value = 1.0
+        chartPoints.value = []
 
-        // Start new round after 5 seconds
         setTimeout(startGameSimulation, 5000)
       }, 3000)
       return
     }
 
     currentMultiplier.value += 0.01 + Math.random() * 0.02
+    chartPoints.value.push(currentMultiplier.value)
 
     // Auto cashout
     if (autoCashoutEnabled.value && hasBet.value && !hasCashedOut.value) {
@@ -322,27 +261,14 @@ const startGameSimulation = () => {
         cashOut()
       }
     }
-
-    // Update chart
-    if (lineSeries) {
-      lineSeries.update({
-        time: Date.now() as any,
-        value: currentMultiplier.value,
-      })
-    }
   }, 100)
 }
 
 onMounted(() => {
-  initChart()
-  // Start game simulation after 2 seconds
   setTimeout(startGameSimulation, 2000)
 })
 
 onUnmounted(() => {
-  if (chart) {
-    chart.remove()
-  }
   if (gameInterval) {
     clearInterval(gameInterval)
   }
@@ -350,21 +276,15 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/*
-  MYBALLS.IO Design System
-  bg-[#0E0F14], border-[#191919], rounded-4xl (32px)
-*/
-
 .trading-game {
   max-width: 600px;
   margin: 0 auto;
   padding: 16px;
-  background: #0E0F14;
+  background: #0e0f14;
   min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Game Container */
 .game-container {
   margin-bottom: 16px;
 }
@@ -380,17 +300,21 @@ onUnmounted(() => {
   height: 100%;
   border-radius: 32px;
   border: 2px solid #191919;
-  background: #0E0F14;
-  backdrop-filter: blur(14px);
+  background: #0e0f14;
   overflow: hidden;
 }
 
 .chart-area {
   width: 100%;
   height: 100%;
+  position: relative;
 }
 
-/* Multiplier Overlay */
+.chart-line {
+  width: 100%;
+  height: 100%;
+}
+
 .multiplier-overlay {
   position: absolute;
   bottom: 30%;
@@ -407,20 +331,16 @@ onUnmounted(() => {
 .multiplier-overlay.low {
   color: #fff;
 }
-
 .multiplier-overlay.medium {
   color: #00ff88;
 }
-
 .multiplier-overlay.high {
   color: #ffd700;
 }
-
 .multiplier-overlay.crashed {
   color: #ff4444;
 }
 
-/* Status Badge */
 .status-badge {
   position: absolute;
   top: 16px;
@@ -437,13 +357,11 @@ onUnmounted(() => {
   background: rgba(0, 255, 136, 0.2);
   color: #00ff88;
 }
-
 .status-badge.crashed {
   background: rgba(255, 68, 68, 0.2);
   color: #ff4444;
 }
 
-/* Bet Controls */
 .bet-controls {
   display: flex;
   gap: 16px;
@@ -529,7 +447,6 @@ onUnmounted(() => {
   color: #fff;
 }
 
-/* Auto Cashout */
 .auto-cashout-section {
   width: 120px;
 }
@@ -550,7 +467,6 @@ onUnmounted(() => {
   opacity: 0.5;
 }
 
-/* Action Button */
 .action-btn {
   width: 100%;
   padding: 16px;
@@ -582,7 +498,6 @@ onUnmounted(() => {
   transform: scale(0.98);
 }
 
-/* Recent Results */
 .recent-results {
   display: flex;
   gap: 8px;
@@ -603,18 +518,15 @@ onUnmounted(() => {
   background: rgba(255, 68, 68, 0.2);
   color: #ff4444;
 }
-
 .result-badge.medium {
   background: rgba(0, 255, 136, 0.2);
   color: #00ff88;
 }
-
 .result-badge.high {
   background: rgba(255, 215, 0, 0.2);
   color: #ffd700;
 }
 
-/* Live Bets */
 .live-bets {
   background: #191919;
   border-radius: 16px;
