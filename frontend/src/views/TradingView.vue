@@ -88,7 +88,7 @@
             :y1="priceToY(currentCandle.high)"
             :x2="getCurrentCandleX() + candleWidth / 2"
             :y2="priceToY(currentCandle.low)"
-            stroke="#22c55e"
+            :stroke="currentCandleColor"
             stroke-width="2"
           />
           <!-- Body -->
@@ -97,19 +97,19 @@
             :y="priceToY(Math.max(currentCandle.open, currentCandle.close))"
             :width="candleWidth - 4"
             :height="Math.max(4, Math.abs(priceToY(currentCandle.open) - priceToY(currentCandle.close)))"
-            fill="#22c55e"
+            :fill="currentCandleColor"
             rx="1"
           >
             <animate attributeName="opacity" values="1;0.7;1" dur="0.5s" repeatCount="indefinite"/>
           </rect>
         </g>
 
-        <!-- Price growth line (during active game) -->
+        <!-- Price line (during active game) - color based on trend -->
         <path
           v-if="pricePath && gameState === 'active'"
           :d="pricePath"
           fill="none"
-          stroke="#22c55e"
+          :stroke="priceLineColor"
           stroke-width="2.5"
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -119,7 +119,7 @@
           v-if="pricePath && gameState === 'active'"
           :d="pricePath"
           fill="none"
-          stroke="#22c55e"
+          :stroke="priceLineColor"
           stroke-width="8"
           stroke-linecap="round"
           opacity="0.2"
@@ -135,15 +135,20 @@
       <!-- Multiplier Overlay -->
       <div class="multiplier-overlay" :class="multiplierClass">
         <template v-if="gameState === 'active'">
-          <span class="multiplier-value">{{ currentMultiplier.toFixed(2) }}x</span>
+          <span class="multiplier-value" :class="{ negative: currentMultiplier < 1.0 }">
+            {{ currentMultiplier.toFixed(3) }}x
+          </span>
           <span class="multiplier-label">МНОЖИТЕЛЬ</span>
+          <!-- Show P/L when player has bet -->
+          <span v-if="playerBet" class="player-pl" :class="{ positive: currentPL >= 0, negative: currentPL < 0 }">
+            {{ currentPL >= 0 ? '+' : '' }}{{ currentPL.toFixed(2) }} TON
+          </span>
         </template>
         <template v-else-if="gameState === 'crashed'">
           <span class="multiplier-crashed">
-            <span v-if="crashedAt < 1.1">💀💀💀</span>
-            {{ crashedAt.toFixed(3) }}x
+            💀💀💀 0.000x
           </span>
-          <span class="crash-label">CRASHED!</span>
+          <span class="crash-label">ЛИКВИДАЦИЯ!</span>
         </template>
         <template v-else-if="gameState === 'countdown'">
           <div class="countdown-display">
@@ -289,11 +294,17 @@
         </button>
         <button
           class="action-btn sell-btn"
+          :class="{ 'in-loss': playerBet && currentPL < 0 }"
           :disabled="!canSell"
           @click="cashOut"
         >
           <span class="btn-emoji">📉</span>
-          Продать {{ playerBet ? `+${((playerBet * currentMultiplier) - playerBet).toFixed(2)}` : '' }}
+          <span v-if="playerBet">
+            Продать <span :class="currentPL >= 0 ? 'profit-text' : 'loss-text'">
+              {{ currentPL >= 0 ? '+' : '' }}{{ currentPL.toFixed(2) }}
+            </span>
+          </span>
+          <span v-else>Продать</span>
         </button>
       </div>
 
@@ -495,9 +506,30 @@ const pricePath = computed(() => {
 
 const multiplierClass = computed(() => {
   if (gameState.value === 'crashed') return 'crashed'
-  if (currentMultiplier.value >= 3) return 'very-high'
+  if (currentMultiplier.value < 1.0) return 'negative'  // Below entry price
   if (currentMultiplier.value >= 2) return 'high'
+  if (currentMultiplier.value >= 1.5) return 'medium'
   return 'normal'
+})
+
+// Current P/L for player (can be negative!)
+const currentPL = computed(() => {
+  if (!playerBet.value) return 0
+  return (playerBet.value * currentMultiplier.value) - playerBet.value
+})
+
+// Current candle color based on direction
+const currentCandleColor = computed(() => {
+  if (!currentCandle.value) return '#22c55e'
+  return currentCandle.value.close >= currentCandle.value.open ? '#22c55e' : '#ef4444'
+})
+
+// Price line color based on current trend
+const priceLineColor = computed(() => {
+  if (priceHistory.value.length < 2) return '#22c55e'
+  const last = priceHistory.value[priceHistory.value.length - 1]
+  const prev = priceHistory.value[priceHistory.value.length - 2]
+  return last >= prev ? '#22c55e' : '#ef4444'
 })
 
 const canBuy = computed(() => {
@@ -559,33 +591,44 @@ const cashOut = () => {
   playerBet.value = null
 }
 
-// Game simulation
+// Game simulation - VOLATILE MODEL (not Aviator!)
 let gameInterval: number | null = null
 let countdownInterval: number | null = null
+let tickCount = 0
+let gameStartTime = 0
+let momentum = 0  // For creating price trends
+
+// Volatility parameters
+const VOLATILITY = 0.025        // Base volatility per tick
+const DRIFT = -0.0008           // Slight negative drift (house edge)
+const MOMENTUM_DECAY = 0.92     // How fast momentum decays
+const MOMENTUM_NOISE = 0.015    // Random momentum changes
+const TICKS_PER_CANDLE = 20     // Ticks before new candle
+
+// Get probability of price going down (increases over time = house edge)
+const getDownProbability = (elapsedSeconds: number) => {
+  // Start at 50%, gradually increase chance of down movement
+  return 0.50 + elapsedSeconds * 0.0015  // +0.15% per second
+}
 
 const startGame = () => {
   gameState.value = 'active'
   currentMultiplier.value = 1.0
   priceHistory.value = [1.0]
+  tickCount = 0
+  gameStartTime = Date.now()
+  momentum = 0
 
-  // Initialize current candle
-  const lastCandle = candles.value[candles.value.length - 1]
+  // Initialize current candle from 1.0
   currentCandle.value = {
-    open: lastCandle?.close || 1,
-    high: lastCandle?.close || 1,
-    low: lastCandle?.close || 1,
-    close: lastCandle?.close || 1,
+    open: 1.0,
+    high: 1.0,
+    low: 1.0,
+    close: 1.0,
     time: Date.now()
   }
 
-  // Decide crash point (provably fair simulation)
-  const rand = Math.random()
-  const targetCrash = rand < 0.05 ? 1 + Math.random() * 0.1 : // 5% instant crash
-                      rand < 0.35 ? 1.1 + Math.random() * 0.9 : // 30% quick crash
-                      rand < 0.7 ? 2 + Math.random() * 3 : // 35% medium
-                      5 + Math.random() * 10 // 30% high
-
-  // Simulate fake traders
+  // Simulate fake traders buying in
   setTimeout(() => {
     if (gameState.value === 'active') {
       addNotification('vomki', 'buy', 0.16 + Math.random() * 0.5)
@@ -601,73 +644,118 @@ const startGame = () => {
   gameInterval = window.setInterval(() => {
     if (gameState.value !== 'active') return
 
-    // Exponential growth with variance
-    const elapsed = (Date.now() - (currentCandle.value?.time || Date.now())) / 1000
-    const baseGrowth = Math.pow(Math.E, 0.05 * elapsed)
-    const variance = 1 + (Math.random() - 0.5) * 0.02
-    currentMultiplier.value = Math.max(1, baseGrowth * variance)
+    tickCount++
+    const elapsedSeconds = (Date.now() - gameStartTime) / 1000
 
+    // === VOLATILE PRICE MODEL ===
+    // 1. Calculate down probability (increases over time)
+    const downProb = getDownProbability(elapsedSeconds)
+
+    // 2. Determine direction with momentum influence
+    const momentumBias = momentum * 0.3
+    const effectiveDownProb = Math.max(0.3, Math.min(0.7, downProb - momentumBias))
+    const direction = Math.random() > effectiveDownProb ? 1 : -1
+
+    // 3. Calculate price change magnitude
+    const magnitude = Math.random() * VOLATILITY
+
+    // 4. Apply change with drift
+    const priceChange = (direction * magnitude) + DRIFT
+
+    // 5. Update momentum (creates trends - series of green/red candles)
+    momentum = momentum * MOMENTUM_DECAY + (direction * MOMENTUM_NOISE * Math.random())
+
+    // 6. Update current price (can't go below 0)
+    currentMultiplier.value = Math.max(0, currentMultiplier.value + priceChange)
+
+    // Add to price history
     priceHistory.value.push(currentMultiplier.value)
-    if (priceHistory.value.length > 100) priceHistory.value.shift()
+    if (priceHistory.value.length > 120) priceHistory.value.shift()
 
     // Update current candle
     if (currentCandle.value) {
       currentCandle.value.close = currentMultiplier.value
       currentCandle.value.high = Math.max(currentCandle.value.high, currentMultiplier.value)
+      currentCandle.value.low = Math.min(currentCandle.value.low, currentMultiplier.value)
     }
 
-    // Auto-sell check
+    // Create new candle every N ticks
+    if (tickCount >= TICKS_PER_CANDLE) {
+      // Finalize current candle
+      if (currentCandle.value) {
+        candles.value.push({ ...currentCandle.value })
+        // Keep only last 20 candles
+        if (candles.value.length > 20) candles.value.shift()
+      }
+
+      // Start new candle
+      currentCandle.value = {
+        open: currentMultiplier.value,
+        high: currentMultiplier.value,
+        low: currentMultiplier.value,
+        close: currentMultiplier.value,
+        time: Date.now()
+      }
+      tickCount = 0
+    }
+
+    // Auto-sell check (only if in profit)
     if (autoSellAt.value && playerBet.value && currentMultiplier.value >= autoSellAt.value) {
       cashOut()
     }
 
-    // Fake trader cashouts
-    if (Math.random() < 0.02 && currentMultiplier.value > 1.5) {
-      const names = ['lucky_star', 'crypto_king', 'moon_boy', 'diamond_hands']
-      addNotification(names[Math.floor(Math.random() * names.length)], 'sell', Math.random() * 2)
+    // Fake trader activity
+    if (Math.random() < 0.015) {
+      const names = ['lucky_star', 'crypto_king', 'moon_boy', 'diamond_hands', 'whale_hunter']
+      const action = Math.random() > 0.4 ? 'buy' : 'sell'
+      const amount = action === 'buy' ? (0.1 + Math.random() * 0.5) : (Math.random() * 1.5)
+      addNotification(names[Math.floor(Math.random() * names.length)], action, amount)
     }
 
-    // Check crash
-    if (currentMultiplier.value >= targetCrash) {
-      crashGame(targetCrash)
+    // === CRASH ONLY AT 0.000x ===
+    if (currentMultiplier.value <= 0.001) {
+      crashGame(0)
     }
-  }, 50)
+  }, 80)  // ~12.5 ticks per second
 }
 
-const crashGame = (crashAt: number) => {
+const crashGame = (_crashAt: number) => {
   if (gameInterval) {
     clearInterval(gameInterval)
     gameInterval = null
   }
 
-  crashedAt.value = crashAt
+  // Calculate max multiplier reached during this round for history
+  const maxReached = Math.max(...priceHistory.value, 1)
+  crashedAt.value = 0  // Always 0.000x for Trading
+
   gameState.value = 'crashed'
 
-  // Finalize current candle
+  // Finalize current candle (crashed to 0)
   if (currentCandle.value) {
-    currentCandle.value.close = 1
-    currentCandle.value.low = Math.min(currentCandle.value.low, 1)
+    currentCandle.value.close = 0
+    currentCandle.value.low = 0
     candles.value.push({ ...currentCandle.value })
     currentCandle.value = null
   }
 
-  // Update crash history
-  crashHistory.value.unshift(crashAt)
+  // Update crash history with max multiplier reached (for display)
+  crashHistory.value.unshift(maxReached)
   crashHistory.value = crashHistory.value.slice(0, 10)
   recentGames.value = generateRecentGames()
 
-  // Reset player bet if still active
+  // Reset player bet if still active (they lost everything)
   if (playerBet.value) {
     const me = traders.value.find(t => t.isYou)
     if (me) {
       me.exited = true
-      me.profit = -me.bet
+      me.profit = -me.bet  // Lost full bet
     }
     playerBet.value = null
   }
 
   // Start countdown to next game
-  setTimeout(startCountdown, 2000)
+  setTimeout(startCountdown, 3000)
 }
 
 const startCountdown = () => {
@@ -876,12 +964,25 @@ onUnmounted(() => {
 
 .multiplier-value {
   display: block;
-  font-size: 52px;
+  font-size: 48px;
   font-weight: 800;
   color: #22c55e;
   text-shadow: 0 0 40px rgba(34, 197, 94, 0.6);
   font-family: 'SF Mono', -apple-system, monospace;
   letter-spacing: -2px;
+  transition: color 0.2s;
+}
+
+/* Negative multiplier (below 1.0x) */
+.multiplier-value.negative,
+.multiplier-overlay.negative .multiplier-value {
+  color: #ef4444;
+  text-shadow: 0 0 40px rgba(239, 68, 68, 0.6);
+}
+
+.multiplier-overlay.medium .multiplier-value {
+  color: #60a5fa;
+  text-shadow: 0 0 40px rgba(96, 165, 250, 0.6);
 }
 
 .multiplier-overlay.high .multiplier-value {
@@ -889,15 +990,32 @@ onUnmounted(() => {
   text-shadow: 0 0 40px rgba(250, 204, 21, 0.6);
 }
 
-.multiplier-overlay.very-high .multiplier-value {
-  color: #f97316;
-  text-shadow: 0 0 40px rgba(249, 115, 22, 0.6);
-  animation: glow-pulse 0.5s infinite alternate;
+/* Player P/L display */
+.player-pl {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.4);
+}
+
+.player-pl.positive {
+  color: #4ade80;
+}
+
+.player-pl.negative {
+  color: #f87171;
 }
 
 @keyframes glow-pulse {
-  from { text-shadow: 0 0 40px rgba(249, 115, 22, 0.6); }
-  to { text-shadow: 0 0 60px rgba(249, 115, 22, 0.9); }
+  from { text-shadow: 0 0 40px rgba(250, 204, 21, 0.6); }
+  to { text-shadow: 0 0 60px rgba(250, 204, 21, 0.9); }
+}
+
+.multiplier-overlay.high .multiplier-value {
+  animation: glow-pulse 0.5s infinite alternate;
 }
 
 .multiplier-label {
@@ -1263,6 +1381,20 @@ onUnmounted(() => {
 .sell-btn {
   background: linear-gradient(135deg, #dc2626, #ef4444);
   color: #fff;
+}
+
+.sell-btn.in-loss {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b);
+}
+
+.profit-text {
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.loss-text {
+  color: #fca5a5;
+  font-weight: 700;
 }
 
 .action-btn:disabled {
