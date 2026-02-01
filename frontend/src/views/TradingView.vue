@@ -1,266 +1,136 @@
 <template>
   <div class="trading-view">
-    <!-- Header -->
-    <header class="trading-header">
-      <button class="header-back" @click="$router.push('/solo')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 18l-6-6 6-6"/>
+    <!-- Tournament Banner -->
+    <div class="tournament-banner" @click="$router.push('/tournament')">
+      <span class="banner-emoji">&#127942;</span>
+      <span class="banner-text">Трейдинг Мега Турнир</span>
+      <span class="banner-timer">{{ tournamentTimer }}</span>
+    </div>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="top-left">
+        <button class="icon-btn" @click="$router.push('/history?sorting=solo_trading')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </button>
+        <button class="icon-btn" @click="showHelp = true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </button>
+      </div>
+      <div class="balance-pill" @click="$router.push('/deposit')">
+        <svg class="ton-icon" width="16" height="16" viewBox="0 0 56 56" fill="none">
+          <path d="M28 56C43.464 56 56 43.464 56 28C56 12.536 43.464 0 28 0C12.536 0 0 12.536 0 28C0 43.464 12.536 56 28 56Z" fill="#0098EA"/>
+          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
         </svg>
-      </button>
-      <div class="header-title">
-        <span class="title-main">Trading</span>
-        <span class="title-badge">CRASH</span>
-      </div>
-      <div class="header-balance">
-        <span class="balance-icon">💎</span>
         <span class="balance-value">{{ balance.toFixed(2) }}</span>
-        <button class="balance-add">+</button>
-      </div>
-    </header>
-
-    <!-- Connection & Game Info Bar -->
-    <div class="info-bar">
-      <div class="connection-status">
-        <span class="status-dot"></span>
-        <span>Connected</span>
-      </div>
-      <div class="game-meta">
-        <span class="game-number">ИГРА #{{ gameNumber }}</span>
-        <span class="game-hash">{{ gameHash }}</span>
+        <span class="balance-add">+</span>
       </div>
     </div>
 
-    <!-- Candlestick Chart Container -->
-    <div class="chart-container">
-      <svg class="chart-svg" :viewBox="`0 0 ${chartWidth} ${chartHeight}`" preserveAspectRatio="none">
-        <!-- Background Grid -->
-        <defs>
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)"/>
-
-        <!-- Horizontal price lines -->
-        <g class="price-lines">
-          <line v-for="i in 5" :key="'hline-'+i"
-            x1="0" :y1="chartHeight * i / 5"
-            :x2="chartWidth - 40" :y2="chartHeight * i / 5"
-            stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="4,4"/>
-        </g>
-
-        <!-- Entry price dashed line (1.00x baseline) -->
-        <line
-          x1="0" :y1="priceToY(1.0)"
-          :x2="chartWidth - 40" :y2="priceToY(1.0)"
-          stroke="#4b5563" stroke-width="1" stroke-dasharray="6,4"
-          opacity="0.8"/>
-
-        <!-- Candlesticks -->
-        <g class="candlesticks">
-          <g v-for="(candle, idx) in visibleCandles" :key="'candle-'+idx">
-            <!-- Wick (shadow) -->
-            <line
-              :x1="getCandleX(idx) + candleWidth / 2"
-              :y1="priceToY(candle.high)"
-              :x2="getCandleX(idx) + candleWidth / 2"
-              :y2="priceToY(candle.low)"
-              :stroke="candle.close >= candle.open ? '#22c55e' : '#ef4444'"
-              stroke-width="1.5"
-            />
-            <!-- Body -->
-            <rect
-              :x="getCandleX(idx) + 2"
-              :y="priceToY(Math.max(candle.open, candle.close))"
-              :width="candleWidth - 4"
-              :height="Math.max(3, Math.abs(priceToY(candle.open) - priceToY(candle.close)))"
-              :fill="candle.close >= candle.open ? '#22c55e' : '#ef4444'"
-              rx="1"
-            />
-          </g>
-        </g>
-
-        <!-- Current candle being formed (during active game) -->
-        <g v-if="gameState === 'active' && currentCandle" class="current-candle">
-          <!-- Wick -->
-          <line
-            :x1="getCurrentCandleX() + candleWidth / 2"
-            :y1="priceToY(currentCandle.high)"
-            :x2="getCurrentCandleX() + candleWidth / 2"
-            :y2="priceToY(currentCandle.low)"
-            :stroke="currentCandleColor"
-            stroke-width="2"
-          />
-          <!-- Body -->
-          <rect
-            :x="getCurrentCandleX() + 2"
-            :y="priceToY(Math.max(currentCandle.open, currentCandle.close))"
-            :width="candleWidth - 4"
-            :height="Math.max(4, Math.abs(priceToY(currentCandle.open) - priceToY(currentCandle.close)))"
-            :fill="currentCandleColor"
-            rx="1"
-          >
-            <animate attributeName="opacity" values="1;0.7;1" dur="0.5s" repeatCount="indefinite"/>
-          </rect>
-        </g>
-
-        <!-- Price line (during active game) - color based on trend -->
-        <path
-          v-if="pricePath && gameState === 'active'"
-          :d="pricePath"
-          fill="none"
-          :stroke="priceLineColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <!-- Glow effect -->
-        <path
-          v-if="pricePath && gameState === 'active'"
-          :d="pricePath"
-          fill="none"
-          :stroke="priceLineColor"
-          stroke-width="8"
-          stroke-linecap="round"
-          opacity="0.2"
-          filter="blur(4px)"
-        />
-      </svg>
-
-      <!-- Y-Axis Labels -->
-      <div class="y-axis-labels">
-        <span v-for="price in yAxisLabels" :key="price" class="y-label">{{ price.toFixed(2) }}x</span>
-      </div>
-
-      <!-- Multiplier Overlay -->
-      <div class="multiplier-overlay" :class="multiplierClass">
-        <template v-if="gameState === 'active'">
-          <span class="multiplier-value" :class="{ negative: currentMultiplier < 1.0 }">
-            {{ currentMultiplier.toFixed(3) }}x
-          </span>
-          <span class="multiplier-label">МНОЖИТЕЛЬ</span>
-          <!-- Show P/L when player has bet -->
-          <span v-if="playerBet" class="player-pl" :class="{ positive: currentPL >= 0, negative: currentPL < 0 }">
-            {{ currentPL >= 0 ? '+' : '' }}{{ currentPL.toFixed(2) }} TON
-          </span>
-        </template>
-        <template v-else-if="gameState === 'crashed'">
-          <span class="multiplier-crashed">
-            💀💀💀 0.000x
-          </span>
-          <span class="crash-label">ЛИКВИДАЦИЯ!</span>
-        </template>
-        <template v-else-if="gameState === 'countdown'">
-          <div class="countdown-display">
-            <span class="countdown-text">Новая игра начнется через</span>
-            <span class="countdown-timer">{{ countdownSeconds.toFixed(2) }}s</span>
-          </div>
-        </template>
-        <template v-else>
-          <span class="waiting-text">Ожидание ставок...</span>
-        </template>
-      </div>
-
-      <!-- Floating trader notifications -->
-      <transition-group name="notification-fade" tag="div" class="trader-notifications">
-        <div
-          v-for="notif in traderNotifications"
-          :key="notif.id"
-          class="trader-notif"
-          :class="notif.type"
-          :style="{ top: notif.y + 'px', left: notif.x + 'px' }"
-        >
-          @{{ notif.username }} {{ notif.type === 'buy' ? 'Купил' : 'Продал' }}
-          <span :class="notif.type === 'buy' ? 'amount-buy' : 'amount-sell'">
-            {{ notif.type === 'buy' ? '+' : '+' }}{{ notif.amount.toFixed(2) }}
-          </span>
-          <span class="notif-icon">◇</span>
+    <!-- Chart Container -->
+    <div class="chart-wrapper">
+      <div class="chart-container" ref="chartContainerRef">
+        <!-- Ping Indicator -->
+        <div class="ping-indicator">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path opacity="0.5" d="M5 1.17C6.76 1.17 8.45 1.86 9.75 3.11C9.91 3.26 9.92 3.51 9.77 3.67C9.61 3.83 9.36 3.84 9.2 3.69C8.04 2.58 6.54 1.97 5 1.97C3.46 1.97 1.96 2.58 0.8 3.69C0.64 3.84 0.39 3.83 0.23 3.67C0.08 3.51 0.09 3.26 0.25 3.11C1.55 1.86 3.24 1.17 5 1.17Z" fill="white"/>
+            <path opacity="0.5" d="M5.02 3.46C6.21 3.46 7.36 3.91 8.26 4.73C8.43 4.87 8.44 5.13 8.29 5.29C8.15 5.45 7.89 5.47 7.73 5.32C6.96 4.63 6 4.26 5.02 4.26C4.03 4.26 3.07 4.63 2.31 5.32C2.14 5.47 1.89 5.45 1.74 5.29C1.59 5.13 1.61 4.87 1.77 4.73C2.68 3.91 3.83 3.46 5.02 3.46Z" fill="white"/>
+            <path opacity="0.5" d="M5 5.74C5.62 5.74 6.22 5.95 6.72 6.33C6.89 6.47 6.92 6.72 6.79 6.9C6.66 7.07 6.4 7.1 6.23 6.97C5.87 6.69 5.44 6.54 5 6.54C4.57 6.54 4.14 6.69 3.78 6.97C3.6 7.1 3.35 7.07 3.21 6.9C3.08 6.72 3.11 6.47 3.29 6.33C3.78 5.95 4.38 5.74 5 5.74Z" fill="white"/>
+            <circle opacity="0.5" cx="5" cy="8.43" r="0.4" fill="white"/>
+          </svg>
+          <span>{{ ping }}ms</span>
         </div>
-      </transition-group>
 
-      <!-- Ping indicator -->
-      <div class="ping-indicator">
-        <span class="ping-dot"></span>
-        {{ ping }}ms
+        <!-- Multiplier Display -->
+        <div class="multiplier-display" :class="multiplierClass" :style="multiplierStyle">
+          <span class="multiplier-value">{{ displayMultiplier }}</span>
+        </div>
+
+        <!-- Price Line (animated dashed) -->
+        <div v-if="gameState === 'active'" class="price-line" :style="{ top: priceLineTop + 'px' }"></div>
+
+        <!-- Crash Overlay -->
+        <div v-if="gameState === 'crashed'" class="crash-overlay">
+          <div class="crash-skulls">
+            <span>&#128128;</span>
+            <span>&#128128;</span>
+            <span>&#128128;</span>
+          </div>
+        </div>
+
+        <!-- Countdown Overlay -->
+        <div v-if="gameState === 'countdown'" class="countdown-overlay">
+          <span class="countdown-value">{{ countdownSeconds.toFixed(1) }}s</span>
+        </div>
       </div>
     </div>
 
-    <!-- Recent Games (Последние игры) -->
+    <!-- Recent Games Strip -->
     <div class="recent-games">
-      <div class="recent-header">
-        <span class="recent-title">Последние игры</span>
-      </div>
+      <span class="recent-label">Последние игры</span>
       <div class="recent-list">
-        <div
-          v-for="(game, idx) in recentGames"
-          :key="idx"
-          class="recent-game-item"
-          :class="{ crashed: game.crashAt < 1.1 }"
-        >
-          <!-- Mini candlestick chart -->
+        <div v-for="(game, idx) in recentGames" :key="idx" class="recent-item">
           <div class="mini-chart">
-            <svg viewBox="0 0 40 30" preserveAspectRatio="none">
-              <path
-                :d="game.miniPath"
-                fill="none"
-                :stroke="game.crashAt >= 2 ? '#22c55e' : '#ef4444'"
-                stroke-width="1.5"
-              />
+            <svg viewBox="0 0 40 24" preserveAspectRatio="none">
+              <path :d="game.path" fill="none" :stroke="game.maxMult >= 2 ? '#09D76D' : '#FF394E'" stroke-width="1.5"/>
             </svg>
           </div>
-          <span class="game-multiplier" :class="{ high: game.crashAt >= 2, low: game.crashAt < 2 }">
-            {{ game.crashAt < 1.1 ? '💀' : '' }}{{ game.crashAt.toFixed(2) }}x
-          </span>
+          <span class="recent-mult" :class="{ high: game.maxMult >= 2 }">{{ game.maxMult.toFixed(2) }}x</span>
         </div>
-      </div>
-    </div>
-
-    <!-- History Strip -->
-    <div class="history-strip">
-      <div
-        v-for="(crash, idx) in crashHistory"
-        :key="idx"
-        class="history-badge"
-        :class="{ high: crash >= 2, low: crash < 2 }"
-      >
-        {{ crash.toFixed(2) }}x
       </div>
     </div>
 
     <!-- Traders Panel -->
     <div class="traders-panel">
       <div class="traders-header">
-        <span class="traders-title">Трейдеры</span>
-        <span class="traders-count">{{ traders.length }}</span>
+        <div class="traders-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span>Traders</span>
+          <span class="traders-count">({{ traders.length }})</span>
+        </div>
+        <div class="game-info">
+          <span class="game-number">Game #{{ gameNumber }}</span>
+          <button class="hash-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Hash: {{ gameHash }}
+          </button>
+        </div>
       </div>
-      <div class="traders-list">
-        <div
-          v-for="trader in traders"
-          :key="trader.id"
-          class="trader-row"
-          :class="{ exited: trader.exited, you: trader.isYou }"
-        >
-          <div class="trader-left">
+      <div class="traders-list" v-if="traders.length > 0">
+        <div v-for="trader in traders" :key="trader.id" class="trader-row" :class="{ exited: trader.exited }">
+          <div class="trader-info">
             <div class="trader-avatar" :style="{ background: trader.color }">
               {{ trader.name.charAt(0).toUpperCase() }}
             </div>
-            <div class="trader-info">
-              <span class="trader-name">@{{ trader.name }}</span>
-              <span class="trader-bet">{{ trader.bet }} TON</span>
-            </div>
+            <span class="trader-name">@{{ trader.name }}</span>
           </div>
-          <div class="trader-right">
+          <div class="trader-bet">{{ trader.bet.toFixed(2) }} TON</div>
+          <div class="trader-status">
             <template v-if="trader.exited">
-              <span class="trader-exited-label">Вышел</span>
+              <span class="status-exited">Вышел</span>
               <span class="trader-profit" :class="{ positive: trader.profit > 0 }">
-                {{ trader.profit > 0 ? '+' : '' }}{{ trader.profit.toFixed(2) }}
+                {{ trader.profit >= 0 ? '+' : '' }}{{ trader.profit.toFixed(2) }}
               </span>
             </template>
             <template v-else-if="gameState === 'active'">
-              <span class="trader-multiplier">{{ currentMultiplier.toFixed(2) }}x</span>
-            </template>
-            <template v-else>
-              <span class="trader-waiting">⏳</span>
+              <span class="status-active">{{ currentMultiplier.toFixed(2) }}x</span>
             </template>
           </div>
         </div>
@@ -268,80 +138,116 @@
     </div>
 
     <!-- Bet Controls -->
-    <div class="bet-section">
-      <!-- Bet Amount Buttons -->
+    <div class="bet-controls">
+      <!-- Bet Amount Pills -->
       <div class="bet-amounts">
-        <button
-          v-for="amount in betAmounts"
-          :key="amount"
-          class="bet-btn"
-          :class="{ active: selectedBet === amount }"
-          @click="selectedBet = amount"
-        >
-          {{ amount }} <span class="bet-icon">💎</span>
+        <button v-for="amount in betAmounts" :key="amount"
+          class="bet-pill" :class="{ active: selectedBet === amount }"
+          @click="selectedBet = amount">
+          <svg class="pill-diamond" width="12" height="12" viewBox="0 0 56 56" fill="currentColor">
+            <path d="M28 56C43.464 56 56 43.464 56 28C56 12.536 43.464 0 28 0C12.536 0 0 12.536 0 28C0 43.464 12.536 56 28 56Z" fill="currentColor" opacity="0.3"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="currentColor"/>
+          </svg>
+          {{ amount }}
+        </button>
+        <button class="bet-pill max-pill" @click="selectedBet = Math.floor(balance * 10) / 10">Макс</button>
+        <button class="bet-pill edit-pill">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
         </button>
       </div>
 
-      <!-- Action Buttons -->
+      <!-- Action Buttons Row -->
       <div class="action-row">
-        <button
-          class="action-btn buy-btn"
-          :disabled="!canBuy"
-          @click="placeBet"
-        >
-          <span class="btn-emoji">📈</span>
-          {{ playerBet ? 'Ставка сделана' : `Купить ${selectedBet} TON` }}
+        <button class="swap-btn" @click="$router.push('/swap')">
+          <svg class="swap-icon" width="20" height="20" viewBox="0 0 56 56" fill="#0098EA">
+            <path d="M28 56C43.464 56 56 43.464 56 28C56 12.536 43.464 0 28 0C12.536 0 0 12.536 0 28C0 43.464 12.536 56 28 56Z"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+          </svg>
+          <span>Сменить</span>
+          <span class="swap-star">&#9733;</span>
         </button>
-        <button
-          class="action-btn sell-btn"
-          :class="{ 'in-loss': playerBet && currentPL < 0 }"
-          :disabled="!canSell"
-          @click="cashOut"
-        >
-          <span class="btn-emoji">📉</span>
-          <span v-if="playerBet">
-            Продать <span :class="currentPL >= 0 ? 'profit-text' : 'loss-text'">
-              {{ currentPL >= 0 ? '+' : '' }}{{ currentPL.toFixed(2) }}
+
+        <!-- Buy / Sell Button -->
+        <button v-if="!playerBet" class="buy-btn" :disabled="!canBuy" @click="placeBet">
+          <svg class="btn-diamond" width="18" height="18" viewBox="0 0 56 56" fill="currentColor">
+            <path d="M28 56C43.464 56 56 43.464 56 28C56 12.536 43.464 0 28 0C12.536 0 0 12.536 0 28C0 43.464 12.536 56 28 56Z" opacity="0.3"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z"/>
+          </svg>
+          <span class="btn-text">
+            <span class="btn-label">Купить</span>
+            <span class="btn-amount">{{ selectedBet.toFixed(1) }} TON</span>
+          </span>
+        </button>
+        <button v-else class="sell-btn" :disabled="!canSell" @click="cashOut">
+          <span class="btn-text">
+            <span class="btn-label">Продать</span>
+            <span class="btn-percent" :class="{ positive: currentPLPercent >= 0, negative: currentPLPercent < 0 }">
+              {{ currentPLPercent >= 0 ? '+' : '' }}{{ currentPLPercent.toFixed(0) }}%
             </span>
           </span>
-          <span v-else>Продать</span>
+        </button>
+
+        <button class="deposit-btn" @click="$router.push('/deposit')">
+          <span class="deposit-plus">+</span>
+          <span>Отправить</span>
         </button>
       </div>
-
-      <!-- Auto-sell Options -->
-      <div class="autosell-row">
-        <span class="autosell-label">Авто-продажа:</span>
-        <div class="autosell-options">
-          <button
-            v-for="mult in autoSellMultipliers"
-            :key="mult"
-            class="autosell-btn"
-            :class="{ active: autoSellAt === mult }"
-            @click="autoSellAt = autoSellAt === mult ? null : mult"
-          >
-            {{ mult }}x
-          </button>
-        </div>
-      </div>
     </div>
 
-    <!-- Game Hash Footer -->
-    <div class="game-footer">
-      <span class="footer-label">Game #{{ gameNumber }}</span>
-      <span class="footer-hash">Hash: {{ gameHash }}</span>
-    </div>
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <router-link to="/market" class="nav-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        <span>Магазин</span>
+      </router-link>
+      <router-link to="/pvp" class="nav-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <span>PvP</span>
+      </router-link>
+      <router-link to="/solo" class="nav-item active">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        <span>Solo</span>
+      </router-link>
+      <router-link to="/earn" class="nav-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"/>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+        <span>Earn</span>
+      </router-link>
+      <router-link to="/profile" class="nav-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>Профиль</span>
+      </router-link>
+    </nav>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { createChart, CandlestickSeries, LineSeries, type IChartApi, type ISeriesApi, ColorType } from 'lightweight-charts'
 
 interface Candle {
+  time: number
   open: number
   high: number
   low: number
   close: number
-  time: number
 }
 
 interface Trader {
@@ -351,226 +257,221 @@ interface Trader {
   color: string
   exited: boolean
   profit: number
-  isYou: boolean
-}
-
-interface TraderNotification {
-  id: number
-  username: string
-  type: 'buy' | 'sell'
-  amount: number
-  x: number
-  y: number
 }
 
 interface RecentGame {
-  crashAt: number
-  miniPath: string
+  maxMult: number
+  path: string
 }
 
-// Chart config
-const chartWidth = 360
-const chartHeight = 200
-const candleWidth = 18
-const maxVisibleCandles = Math.floor((chartWidth - 50) / candleWidth)
+// Chart refs
+const chartContainerRef = ref<HTMLElement | null>(null)
+let chart: IChartApi | null = null
+let candleSeries: ISeriesApi<'Candlestick'> | null = null
+
+// Chart dimensions
+const chartHeight = ref(220)
+const priceLineTop = ref(100)
 
 // Game state
 const gameState = ref<'waiting' | 'active' | 'crashed' | 'countdown'>('waiting')
 const currentMultiplier = ref(1.0)
-const crashedAt = ref(0)
 const countdownSeconds = ref(5)
-const gameNumber = ref(28392)
-const gameHash = ref('3d07...f8da')
-const ping = ref(74)
+const gameNumber = ref(30772)
+const gameHash = ref('2b2c...c667')
+const ping = ref(73)
+const tournamentTimer = ref('14:13:24:13')
+const showHelp = ref(false)
 
 // Candle data
 const candles = ref<Candle[]>([])
 const currentCandle = ref<Candle | null>(null)
-const priceHistory = ref<number[]>([])
+let candleIndex = 0
 
 // Player state
-const balance = ref(3.16)
-const selectedBet = ref(1)
+const balance = ref(3.66)
+const selectedBet = ref(0.5)
 const playerBet = ref<number | null>(null)
-const autoSellAt = ref<number | null>(null)
-const betAmounts = [0.5, 1, 2, 5]
-const autoSellMultipliers = [1.5, 2, 3, 5, 10]
+const betAmounts = [0.5, 1, 5, 10]
 
 // Traders
-const traders = ref<Trader[]>([
-  { id: 1, name: 'you', bet: 1, color: '#facc15', exited: false, profit: 0, isYou: true },
-  { id: 2, name: 'trader1', bet: 2.5, color: '#22c55e', exited: false, profit: 0, isYou: false },
+const traders = ref<Trader[]>([])
+
+// Recent games
+const recentGames = ref<RecentGame[]>([
+  { maxMult: 1.76, path: generateMiniPath() },
+  { maxMult: 2.33, path: generateMiniPath() },
+  { maxMult: 1.01, path: generateMiniPath() },
+  { maxMult: 5.87, path: generateMiniPath() },
 ])
 
-// Notifications
-const traderNotifications = ref<TraderNotification[]>([])
-let notifId = 0
-
-// Recent games & crash history
-const crashHistory = ref([2.34, 1.12, 5.67, 1.89, 3.21, 1.05, 8.92, 2.11])
-const recentGames = ref<RecentGame[]>([])
-
-// Generate initial data
-const generateCandles = () => {
-  const result: Candle[] = []
-  let price = 1.0
-  for (let i = 0; i < 12; i++) {
-    const open = price
-    const change = (Math.random() - 0.4) * 0.25
-    const close = Math.max(0.6, price + change)
-    const wickUp = Math.random() * 0.08
-    const wickDown = Math.random() * 0.08
-    const high = Math.max(open, close) + wickUp
-    const low = Math.min(open, close) - wickDown
-    result.push({ open, high, low, close, time: Date.now() - (12 - i) * 5000 })
-    price = close
-  }
-  return result
-}
-
-const generateMiniPath = (): string => {
-  const points: string[] = []
-  let y = 15 + Math.random() * 10
-  for (let x = 0; x <= 40; x += 4) {
-    y += (Math.random() - 0.45) * 6
-    y = Math.max(5, Math.min(25, y))
-    points.push(`${x},${y}`)
-  }
-  return `M ${points.join(' L ')}`
-}
-
-const generateRecentGames = () => {
-  return crashHistory.value.slice(0, 6).map(crashAt => ({
-    crashAt,
-    miniPath: generateMiniPath()
-  }))
-}
-
-// Initialize
-candles.value = generateCandles()
-recentGames.value = generateRecentGames()
-
 // Computed
-const visibleCandles = computed(() => candles.value.slice(-maxVisibleCandles))
-
-const minPrice = computed(() => {
-  const prices = visibleCandles.value.flatMap(c => [c.low, c.high])
-  if (currentCandle.value) {
-    prices.push(currentCandle.value.low, currentCandle.value.high)
-  }
-  prices.push(...priceHistory.value)
-  return Math.max(0.5, Math.min(...prices, 1) - 0.15)
-})
-
-const maxPrice = computed(() => {
-  const prices = visibleCandles.value.flatMap(c => [c.low, c.high])
-  if (currentCandle.value) {
-    prices.push(currentCandle.value.low, currentCandle.value.high)
-  }
-  prices.push(...priceHistory.value)
-  return Math.max(...prices, 1) + 0.3
-})
-
-const yAxisLabels = computed(() => {
-  const labels = []
-  const step = (maxPrice.value - minPrice.value) / 4
-  for (let i = 0; i <= 4; i++) {
-    labels.push(maxPrice.value - step * i)
-  }
-  return labels
-})
-
-const priceToY = (price: number): number => {
-  const range = maxPrice.value - minPrice.value
-  return chartHeight - ((price - minPrice.value) / range) * chartHeight
-}
-
-const getCandleX = (idx: number): number => {
-  return idx * candleWidth + 10
-}
-
-const getCurrentCandleX = (): number => {
-  return visibleCandles.value.length * candleWidth + 10
-}
-
-const pricePath = computed(() => {
-  if (priceHistory.value.length < 2) return ''
-  const startX = getCurrentCandleX() + candleWidth / 2
-  const points = priceHistory.value.map((price, i) => {
-    const x = startX + i * 2
-    const y = priceToY(price)
-    return `${x},${y}`
-  })
-  return `M ${points.join(' L ')}`
+const displayMultiplier = computed(() => {
+  if (gameState.value === 'crashed') return '0.000x'
+  return currentMultiplier.value.toFixed(3) + 'x'
 })
 
 const multiplierClass = computed(() => {
   if (gameState.value === 'crashed') return 'crashed'
-  if (currentMultiplier.value < 1.0) return 'negative'  // Below entry price
+  if (currentMultiplier.value < 1.0) return 'negative'
   if (currentMultiplier.value >= 2) return 'high'
-  if (currentMultiplier.value >= 1.5) return 'medium'
   return 'normal'
 })
 
-// Current P/L for player (can be negative!)
-const currentPL = computed(() => {
-  if (!playerBet.value) return 0
-  return (playerBet.value * currentMultiplier.value) - playerBet.value
+const multiplierStyle = computed(() => {
+  // Position multiplier based on price
+  const containerHeight = chartHeight.value
+  const minY = 0.5
+  const maxY = Math.max(2.5, currentMultiplier.value + 0.5)
+  const range = maxY - minY
+  const normalized = (currentMultiplier.value - minY) / range
+  const top = containerHeight - (normalized * containerHeight * 0.8) - 40
+
+  return {
+    top: Math.max(20, Math.min(containerHeight - 60, top)) + 'px',
+    color: gameState.value === 'crashed' ? '#FB2C36' :
+           currentMultiplier.value < 1.0 ? '#FB2C36' :
+           currentMultiplier.value >= 2 ? '#09D76D' : '#FFFFFF'
+  }
 })
 
-// Current candle color based on direction
-const currentCandleColor = computed(() => {
-  if (!currentCandle.value) return '#22c55e'
-  return currentCandle.value.close >= currentCandle.value.open ? '#22c55e' : '#ef4444'
-})
-
-// Price line color based on current trend
-const priceLineColor = computed(() => {
-  if (priceHistory.value.length < 2) return '#22c55e'
-  const last = priceHistory.value[priceHistory.value.length - 1]
-  const prev = priceHistory.value[priceHistory.value.length - 2]
-  return last >= prev ? '#22c55e' : '#ef4444'
+const currentPLPercent = computed(() => {
+  return (currentMultiplier.value - 1) * 100
 })
 
 const canBuy = computed(() => {
-  return (gameState.value === 'waiting' || gameState.value === 'countdown') && !playerBet.value
+  return (gameState.value === 'waiting' || gameState.value === 'countdown' || gameState.value === 'active') &&
+         !playerBet.value && balance.value >= selectedBet.value
 })
 
 const canSell = computed(() => {
   return gameState.value === 'active' && playerBet.value !== null
 })
 
-// Methods
-const addNotification = (username: string, type: 'buy' | 'sell', amount: number) => {
-  const notif: TraderNotification = {
-    id: notifId++,
-    username,
-    type,
-    amount,
-    x: 50 + Math.random() * 150,
-    y: 40 + Math.random() * 80
+// Generate mini chart path for recent games
+function generateMiniPath(): string {
+  const points: string[] = []
+  let y = 12 + Math.random() * 8
+  for (let x = 0; x <= 40; x += 4) {
+    y += (Math.random() - 0.45) * 5
+    y = Math.max(4, Math.min(20, y))
+    points.push(`${x},${y}`)
   }
-  traderNotifications.value.push(notif)
-  setTimeout(() => {
-    const idx = traderNotifications.value.findIndex(n => n.id === notif.id)
-    if (idx !== -1) traderNotifications.value.splice(idx, 1)
-  }, 2500)
+  return `M ${points.join(' L ')}`
 }
 
+// Initialize TradingView Lightweight Chart
+const initChart = () => {
+  if (!chartContainerRef.value) return
+
+  const container = chartContainerRef.value
+
+  chart = createChart(container, {
+    width: container.clientWidth,
+    height: container.clientHeight,
+    layout: {
+      background: { type: ColorType.Solid, color: 'transparent' },
+      textColor: 'rgba(255, 255, 255, 0.5)',
+      fontFamily: "'SF Pro Text', -apple-system, sans-serif",
+      fontSize: 10,
+    },
+    grid: {
+      vertLines: { visible: false },
+      horzLines: { color: 'rgba(255, 255, 255, 0.05)', style: 1 },
+    },
+    crosshair: {
+      mode: 0, // Disabled
+    },
+    rightPriceScale: {
+      visible: false,
+    },
+    leftPriceScale: {
+      visible: true,
+      borderVisible: false,
+      scaleMargins: { top: 0.1, bottom: 0.1 },
+    },
+    timeScale: {
+      visible: false,
+      borderVisible: false,
+    },
+    handleScroll: false,
+    handleScale: false,
+  })
+
+  candleSeries = chart.addSeries(CandlestickSeries, {
+    upColor: '#09D76D',
+    downColor: '#FB2C36',
+    borderUpColor: '#09D76D',
+    borderDownColor: '#FB2C36',
+    wickUpColor: '#09D76D',
+    wickDownColor: '#FB2C36',
+    priceScaleId: 'left',
+  })
+
+  // Set initial price scale
+  candleSeries.priceScale().applyOptions({
+    autoScale: true,
+    scaleMargins: { top: 0.1, bottom: 0.1 },
+  })
+}
+
+// Update chart with new candle data
+const updateChart = () => {
+  if (!candleSeries || !currentCandle.value) return
+
+  const candleData = {
+    time: currentCandle.value.time as any,
+    open: currentCandle.value.open,
+    high: currentCandle.value.high,
+    low: currentCandle.value.low,
+    close: currentCandle.value.close,
+  }
+
+  candleSeries.update(candleData)
+
+  // Update price line position
+  updatePriceLinePosition()
+}
+
+const updatePriceLinePosition = () => {
+  if (!chart) return
+  // Approximate price line position calculation
+  const containerHeight = chartHeight.value
+  const price = currentMultiplier.value
+  const minPrice = Math.min(0.5, ...candles.value.map(c => c.low), price)
+  const maxPrice = Math.max(2.0, ...candles.value.map(c => c.high), price)
+  const range = maxPrice - minPrice
+  const normalized = (price - minPrice) / range
+  priceLineTop.value = containerHeight - (normalized * containerHeight * 0.85) - 10
+}
+
+// Add completed candle to chart
+const addCandleToChart = (candle: Candle) => {
+  if (!candleSeries) return
+
+  candleSeries.update({
+    time: candle.time as any,
+    open: candle.open,
+    high: candle.high,
+    low: candle.low,
+    close: candle.close,
+  })
+}
+
+// Player actions
 const placeBet = () => {
   if (!canBuy.value) return
   playerBet.value = selectedBet.value
   balance.value -= selectedBet.value
 
-  // Update trader entry
-  const me = traders.value.find(t => t.isYou)
-  if (me) {
-    me.bet = selectedBet.value
-    me.exited = false
-    me.profit = 0
-  }
-
-  addNotification('you', 'buy', selectedBet.value)
+  traders.value.push({
+    id: Date.now(),
+    name: 'you',
+    bet: selectedBet.value,
+    color: '#0098EA',
+    exited: false,
+    profit: 0
+  })
 }
 
 const cashOut = () => {
@@ -580,196 +481,195 @@ const cashOut = () => {
   const profit = payout - playerBet.value
   balance.value += payout
 
-  // Update trader
-  const me = traders.value.find(t => t.isYou)
+  const me = traders.value.find(t => t.name === 'you')
   if (me) {
     me.exited = true
     me.profit = profit
   }
 
-  addNotification('you', 'sell', profit)
   playerBet.value = null
 }
 
-// Game simulation - VOLATILE MODEL (not Aviator!)
+// Game simulation
 let gameInterval: number | null = null
 let countdownInterval: number | null = null
 let tickCount = 0
-let gameStartTime = 0
-let momentum = 0  // For creating price trends
+let momentum = 0
 
-// Volatility parameters
-const VOLATILITY = 0.025        // Base volatility per tick
-const DRIFT = -0.0008           // Slight negative drift (house edge)
-const MOMENTUM_DECAY = 0.92     // How fast momentum decays
-const MOMENTUM_NOISE = 0.015    // Random momentum changes
-const TICKS_PER_CANDLE = 20     // Ticks before new candle
-
-// Get probability of price going down (increases over time = house edge)
-const getDownProbability = (elapsedSeconds: number) => {
-  // Start at 50%, gradually increase chance of down movement
-  return 0.50 + elapsedSeconds * 0.0015  // +0.15% per second
-}
+const VOLATILITY = 0.025
+const DRIFT = -0.0008
+const MOMENTUM_DECAY = 0.92
+const TICKS_PER_CANDLE = 18
 
 const startGame = () => {
   gameState.value = 'active'
   currentMultiplier.value = 1.0
-  priceHistory.value = [1.0]
   tickCount = 0
-  gameStartTime = Date.now()
   momentum = 0
+  candleIndex = Date.now()
 
-  // Initialize current candle from 1.0
+  // Clear old data
+  candles.value = []
+  if (candleSeries) {
+    candleSeries.setData([])
+  }
+
+  // Initialize first candle
   currentCandle.value = {
+    time: candleIndex,
     open: 1.0,
     high: 1.0,
     low: 1.0,
     close: 1.0,
-    time: Date.now()
   }
 
-  // Simulate fake traders buying in
+  // Add initial candle
+  if (candleSeries) {
+    candleSeries.update({
+      time: candleIndex as any,
+      open: 1.0,
+      high: 1.0,
+      low: 1.0,
+      close: 1.0,
+    })
+  }
+
+  // Simulate other traders joining
   setTimeout(() => {
     if (gameState.value === 'active') {
-      addNotification('vomki', 'buy', 0.16 + Math.random() * 0.5)
+      const names = ['vomki', 'Kweer_gg', 'lucky_star', 'whale_99']
+      const name = names[Math.floor(Math.random() * names.length)]
+      const amount = 0.1 + Math.random() * 0.5
+      traders.value.push({
+        id: Date.now(),
+        name,
+        bet: amount,
+        color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+        exited: false,
+        profit: 0
+      })
     }
   }, 500 + Math.random() * 1000)
-
-  setTimeout(() => {
-    if (gameState.value === 'active') {
-      addNotification('Kweer_gg', 'buy', 0.03 + Math.random() * 0.3)
-    }
-  }, 1200 + Math.random() * 800)
 
   gameInterval = window.setInterval(() => {
     if (gameState.value !== 'active') return
 
     tickCount++
-    const elapsedSeconds = (Date.now() - gameStartTime) / 1000
 
-    // === VOLATILE PRICE MODEL ===
-    // 1. Calculate down probability (increases over time)
-    const downProb = getDownProbability(elapsedSeconds)
-
-    // 2. Determine direction with momentum influence
+    // Volatile price movement
+    const downProb = 0.50 + tickCount * 0.0003
     const momentumBias = momentum * 0.3
     const effectiveDownProb = Math.max(0.3, Math.min(0.7, downProb - momentumBias))
     const direction = Math.random() > effectiveDownProb ? 1 : -1
-
-    // 3. Calculate price change magnitude
     const magnitude = Math.random() * VOLATILITY
-
-    // 4. Apply change with drift
     const priceChange = (direction * magnitude) + DRIFT
 
-    // 5. Update momentum (creates trends - series of green/red candles)
-    momentum = momentum * MOMENTUM_DECAY + (direction * MOMENTUM_NOISE * Math.random())
-
-    // 6. Update current price (can't go below 0)
+    momentum = momentum * MOMENTUM_DECAY + (direction * 0.015 * Math.random())
     currentMultiplier.value = Math.max(0, currentMultiplier.value + priceChange)
-
-    // Add to price history
-    priceHistory.value.push(currentMultiplier.value)
-    if (priceHistory.value.length > 120) priceHistory.value.shift()
 
     // Update current candle
     if (currentCandle.value) {
       currentCandle.value.close = currentMultiplier.value
       currentCandle.value.high = Math.max(currentCandle.value.high, currentMultiplier.value)
       currentCandle.value.low = Math.min(currentCandle.value.low, currentMultiplier.value)
+      updateChart()
     }
 
-    // Create new candle every N ticks
+    // New candle every N ticks
     if (tickCount >= TICKS_PER_CANDLE) {
-      // Finalize current candle
       if (currentCandle.value) {
         candles.value.push({ ...currentCandle.value })
-        // Keep only last 20 candles
-        if (candles.value.length > 20) candles.value.shift()
       }
 
-      // Start new candle
+      candleIndex++
       currentCandle.value = {
+        time: candleIndex,
         open: currentMultiplier.value,
         high: currentMultiplier.value,
         low: currentMultiplier.value,
         close: currentMultiplier.value,
-        time: Date.now()
       }
       tickCount = 0
     }
 
-    // Auto-sell check (only if in profit)
-    if (autoSellAt.value && playerBet.value && currentMultiplier.value >= autoSellAt.value) {
-      cashOut()
-    }
-
     // Fake trader activity
-    if (Math.random() < 0.015) {
-      const names = ['lucky_star', 'crypto_king', 'moon_boy', 'diamond_hands', 'whale_hunter']
+    if (Math.random() < 0.012) {
+      const names = ['lucky_star', 'moon_boy', 'diamond_h', 'whale_99']
       const action = Math.random() > 0.4 ? 'buy' : 'sell'
-      const amount = action === 'buy' ? (0.1 + Math.random() * 0.5) : (Math.random() * 1.5)
-      addNotification(names[Math.floor(Math.random() * names.length)], action, amount)
+      const name = names[Math.floor(Math.random() * names.length)]
+
+      if (action === 'sell') {
+        const trader = traders.value.find(t => t.name === name && !t.exited)
+        if (trader) {
+          trader.exited = true
+          trader.profit = trader.bet * currentMultiplier.value - trader.bet
+        }
+      } else {
+        traders.value.push({
+          id: Date.now() + Math.random(),
+          name,
+          bet: 0.1 + Math.random() * 0.5,
+          color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+          exited: false,
+          profit: 0
+        })
+      }
     }
 
-    // === CRASH ONLY AT 0.000x ===
+    // Crash at 0.000x
     if (currentMultiplier.value <= 0.001) {
-      crashGame(0)
+      crashGame()
     }
-  }, 80)  // ~12.5 ticks per second
+  }, 80)
 }
 
-const crashGame = (_crashAt: number) => {
+const crashGame = () => {
   if (gameInterval) {
     clearInterval(gameInterval)
     gameInterval = null
   }
 
-  // Calculate max multiplier reached during this round for history
-  const maxReached = Math.max(...priceHistory.value, 1)
-  crashedAt.value = 0  // Always 0.000x for Trading
-
+  const maxReached = Math.max(...candles.value.map(c => c.high), currentCandle.value?.high || 1, 1)
   gameState.value = 'crashed'
+  currentMultiplier.value = 0
 
-  // Finalize current candle (crashed to 0)
-  if (currentCandle.value) {
+  // Final candle update
+  if (currentCandle.value && candleSeries) {
     currentCandle.value.close = 0
     currentCandle.value.low = 0
-    candles.value.push({ ...currentCandle.value })
-    currentCandle.value = null
+    candleSeries.update({
+      time: currentCandle.value.time as any,
+      open: currentCandle.value.open,
+      high: currentCandle.value.high,
+      low: 0,
+      close: 0,
+    })
   }
 
-  // Update crash history with max multiplier reached (for display)
-  crashHistory.value.unshift(maxReached)
-  crashHistory.value = crashHistory.value.slice(0, 10)
-  recentGames.value = generateRecentGames()
+  // Update recent games
+  recentGames.value.unshift({ maxMult: maxReached, path: generateMiniPath() })
+  recentGames.value = recentGames.value.slice(0, 6)
 
-  // Reset player bet if still active (they lost everything)
+  // Liquidate player if still in
   if (playerBet.value) {
-    const me = traders.value.find(t => t.isYou)
+    const me = traders.value.find(t => t.name === 'you')
     if (me) {
       me.exited = true
-      me.profit = -me.bet  // Lost full bet
+      me.profit = -me.bet
     }
     playerBet.value = null
   }
 
-  // Start countdown to next game
   setTimeout(startCountdown, 3000)
 }
 
 const startCountdown = () => {
   gameState.value = 'countdown'
   countdownSeconds.value = 5
-
   gameNumber.value++
-  gameHash.value = Math.random().toString(36).substring(2, 10) + '...' + Math.random().toString(36).substring(2, 6)
-
-  // Reset traders
-  traders.value.forEach(t => {
-    t.exited = false
-    t.profit = 0
-  })
+  gameHash.value = Math.random().toString(36).substring(2, 6) + '...' + Math.random().toString(36).substring(2, 6)
+  traders.value = []
+  candles.value = []
 
   countdownInterval = window.setInterval(() => {
     countdownSeconds.value -= 0.05
@@ -778,364 +678,287 @@ const startCountdown = () => {
         clearInterval(countdownInterval)
         countdownInterval = null
       }
-      priceHistory.value = []
       startGame()
     }
   }, 50)
 }
 
-// Watch for auto-sell
-watch(currentMultiplier, (newVal) => {
-  if (autoSellAt.value && playerBet.value && newVal >= autoSellAt.value && gameState.value === 'active') {
-    cashOut()
-  }
-})
-
+// Lifecycle
 onMounted(() => {
-  // Random ping simulation
+  nextTick(() => {
+    initChart()
+  })
+
+  // Ping simulation
   setInterval(() => {
     ping.value = Math.floor(50 + Math.random() * 80)
   }, 3000)
 
-  // Start first game after delay
-  setTimeout(startGame, 2000)
+  // Start first game
+  setTimeout(startGame, 1500)
+
+  // Handle resize
+  const resizeObserver = new ResizeObserver(() => {
+    if (chart && chartContainerRef.value) {
+      chart.applyOptions({
+        width: chartContainerRef.value.clientWidth,
+        height: chartContainerRef.value.clientHeight,
+      })
+      chartHeight.value = chartContainerRef.value.clientHeight
+    }
+  })
+
+  if (chartContainerRef.value) {
+    resizeObserver.observe(chartContainerRef.value)
+  }
 })
 
 onUnmounted(() => {
   if (gameInterval) clearInterval(gameInterval)
   if (countdownInterval) clearInterval(countdownInterval)
+  if (chart) {
+    chart.remove()
+    chart = null
+  }
 })
 </script>
 
 <style scoped>
+/* === MyBalls.io Trading Style with Lightweight Charts === */
+
 .trading-view {
   min-height: 100vh;
-  background: linear-gradient(180deg, #0a0e17 0%, #0d1320 100%);
+  background: #0C0C0C;
   color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 15px;
   padding-bottom: 100px;
 }
 
-/* Header */
-.trading-header {
+/* Tournament Banner */
+.tournament-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #0098EA 0%, #006AFF 100%);
+  padding: 10px 20px;
+  border-radius: 24px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.banner-emoji {
+  font-size: 18px;
+}
+
+.banner-text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.banner-timer {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+}
+
+/* Top Bar */
+.top-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: rgba(0,0,0,0.3);
+  margin-bottom: 12px;
 }
 
-.header-back {
-  width: 36px;
-  height: 36px;
-  background: #1c1f2e;
+.top-left {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  background: #1D1E20;
   border: none;
-  border-radius: 10px;
-  color: #fff;
+  border-radius: 14px;
+  color: rgba(255, 255, 255, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
 }
 
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.title-main {
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.title-badge {
-  background: linear-gradient(135deg, #22c55e, #15803d);
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-.header-balance {
+.balance-pill {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #1c1f2e;
+  background: #1D1E20;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 16px;
+  cursor: pointer;
 }
 
-.balance-icon { font-size: 14px; }
-.balance-value { font-size: 14px; font-weight: 600; }
+.ton-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.balance-value {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+}
 
 .balance-add {
   width: 20px;
   height: 20px;
+  background: #414244;
   border-radius: 50%;
-  border: 1px solid #4b5563;
-  background: transparent;
-  color: #fff;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-/* Info Bar */
-.info-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-}
-
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: #4ade80;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #4ade80;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-.game-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 10px;
-  color: #6b7280;
-  font-family: 'SF Mono', monospace;
-}
-
-/* Chart Container */
-.chart-container {
-  margin: 8px 12px;
-  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-  border-radius: 16px;
-  height: 220px;
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.05);
-}
-
-.chart-svg {
-  width: calc(100% - 45px);
-  height: 100%;
-}
-
-.y-axis-labels {
-  position: absolute;
-  right: 6px;
-  top: 10px;
-  bottom: 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  pointer-events: none;
-}
-
-.y-label {
-  font-size: 9px;
-  color: #4b5563;
-  font-family: 'SF Mono', monospace;
-}
-
-/* Multiplier Overlay */
-.multiplier-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.multiplier-value {
-  display: block;
-  font-size: 48px;
-  font-weight: 800;
-  color: #22c55e;
-  text-shadow: 0 0 40px rgba(34, 197, 94, 0.6);
-  font-family: 'SF Mono', -apple-system, monospace;
-  letter-spacing: -2px;
-  transition: color 0.2s;
-}
-
-/* Negative multiplier (below 1.0x) */
-.multiplier-value.negative,
-.multiplier-overlay.negative .multiplier-value {
-  color: #ef4444;
-  text-shadow: 0 0 40px rgba(239, 68, 68, 0.6);
-}
-
-.multiplier-overlay.medium .multiplier-value {
-  color: #60a5fa;
-  text-shadow: 0 0 40px rgba(96, 165, 250, 0.6);
-}
-
-.multiplier-overlay.high .multiplier-value {
-  color: #facc15;
-  text-shadow: 0 0 40px rgba(250, 204, 21, 0.6);
-}
-
-/* Player P/L display */
-.player-pl {
-  display: block;
-  font-size: 16px;
-  font-weight: 600;
-  margin-top: 8px;
-  padding: 4px 12px;
-  border-radius: 8px;
-  background: rgba(0,0,0,0.4);
-}
-
-.player-pl.positive {
-  color: #4ade80;
-}
-
-.player-pl.negative {
-  color: #f87171;
-}
-
-@keyframes glow-pulse {
-  from { text-shadow: 0 0 40px rgba(250, 204, 21, 0.6); }
-  to { text-shadow: 0 0 60px rgba(250, 204, 21, 0.9); }
-}
-
-.multiplier-overlay.high .multiplier-value {
-  animation: glow-pulse 0.5s infinite alternate;
-}
-
-.multiplier-label {
-  display: block;
-  font-size: 10px;
-  color: #6b7280;
-  letter-spacing: 2px;
-  margin-top: 4px;
-}
-
-.multiplier-crashed {
-  font-size: 42px;
-  font-weight: 800;
-  color: #ef4444;
-  text-shadow: 0 0 40px rgba(239, 68, 68, 0.5);
-}
-
-.crash-label {
-  display: block;
-  font-size: 12px;
-  color: #ef4444;
-  font-weight: 700;
-  margin-top: 4px;
-}
-
-.countdown-display {
-  text-align: center;
-}
-
-.countdown-text {
-  display: block;
-  font-size: 12px;
-  color: #9ca3af;
-  margin-bottom: 8px;
-}
-
-.countdown-timer {
-  display: block;
-  font-size: 36px;
-  font-weight: 700;
-  color: #60a5fa;
-  font-family: 'SF Mono', monospace;
-}
-
-.waiting-text {
+  justify-content: center;
   font-size: 14px;
-  color: #9ca3af;
+  color: #fff;
 }
 
-/* Trader Notifications */
-.trader-notifications {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
+/* Chart Wrapper - Square aspect ratio like MyBalls */
+.chart-wrapper {
+  width: 100%;
+  aspect-ratio: 1;
+  margin-bottom: 12px;
+}
+
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #0E0F14;
+  border: 2px solid #191919;
+  border-radius: 32px;
   overflow: hidden;
 }
-
-.trader-notif {
-  position: absolute;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 11px;
-  color: #fff;
-  white-space: nowrap;
-  animation: float-up 2.5s ease-out forwards;
-}
-
-@keyframes float-up {
-  0% { opacity: 0; transform: translateY(10px); }
-  20% { opacity: 1; transform: translateY(0); }
-  80% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-20px); }
-}
-
-.notification-fade-enter-active,
-.notification-fade-leave-active {
-  transition: all 0.3s ease;
-}
-
-.notification-fade-enter-from,
-.notification-fade-leave-to {
-  opacity: 0;
-}
-
-.amount-buy { color: #4ade80; }
-.amount-sell { color: #facc15; }
-.notif-icon { color: #60a5fa; margin-left: 4px; }
 
 /* Ping Indicator */
 .ping-indicator {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
-  font-size: 10px;
-  color: #6b7280;
+  top: 20px;
+  left: 20px;
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.ping-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #4ade80;
+/* Multiplier Display */
+.multiplier-display {
+  position: absolute;
+  right: 20px;
+  z-index: 20;
+  pointer-events: none;
+  transition: top 0.1s ease-out;
 }
 
-/* Recent Games Section */
+.multiplier-value {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.multiplier-display.crashed .multiplier-value {
+  color: #FB2C36;
+}
+
+.multiplier-display.negative .multiplier-value {
+  color: #FB2C36;
+}
+
+.multiplier-display.high .multiplier-value {
+  color: #09D76D;
+}
+
+/* Price Line */
+.price-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  z-index: 10;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.6) 60%,
+    rgba(255, 255, 255, 0.3) 80%,
+    transparent 100%
+  );
+  animation: dashMove 0.5s linear infinite;
+}
+
+@keyframes dashMove {
+  from { background-position: 0 0; }
+  to { background-position: 14px 0; }
+}
+
+/* Crash Overlay */
+.crash-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 34px;
+  background: #191919;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+
+.crash-skulls {
+  display: flex;
+  gap: 8px;
+  font-size: 20px;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+/* Countdown Overlay */
+.countdown-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(14, 15, 20, 0.8);
+  z-index: 25;
+}
+
+.countdown-value {
+  font-size: 48px;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+  color: #0098EA;
+}
+
+/* Recent Games */
 .recent-games {
-  padding: 8px 12px;
+  margin-bottom: 12px;
 }
 
-.recent-header {
-  margin-bottom: 8px;
-}
-
-.recent-title {
+.recent-label {
   font-size: 12px;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+  display: block;
 }
 
 .recent-list {
@@ -1145,11 +968,11 @@ onUnmounted(() => {
   padding-bottom: 4px;
 }
 
-.recent-game-item {
+.recent-item {
   flex-shrink: 0;
   width: 56px;
-  background: #1c1f2e;
-  border-radius: 8px;
+  background: #181818;
+  border-radius: 12px;
   padding: 6px;
   text-align: center;
 }
@@ -1164,68 +987,70 @@ onUnmounted(() => {
   height: 100%;
 }
 
-.game-multiplier {
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.game-multiplier.high { color: #4ade80; }
-.game-multiplier.low { color: #ef4444; }
-
-/* History Strip */
-.history-strip {
-  display: flex;
-  gap: 6px;
-  padding: 0 12px;
-  margin-bottom: 12px;
-  overflow-x: auto;
-}
-
-.history-badge {
-  flex-shrink: 0;
-  padding: 4px 10px;
-  border-radius: 8px;
+.recent-mult {
   font-size: 11px;
   font-weight: 600;
+  color: #FB2C36;
+  font-family: ui-monospace, monospace;
 }
 
-.history-badge.high {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
-}
-
-.history-badge.low {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+.recent-mult.high {
+  color: #09D76D;
 }
 
 /* Traders Panel */
 .traders-panel {
-  margin: 0 12px 12px;
-  background: #1c1f2e;
-  border-radius: 12px;
+  background: #181818;
+  border-radius: 20px;
   overflow: hidden;
+  margin-bottom: 12px;
 }
 
 .traders-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #262729;
 }
 
 .traders-title {
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
   font-weight: 600;
 }
 
+.traders-title svg {
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .traders-count {
-  background: #27272a;
-  padding: 2px 8px;
-  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+}
+
+.game-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.game-number {
   font-size: 11px;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.hash-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  cursor: pointer;
 }
 
 .traders-list {
@@ -1237,19 +1062,15 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
-}
-
-.trader-row.you {
-  background: rgba(250, 204, 21, 0.05);
+  padding: 10px 16px;
+  border-bottom: 1px solid #262729;
 }
 
 .trader-row.exited {
-  opacity: 0.7;
+  background: rgba(9, 215, 109, 0.05);
 }
 
-.trader-left {
+.trader-info {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1262,199 +1083,258 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #000;
 }
 
-.trader-info {
-  display: flex;
-  flex-direction: column;
-}
-
 .trader-name {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
 }
 
 .trader-bet {
-  font-size: 10px;
-  color: #6b7280;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.trader-right {
+.trader-status {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.trader-exited-label {
-  font-size: 10px;
-  color: #6b7280;
+.status-exited {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.status-active {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0098EA;
 }
 
 .trader-profit {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: #ef4444;
+  color: #FB2C36;
 }
 
 .trader-profit.positive {
-  color: #4ade80;
+  color: #09D76D;
 }
 
-.trader-multiplier {
-  font-size: 12px;
-  font-weight: 600;
-  color: #60a5fa;
-}
-
-.trader-waiting {
-  font-size: 14px;
-  opacity: 0.5;
-}
-
-/* Bet Section */
-.bet-section {
-  padding: 0 12px;
+/* Bet Controls */
+.bet-controls {
+  margin-bottom: 12px;
 }
 
 .bet-amounts {
   display: flex;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  justify-content: center;
 }
 
-.bet-btn {
-  flex: 1;
-  background: #1c1f2e;
-  border: 2px solid transparent;
-  border-radius: 10px;
-  padding: 10px 8px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
+.bet-pill {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 4px;
+  background: #414244;
+  border: none;
+  border-radius: 16px;
+  padding: 10px 14px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.bet-btn.active {
-  border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.15);
+.bet-pill.active {
+  background: #0098EA;
+  color: #fff;
 }
 
-.bet-icon {
-  font-size: 12px;
+.bet-pill:hover:not(.active) {
+  background: #2D2E30;
+}
+
+.pill-diamond {
+  width: 14px;
+  height: 14px;
+  color: #0098EA;
+}
+
+.bet-pill.active .pill-diamond {
+  color: #fff;
+}
+
+.max-pill {
+  background: #414244;
+}
+
+.edit-pill {
+  padding: 10px 12px;
 }
 
 /* Action Row */
 .action-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
 }
 
-.action-btn {
-  flex: 1;
+.swap-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: #181818;
   border: none;
-  border-radius: 12px;
-  padding: 14px 12px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: 16px;
+  padding: 10px 14px;
+  color: #0098EA;
+  font-size: 11px;
   cursor: pointer;
+}
+
+.swap-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.swap-star {
+  color: #FFD700;
+  font-size: 10px;
+}
+
+.buy-btn {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  background: #09D76D;
+  border: none;
+  border-radius: 20px;
+  padding: 14px 24px;
+  color: #101010;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.2s;
 }
 
-.buy-btn {
-  background: linear-gradient(135deg, #16a34a, #22c55e);
-  color: #fff;
-}
-
-.sell-btn {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-  color: #fff;
-}
-
-.sell-btn.in-loss {
-  background: linear-gradient(135deg, #7f1d1d, #991b1b);
-}
-
-.profit-text {
-  color: #4ade80;
-  font-weight: 700;
-}
-
-.loss-text {
-  color: #fca5a5;
-  font-weight: 700;
-}
-
-.action-btn:disabled {
-  opacity: 0.4;
+.buy-btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.btn-emoji {
-  font-size: 16px;
+.buy-btn:not(:disabled):hover {
+  opacity: 0.9;
 }
 
-/* Auto-sell Row */
-.autosell-row {
+.btn-diamond {
+  color: #101010;
+}
+
+.btn-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.btn-label {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.btn-amount {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.sell-btn {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: #1c1f2e;
-  border-radius: 10px;
-}
-
-.autosell-label {
-  font-size: 11px;
-  color: #6b7280;
-  white-space: nowrap;
-}
-
-.autosell-options {
-  display: flex;
-  gap: 6px;
-  flex: 1;
-  overflow-x: auto;
-}
-
-.autosell-btn {
-  padding: 6px 10px;
-  background: #27272a;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  font-size: 11px;
+  justify-content: center;
+  background: linear-gradient(135deg, #FB2C36 0%, #FF6B7A 100%);
+  border: none;
+  border-radius: 20px;
+  padding: 14px 24px;
+  color: #fff;
+  font-size: 16px;
   font-weight: 600;
-  color: #9ca3af;
   cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
 }
 
-.autosell-btn.active {
-  border-color: #facc15;
-  background: rgba(250, 204, 21, 0.15);
-  color: #facc15;
+.sell-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-/* Game Footer */
-.game-footer {
+.btn-percent {
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+.btn-percent.positive {
+  color: #4ade80;
+}
+
+.btn-percent.negative {
+  color: #fca5a5;
+}
+
+.deposit-btn {
   display: flex;
-  justify-content: space-between;
-  padding: 12px 16px;
-  font-size: 10px;
-  color: #4b5563;
-  font-family: 'SF Mono', monospace;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: #181818;
+  border: none;
+  border-radius: 16px;
+  padding: 10px 14px;
+  color: #0098EA;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.deposit-plus {
+  font-size: 20px;
+  font-weight: 300;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #0C0C0C;
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 0 24px;
+  border-top: 1px solid #262729;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.nav-item.active {
+  color: #0098EA;
+}
+
+.nav-item svg {
+  width: 20px;
+  height: 20px;
 }
 </style>
