@@ -239,8 +239,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { createChart, CandlestickSeries, LineSeries, type IChartApi, type ISeriesApi, ColorType } from 'lightweight-charts'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi, ColorType } from 'lightweight-charts'
 
 interface Candle {
   time: number
@@ -443,19 +443,6 @@ const updatePriceLinePosition = () => {
   const range = maxPrice - minPrice
   const normalized = (price - minPrice) / range
   priceLineTop.value = containerHeight - (normalized * containerHeight * 0.85) - 10
-}
-
-// Add completed candle to chart
-const addCandleToChart = (candle: Candle) => {
-  if (!candleSeries) return
-
-  candleSeries.update({
-    time: candle.time as any,
-    open: candle.open,
-    high: candle.high,
-    low: candle.low,
-    close: candle.close,
-  })
 }
 
 // Player actions
