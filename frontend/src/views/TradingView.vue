@@ -25,9 +25,9 @@
 
     <!-- Connection Status -->
     <div class="connection-bar">
-      <div class="connection-status" :class="{ connected: connectionStatus === 'Connected' }">
+      <div class="connection-status connected">
         <span class="status-dot"></span>
-        <span>{{ connectionStatus }}</span>
+        <span>Connected</span>
       </div>
       <div class="game-info">
         <span>ИГРА #{{ gameNumber }}</span>
@@ -35,8 +35,74 @@
       </div>
     </div>
 
-    <!-- Chart Container -->
+    <!-- Chart Container with Candlesticks -->
     <div class="chart-container">
+      <!-- SVG Candlestick Chart -->
+      <svg class="candlestick-chart" :viewBox="`0 0 ${chartWidth} ${chartHeight}`" preserveAspectRatio="none">
+        <!-- Grid lines -->
+        <line v-for="i in 5" :key="'h'+i"
+          x1="0" :y1="chartHeight * i / 5"
+          :x2="chartWidth" :y2="chartHeight * i / 5"
+          stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <line v-for="i in 8" :key="'v'+i"
+          :x1="chartWidth * i / 8" y1="0"
+          :x2="chartWidth * i / 8" :y2="chartHeight"
+          stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+
+        <!-- Candlesticks -->
+        <g v-for="(candle, i) in visibleCandles" :key="i">
+          <!-- Wick (high-low line) -->
+          <line
+            :x1="getCandleX(i) + candleWidth / 2"
+            :y1="priceToY(candle.high)"
+            :x2="getCandleX(i) + candleWidth / 2"
+            :y2="priceToY(candle.low)"
+            :stroke="candle.close >= candle.open ? '#22c55e' : '#ef4444'"
+            stroke-width="1"
+          />
+          <!-- Body -->
+          <rect
+            :x="getCandleX(i)"
+            :y="priceToY(Math.max(candle.open, candle.close))"
+            :width="candleWidth - 2"
+            :height="Math.max(2, Math.abs(priceToY(candle.open) - priceToY(candle.close)))"
+            :fill="candle.close >= candle.open ? '#22c55e' : '#ef4444'"
+            rx="1"
+          />
+        </g>
+
+        <!-- Current price line -->
+        <line
+          v-if="gameStatus === 'active'"
+          x1="0" :y1="priceToY(currentMultiplier)"
+          :x2="chartWidth" :y2="priceToY(currentMultiplier)"
+          stroke="#3b82f6" stroke-width="1" stroke-dasharray="4,4"
+          opacity="0.7"
+        />
+
+        <!-- Price curve overlay -->
+        <path
+          v-if="pricePath"
+          :d="pricePath"
+          fill="none"
+          :stroke="gameStatus === 'crashed' ? '#ef4444' : '#22c55e'"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+
+        <!-- Glow effect for curve -->
+        <path
+          v-if="pricePath && gameStatus === 'active'"
+          :d="pricePath"
+          fill="none"
+          stroke="#22c55e"
+          stroke-width="6"
+          stroke-linecap="round"
+          opacity="0.3"
+          filter="blur(4px)"
+        />
+      </svg>
+
       <!-- Multiplier Display -->
       <div class="multiplier-overlay" :class="{ crashed: gameStatus === 'crashed' }">
         <div v-if="gameStatus === 'active'" class="multiplier-active">
@@ -56,23 +122,20 @@
         </div>
       </div>
 
-      <!-- Chart Canvas -->
-      <div ref="chartContainer" class="chart-canvas"></div>
-
-      <!-- Chart Grid -->
-      <div class="chart-grid">
-        <div class="grid-line" v-for="i in 5" :key="i"></div>
+      <!-- Y-axis labels -->
+      <div class="y-axis">
+        <span v-for="i in 5" :key="i" class="y-label">{{ (maxPrice - (maxPrice - minPrice) * (i - 1) / 4).toFixed(2) }}x</span>
       </div>
+    </div>
 
-      <!-- Candlesticks Preview -->
-      <div class="candles-row">
-        <div
-          v-for="(candle, i) in candles"
-          :key="i"
-          class="candle"
-          :class="candle.type"
-          :style="{ height: candle.height + 'px' }"
-        ></div>
+    <!-- Recent Crashes Strip -->
+    <div class="crashes-strip">
+      <div
+        v-for="(crash, i) in recentCrashes"
+        :key="i"
+        :class="['crash-badge', crash >= 2 ? 'high' : 'low']"
+      >
+        {{ crash.toFixed(2) }}x
       </div>
     </div>
 
@@ -80,20 +143,20 @@
     <div class="traders-panel">
       <div class="traders-header">
         <span class="traders-title">Игроки</span>
-        <span class="traders-count">{{ traderCount }}</span>
+        <span class="traders-count">{{ traders.length }}</span>
       </div>
       <div class="traders-list">
         <div v-for="trader in traders" :key="trader.id" class="trader-item">
           <div class="trader-avatar" :style="{ background: trader.color }">
-            {{ trader.name.charAt(0) }}
+            {{ trader.name.charAt(0).toUpperCase() }}
           </div>
           <div class="trader-info">
             <span class="trader-name">@{{ trader.name }}</span>
             <span class="trader-bet">{{ trader.bet }} TON</span>
           </div>
           <div class="trader-status" :class="trader.status">
-            <span v-if="trader.status === 'won'" class="status-won">+{{ trader.profit }}</span>
-            <span v-else-if="trader.status === 'playing'">{{ trader.multiplier }}x</span>
+            <span v-if="trader.status === 'won'" class="status-won">+{{ trader.profit?.toFixed(2) }}</span>
+            <span v-else-if="trader.status === 'playing'">{{ trader.multiplier?.toFixed(2) }}x</span>
             <span v-else class="status-waiting">⏳</span>
           </div>
         </div>
@@ -115,17 +178,6 @@
         </button>
       </div>
 
-      <!-- Custom Bet Input -->
-      <div class="custom-bet">
-        <input
-          type="number"
-          v-model.number="customBetAmount"
-          placeholder="Своя сумма"
-          class="bet-input"
-        />
-        <span class="input-icon">TON</span>
-      </div>
-
       <!-- Action Buttons -->
       <div class="action-buttons">
         <button
@@ -135,7 +187,7 @@
         >
           <span class="btn-icon">📈</span>
           <span class="btn-text">
-            {{ isPlacingBet ? 'Покупаем...' : `Купить ${effectiveBetAmount} TON` }}
+            {{ isPlacingBet ? 'Покупаем...' : `Купить ${selectedBetAmount} TON` }}
           </span>
         </button>
         <button
@@ -145,38 +197,26 @@
         >
           <span class="btn-icon">📉</span>
           <span class="btn-text">
-            {{ isCashingOut ? 'Продаём...' : activeBet ? `Продать +${((activeBet.bet_amount * currentMultiplier) - activeBet.bet_amount).toFixed(2)}` : 'Продать' }}
+            {{ isCashingOut ? 'Продаём...' : activeBet ? `Продать +${((activeBet.amount * currentMultiplier) - activeBet.amount).toFixed(2)}` : 'Продать' }}
           </span>
         </button>
       </div>
 
       <!-- Auto Cashout -->
       <div class="auto-cashout">
-        <span class="auto-label">Авто-продажа на:</span>
+        <span class="auto-label">Авто-продажа:</span>
         <div class="auto-options">
           <button
             v-for="mult in autoMultipliers"
             :key="mult"
             :class="['auto-btn', { active: autoMultiplier === mult }]"
-            @click="autoMultiplier = mult"
+            @click="autoMultiplier = autoMultiplier === mult ? null : mult"
           >
             {{ mult }}x
           </button>
         </div>
       </div>
     </div>
-
-    <!-- Notifications -->
-    <transition-group name="notification" tag="div" class="notifications">
-      <div
-        v-for="notif in notifications"
-        :key="notif.id"
-        :class="['notification', notif.type]"
-      >
-        <span class="notif-icon">{{ notif.type === 'buy' ? '📈' : '📉' }}</span>
-        <span class="notif-text">{{ notif.message }}</span>
-      </div>
-    </transition-group>
 
     <!-- Bottom Navigation -->
     <nav class="bottom-nav">
@@ -221,6 +261,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
+interface Candle {
+  open: number
+  high: number
+  low: number
+  close: number
+  time: number
+}
+
 interface Trader {
   id: number
   name: string
@@ -231,11 +279,9 @@ interface Trader {
   profit?: number
 }
 
-interface Notification {
-  id: number
-  type: 'buy' | 'sell'
-  message: string
-}
+// Chart dimensions
+const chartWidth = 340
+const chartHeight = 180
 
 // State
 const balance = ref(4.16)
@@ -244,24 +290,79 @@ const gameStatus = ref<'pending' | 'active' | 'crashed'>('pending')
 const crashPoint = ref(0)
 const nextGameTimer = ref(5)
 const gameNumber = ref(28392)
-const traderCount = ref(12)
 const currentHash = ref('3d07...f8da')
-const connectionStatus = ref('Connecting...')
 
-// Bet state
-const betAmounts = [0.5, 1, 2, 5]
-const selectedBetAmount = ref(1)
-const customBetAmount = ref<number | null>(null)
-const autoMultipliers = [1.5, 2, 3, 5, 10]
-const autoMultiplier = ref<number | null>(null)
-const activeBet = ref<any>(null)
-const isPlacingBet = ref(false)
-const isCashingOut = ref(false)
+// Candlestick data
+const candles = ref<Candle[]>([])
+const priceHistory = ref<number[]>([])
+const candleWidth = 16
+const maxVisibleCandles = Math.floor(chartWidth / candleWidth) - 2
 
-// Effective bet amount
-const effectiveBetAmount = computed(() => {
-  return customBetAmount.value || selectedBetAmount.value
+// Generate initial candles
+const generateInitialCandles = () => {
+  const result: Candle[] = []
+  let price = 1.0
+  for (let i = 0; i < 15; i++) {
+    const open = price
+    const change = (Math.random() - 0.45) * 0.3
+    const close = Math.max(0.5, price + change)
+    const high = Math.max(open, close) + Math.random() * 0.1
+    const low = Math.min(open, close) - Math.random() * 0.1
+    result.push({ open, high, low, close, time: Date.now() - (15 - i) * 5000 })
+    price = close
+  }
+  return result
+}
+
+// Initialize candles
+candles.value = generateInitialCandles()
+
+const visibleCandles = computed(() => {
+  return candles.value.slice(-maxVisibleCandles)
 })
+
+// Price range for Y-axis
+const minPrice = computed(() => {
+  const prices = visibleCandles.value.flatMap(c => [c.low, c.high])
+  if (priceHistory.value.length > 0) {
+    prices.push(...priceHistory.value)
+  }
+  return Math.max(0.5, Math.min(...prices) - 0.2)
+})
+
+const maxPrice = computed(() => {
+  const prices = visibleCandles.value.flatMap(c => [c.low, c.high])
+  if (priceHistory.value.length > 0) {
+    prices.push(...priceHistory.value)
+  }
+  return Math.max(...prices) + 0.5
+})
+
+const priceToY = (price: number) => {
+  const range = maxPrice.value - minPrice.value
+  return chartHeight - ((price - minPrice.value) / range) * chartHeight
+}
+
+const getCandleX = (index: number) => {
+  return (index + 1) * candleWidth
+}
+
+// Price curve path
+const pricePath = computed(() => {
+  if (priceHistory.value.length < 2) return ''
+
+  const startX = (visibleCandles.value.length + 1) * candleWidth
+  const points = priceHistory.value.map((price, i) => {
+    const x = startX + i * 3
+    const y = priceToY(price)
+    return `${x},${y}`
+  })
+
+  return `M ${points.join(' L ')}`
+})
+
+// Recent crashes for display
+const recentCrashes = ref([2.34, 1.12, 5.67, 1.89, 3.21, 1.05, 8.92, 2.11])
 
 // Traders
 const traders = ref<Trader[]>([
@@ -270,33 +371,14 @@ const traders = ref<Trader[]>([
   { id: 3, name: 'lucky_star', bet: 5.0, color: '#ec4899', status: 'waiting' },
 ])
 
-// Candles for visual effect
-const candles = ref([
-  { type: 'green', height: 25 },
-  { type: 'red', height: 18 },
-  { type: 'green', height: 32 },
-  { type: 'green', height: 28 },
-  { type: 'red', height: 15 },
-  { type: 'green', height: 40 },
-  { type: 'red', height: 22 },
-  { type: 'green', height: 35 },
-])
-
-// Notifications
-const notifications = ref<Notification[]>([])
-let notificationId = 0
-
-const addNotification = (type: 'buy' | 'sell', message: string) => {
-  const id = ++notificationId
-  notifications.value.push({ id, type, message })
-  setTimeout(() => {
-    notifications.value = notifications.value.filter(n => n.id !== id)
-  }, 3000)
-}
-
-// WebSocket
-const ws = ref<WebSocket | null>(null)
-const chartContainer = ref<HTMLElement | null>(null)
+// Bet state
+const betAmounts = [0.5, 1, 2, 5]
+const selectedBetAmount = ref(1)
+const autoMultipliers = [1.5, 2, 3, 5, 10]
+const autoMultiplier = ref<number | null>(null)
+const activeBet = ref<{ amount: number } | null>(null)
+const isPlacingBet = ref(false)
+const isCashingOut = ref(false)
 
 // Stars background
 const getStarStyle = (_i: number) => ({
@@ -308,62 +390,105 @@ const getStarStyle = (_i: number) => ({
   animationDuration: `${Math.random() * 2 + 2}s`
 })
 
-// Game simulation for demo
+// Game simulation
 let gameInterval: number | null = null
 
 const simulateGame = () => {
   gameStatus.value = 'active'
   currentMultiplier.value = 1.00
+  priceHistory.value = [1.00]
+
+  // Decide crash point (house edge)
+  const rand = Math.random()
+  const targetCrash = rand < 0.3 ? 1 + Math.random() * 0.5 : // 30% quick crash
+                      rand < 0.7 ? 1.5 + Math.random() * 2 : // 40% medium
+                      3 + Math.random() * 7 // 30% high
 
   gameInterval = window.setInterval(() => {
     if (gameStatus.value !== 'active') return
 
-    currentMultiplier.value += Math.random() * 0.05 + 0.01
+    // Increase multiplier with some variance
+    const increase = 0.01 + Math.random() * 0.03
+    currentMultiplier.value += increase
+    priceHistory.value.push(currentMultiplier.value)
 
-    // Random crash
-    if (Math.random() < 0.02 || currentMultiplier.value > 10) {
-      crashPoint.value = currentMultiplier.value
-      gameStatus.value = 'crashed'
-
-      if (activeBet.value) {
-        activeBet.value = null
-        addNotification('sell', `Проигрыш -${effectiveBetAmount.value} TON`)
+    // Update playing traders
+    traders.value.forEach(t => {
+      if (t.status === 'playing') {
+        t.multiplier = currentMultiplier.value
       }
+    })
 
-      nextGameTimer.value = 5
-      const countdown = setInterval(() => {
-        nextGameTimer.value--
-        if (nextGameTimer.value <= 0) {
-          clearInterval(countdown)
-          gameStatus.value = 'pending'
-          gameNumber.value++
-          setTimeout(simulateGame, 2000)
-        }
-      }, 1000)
-
-      if (gameInterval) clearInterval(gameInterval)
+    // Check crash
+    if (currentMultiplier.value >= targetCrash) {
+      crashGame()
     }
 
     // Auto cashout
     if (autoMultiplier.value && activeBet.value && currentMultiplier.value >= autoMultiplier.value) {
       cashOut()
     }
-  }, 100)
+  }, 80)
+}
+
+const crashGame = () => {
+  crashPoint.value = currentMultiplier.value
+  gameStatus.value = 'crashed'
+
+  // Add to recent crashes
+  recentCrashes.value.unshift(crashPoint.value)
+  recentCrashes.value = recentCrashes.value.slice(0, 10)
+
+  // Add final candle
+  const lastCandle = candles.value[candles.value.length - 1]
+  candles.value.push({
+    open: lastCandle?.close || 1,
+    high: crashPoint.value,
+    low: lastCandle?.close || 1,
+    close: 1,
+    time: Date.now()
+  })
+
+  // Reset active bet if still playing
+  if (activeBet.value) {
+    activeBet.value = null
+  }
+
+  if (gameInterval) clearInterval(gameInterval)
+
+  // Countdown to next game
+  nextGameTimer.value = 5
+  const countdown = setInterval(() => {
+    nextGameTimer.value--
+    if (nextGameTimer.value <= 0) {
+      clearInterval(countdown)
+      gameStatus.value = 'pending'
+      gameNumber.value++
+      priceHistory.value = []
+      currentHash.value = Math.random().toString(36).substring(2, 10)
+      setTimeout(simulateGame, 2000)
+    }
+  }, 1000)
 }
 
 const placeBet = async () => {
   if (gameStatus.value !== 'pending') return
 
   isPlacingBet.value = true
-  await new Promise(r => setTimeout(r, 500))
+  await new Promise(r => setTimeout(r, 300))
 
-  activeBet.value = {
+  activeBet.value = { amount: selectedBetAmount.value }
+  balance.value -= selectedBetAmount.value
+
+  // Add to traders list
+  traders.value.unshift({
     id: Date.now(),
-    bet_amount: effectiveBetAmount.value
-  }
-  balance.value -= effectiveBetAmount.value
+    name: 'you',
+    bet: selectedBetAmount.value,
+    color: '#facc15',
+    status: 'waiting'
+  })
 
-  addNotification('buy', `Куплено за ${effectiveBetAmount.value} TON`)
   isPlacingBet.value = false
 }
 
@@ -371,24 +496,28 @@ const cashOut = async () => {
   if (!activeBet.value || gameStatus.value !== 'active') return
 
   isCashingOut.value = true
-  await new Promise(r => setTimeout(r, 300))
+  await new Promise(r => setTimeout(r, 200))
 
-  const payout = activeBet.value.bet_amount * currentMultiplier.value
+  const payout = activeBet.value.amount * currentMultiplier.value
   balance.value += payout
 
-  addNotification('sell', `Продано за ${payout.toFixed(2)} TON (+${(payout - activeBet.value.bet_amount).toFixed(2)})`)
+  // Update trader status
+  const myTrader = traders.value.find(t => t.name === 'you')
+  if (myTrader) {
+    myTrader.status = 'won'
+    myTrader.profit = payout - activeBet.value.amount
+  }
+
   activeBet.value = null
   isCashingOut.value = false
 }
 
 onMounted(() => {
-  connectionStatus.value = 'Connected'
   setTimeout(simulateGame, 2000)
 })
 
 onUnmounted(() => {
   if (gameInterval) clearInterval(gameInterval)
-  if (ws.value) ws.value.close()
 })
 </script>
 
@@ -458,9 +587,9 @@ onUnmounted(() => {
 }
 
 .title-badge {
-  background: #22c55e;
-  color: #000;
-  padding: 2px 8px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  padding: 3px 8px;
   border-radius: 6px;
   font-size: 10px;
   font-weight: 700;
@@ -505,19 +634,13 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #6b7280;
+  color: #4ade80;
 }
-
-.connection-status.connected { color: #4ade80; }
 
 .status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #6b7280;
-}
-
-.connection-status.connected .status-dot {
   background: #4ade80;
   animation: pulse 2s infinite;
 }
@@ -541,7 +664,7 @@ onUnmounted(() => {
 
 /* Chart Container */
 .chart-container {
-  margin: 0 16px 16px;
+  margin: 0 16px 12px;
   background: linear-gradient(180deg, #0a1628 0%, #0f172a 100%);
   border-radius: 20px;
   height: 200px;
@@ -551,38 +674,47 @@ onUnmounted(() => {
   border: 1px solid #1e3a5f;
 }
 
-.chart-canvas {
+.candlestick-chart {
+  width: 100%;
+  height: 100%;
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
 }
 
-.chart-grid {
+.y-axis {
   position: absolute;
-  inset: 0;
+  right: 8px;
+  top: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 20px 0;
+  padding: 10px 0;
   pointer-events: none;
 }
 
-.grid-line {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.05);
+.y-label {
+  font-size: 9px;
+  color: #4b5563;
+  font-family: monospace;
 }
 
 /* Multiplier Overlay */
 .multiplier-overlay {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
   z-index: 5;
+  pointer-events: none;
 }
 
 .multiplier-overlay.crashed {
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px 40px;
+  border-radius: 16px;
   backdrop-filter: blur(4px);
 }
 
@@ -592,7 +724,7 @@ onUnmounted(() => {
 
 .multiplier-value {
   display: block;
-  font-size: 56px;
+  font-size: 48px;
   font-weight: 800;
   color: #3b82f6;
   text-shadow: 0 0 40px rgba(59, 130, 246, 0.5);
@@ -606,7 +738,7 @@ onUnmounted(() => {
 
 .multiplier-label {
   display: block;
-  font-size: 12px;
+  font-size: 10px;
   color: #6b7280;
   letter-spacing: 2px;
   margin-top: 4px;
@@ -618,7 +750,7 @@ onUnmounted(() => {
 
 .crash-value {
   display: block;
-  font-size: 48px;
+  font-size: 42px;
   font-weight: 800;
   color: #ef4444;
   text-shadow: 0 0 40px rgba(239, 68, 68, 0.5);
@@ -626,16 +758,17 @@ onUnmounted(() => {
 
 .crash-label {
   display: block;
-  font-size: 16px;
+  font-size: 14px;
   color: #ef4444;
+  font-weight: 700;
   margin-top: 4px;
 }
 
 .next-game {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .multiplier-waiting {
@@ -644,46 +777,53 @@ onUnmounted(() => {
 
 .waiting-text {
   display: block;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #fff;
 }
 
 .waiting-sub {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   color: #6b7280;
   margin-top: 4px;
 }
 
-/* Candles Row */
-.candles-row {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
+/* Crashes Strip */
+.crashes-strip {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-around;
-  gap: 8px;
-  pointer-events: none;
+  gap: 6px;
+  padding: 0 16px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  position: relative;
+  z-index: 10;
 }
 
-.candle {
-  width: 12px;
-  border-radius: 2px;
-  opacity: 0.6;
+.crash-badge {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.candle.green { background: #22c55e; }
-.candle.red { background: #ef4444; }
+.crash-badge.high {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+.crash-badge.low {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
 
 /* Traders Panel */
 .traders-panel {
-  margin: 0 16px 16px;
+  margin: 0 16px 12px;
   background: #1c1c1e;
   border-radius: 16px;
-  padding: 14px;
+  padding: 12px;
   position: relative;
   z-index: 10;
 }
@@ -692,7 +832,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .traders-title {
@@ -711,8 +851,8 @@ onUnmounted(() => {
 .traders-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 120px;
+  gap: 6px;
+  max-height: 100px;
   overflow-y: auto;
 }
 
@@ -726,13 +866,13 @@ onUnmounted(() => {
 }
 
 .trader-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #fff;
 }
@@ -744,7 +884,7 @@ onUnmounted(() => {
 }
 
 .trader-name {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
 }
 
@@ -754,7 +894,7 @@ onUnmounted(() => {
 }
 
 .trader-status {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -771,7 +911,7 @@ onUnmounted(() => {
 .bet-amounts {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .bet-amount {
@@ -779,7 +919,7 @@ onUnmounted(() => {
   background: #1c1c1e;
   border: 2px solid transparent;
   border-radius: 12px;
-  padding: 12px 8px;
+  padding: 10px 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -799,59 +939,26 @@ onUnmounted(() => {
 }
 
 .amount-icon {
-  font-size: 12px;
-}
-
-.custom-bet {
-  position: relative;
-  margin-bottom: 12px;
-}
-
-.bet-input {
-  width: 100%;
-  background: #1c1c1e;
-  border: 1px solid #3a3a3c;
-  border-radius: 12px;
-  padding: 14px 60px 14px 16px;
-  font-size: 14px;
-  color: #fff;
-  outline: none;
-}
-
-.bet-input:focus {
-  border-color: #3b82f6;
-}
-
-.bet-input::placeholder {
-  color: #6b7280;
-}
-
-.input-icon {
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 11px;
 }
 
 /* Action Buttons */
 .action-buttons {
   display: flex;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .btn-buy, .btn-sell {
   flex: 1;
   border: none;
   border-radius: 14px;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   transition: all 0.2s;
 }
@@ -877,7 +984,7 @@ onUnmounted(() => {
 }
 
 .btn-icon {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 /* Auto Cashout */
@@ -885,13 +992,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 10px 12px;
   background: #1c1c1e;
   border-radius: 12px;
 }
 
 .auto-label {
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
   white-space: nowrap;
 }
@@ -904,11 +1011,11 @@ onUnmounted(() => {
 }
 
 .auto-btn {
-  padding: 6px 12px;
+  padding: 6px 10px;
   background: #27272a;
   border: 1px solid transparent;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
@@ -918,58 +1025,6 @@ onUnmounted(() => {
   border-color: #facc15;
   background: rgba(250, 204, 21, 0.15);
   color: #facc15;
-}
-
-/* Notifications */
-.notifications {
-  position: fixed;
-  top: 80px;
-  right: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 1000;
-}
-
-.notification {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 500;
-  animation: slideIn 0.3s ease;
-}
-
-.notification.buy {
-  background: rgba(34, 197, 94, 0.9);
-  color: #fff;
-}
-
-.notification.sell {
-  background: rgba(59, 130, 246, 0.9);
-  color: #fff;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.notification-leave-active {
-  transition: all 0.3s ease;
-}
-
-.notification-leave-to {
-  opacity: 0;
-  transform: translateX(20px);
 }
 
 /* Bottom Nav */

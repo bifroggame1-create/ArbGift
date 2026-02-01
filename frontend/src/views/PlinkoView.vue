@@ -233,11 +233,12 @@ const currentMultipliers = computed(() => {
   return set[rowCount.value as keyof typeof set] || set[12]
 })
 
-// Plinko physics
+// Plinko physics - FIXED values for better flow
 const PEG_RADIUS = 4
-const BALL_RADIUS = 6
-const GRAVITY = 0.25
-const BOUNCE = 0.7
+const BALL_RADIUS = 5
+const GRAVITY = 0.4  // Stronger gravity
+const BOUNCE = 0.5   // Less bounce to prevent getting stuck
+const MAX_FRAMES = 500 // Fallback timeout
 
 interface Ball {
   x: number
@@ -255,6 +256,7 @@ let ball: Ball | null = null
 let pegs: Peg[] = []
 let animationId: number | null = null
 let targetSlot = 0
+let frameCount = 0
 
 // Stars background
 const getStarStyle = (_i: number) => ({
@@ -326,14 +328,15 @@ const playGame = async () => {
     }
   }
 
-  // Start ball
+  // Start ball with better initial conditions
   ball = {
-    x: canvasWidth / 2 + (Math.random() - 0.5) * 10,
-    y: 20,
-    vx: (Math.random() - 0.5) * 2,
-    vy: 2
+    x: canvasWidth / 2 + (Math.random() - 0.5) * 20,
+    y: 15,
+    vx: (Math.random() - 0.5) * 3,
+    vy: 3
   }
 
+  frameCount = 0
   computePegs()
   animate()
 }
@@ -346,10 +349,23 @@ const animate = () => {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
+  frameCount++
+
+  // Timeout - force finish if stuck too long
+  if (frameCount > MAX_FRAMES) {
+    ball.y = canvasHeight - 25
+    ball.vy = 0
+  }
+
   // Physics
   ball.vy += GRAVITY
   ball.x += ball.vx
   ball.y += ball.vy
+
+  // Limit max velocity to prevent tunneling
+  const maxVel = 12
+  ball.vx = Math.max(-maxVel, Math.min(maxVel, ball.vx))
+  ball.vy = Math.max(-maxVel, Math.min(maxVel, ball.vy))
 
   // Peg collisions
   for (const peg of pegs) {
@@ -358,25 +374,37 @@ const animate = () => {
     const dist = Math.sqrt(dx * dx + dy * dy)
     const minDist = PEG_RADIUS + BALL_RADIUS
 
-    if (dist < minDist && dist > 0) {
+    if (dist < minDist && dist > 0.1) {
       const nx = dx / dist
       const ny = dy / dist
 
-      ball.x = peg.x + nx * (minDist + 1)
-      ball.y = peg.y + ny * (minDist + 1)
+      // Push ball out of peg
+      const overlap = minDist - dist + 1
+      ball.x += nx * overlap
+      ball.y += ny * overlap
 
+      // Reflect velocity
       const dot = ball.vx * nx + ball.vy * ny
       if (dot < 0) {
         ball.vx -= 2 * dot * nx * BOUNCE
         ball.vy -= 2 * dot * ny * BOUNCE
       }
 
-      // Steer toward target
-      const mults = currentMultipliers.value
-      const slotWidth = canvasWidth / mults.length
-      const targetX = targetSlot * slotWidth + slotWidth / 2
-      ball.vx += (targetX - ball.x) * 0.01
-      ball.vx += (Math.random() - 0.5) * 0.5
+      // Add randomness for natural movement
+      ball.vx += (Math.random() - 0.5) * 1.5
+
+      // Only steer toward target in lower half
+      if (ball.y > canvasHeight * 0.5) {
+        const mults = currentMultipliers.value
+        const slotWidth = canvasWidth / mults.length
+        const targetX = targetSlot * slotWidth + slotWidth / 2
+        ball.vx += (targetX - ball.x) * 0.005
+      }
+
+      // Ensure ball keeps moving down
+      if (Math.abs(ball.vy) < 1) {
+        ball.vy = 2
+      }
     }
   }
 
