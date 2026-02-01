@@ -279,7 +279,7 @@ const recentActivity = ref<Activity[]>([
 ])
 
 // Stars background
-const getStarStyle = (i: number) => ({
+const getStarStyle = (_i: number) => ({
   left: `${Math.random() * 100}%`,
   top: `${Math.random() * 100}%`,
   width: `${Math.random() * 2 + 1}px`,

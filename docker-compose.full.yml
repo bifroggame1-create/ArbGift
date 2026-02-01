@@ -250,6 +250,126 @@ services:
       - ton-gifts-network
 
   # ===========================================
+  # TRADING/CRASH GAME SERVICE
+  # ===========================================
+
+  trading-api:
+    build:
+      context: ./services/trading
+      dockerfile: Dockerfile
+    container_name: ton-gifts-trading
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/trading
+      REDIS_URL: redis://redis:6379/8
+      DEBUG: ${DEBUG:-false}
+      SECRET_KEY: ${TRADING_SECRET_KEY:-change-me-in-production}
+    ports:
+      - "8006:8000"
+    depends_on:
+      - postgres
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    networks:
+      - ton-gifts-network
+
+  # ===========================================
+  # PLINKO GAME SERVICE
+  # ===========================================
+
+  plinko-api:
+    build:
+      context: ./services/plinko
+      dockerfile: Dockerfile
+    container_name: ton-gifts-plinko
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/plinko
+      REDIS_URL: redis://redis:6379/9
+      DEBUG: ${DEBUG:-false}
+      SECRET_KEY: ${PLINKO_SECRET_KEY:-change-me-in-production}
+    ports:
+      - "8007:8000"
+    depends_on:
+      - postgres
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    networks:
+      - ton-gifts-network
+
+  # ===========================================
+  # SOLO GAMES SERVICE (Gonka, Ball Escape, etc)
+  # ===========================================
+
+  solo-games-api:
+    build:
+      context: ./services/solo-games
+      dockerfile: Dockerfile
+    container_name: ton-gifts-solo-games
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/solo_games
+      REDIS_URL: redis://redis:6379/10
+      DEBUG: ${DEBUG:-false}
+      SECRET_KEY: ${SOLO_GAMES_SECRET_KEY:-change-me-in-production}
+    ports:
+      - "8008:8000"
+    depends_on:
+      - postgres
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    networks:
+      - ton-gifts-network
+
+  # ===========================================
+  # PVP GIFT ROULETTE SERVICE (Rolls.codes clone)
+  # ===========================================
+
+  pvp-api:
+    build:
+      context: ./services/pvp
+      dockerfile: Dockerfile
+    container_name: ton-gifts-pvp
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/pvp
+      REDIS_URL: redis://redis:6379/11
+      DEBUG: ${DEBUG:-false}
+      JWT_SECRET_KEY: ${PVP_SECRET_KEY:-change-me-in-production}
+    ports:
+      - "8009:8000"
+    depends_on:
+      - postgres
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    networks:
+      - ton-gifts-network
+
+  # ===========================================
+  # STAKING SERVICE
+  # ===========================================
+
+  staking-api:
+    build:
+      context: ./services/staking
+      dockerfile: Dockerfile
+    container_name: ton-gifts-staking
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/staking
+      REDIS_URL: redis://redis:6379/12
+      DEBUG: ${DEBUG:-false}
+      JWT_SECRET_KEY: ${STAKING_SECRET_KEY:-change-me-in-production}
+    ports:
+      - "8010:8000"
+    depends_on:
+      - postgres
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+    networks:
+      - ton-gifts-network
+
+  # ===========================================
   # FRONTEND (Telegram Mini App)
   # ===========================================
 
@@ -292,6 +412,9 @@ services:
       - stars-api
       - contracts-api
       - upgrade-api
+      - trading-api
+      - plinko-api
+      - solo-games-api
     restart: unless-stopped
     networks:
       - ton-gifts-network

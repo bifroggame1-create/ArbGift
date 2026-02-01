@@ -328,7 +328,7 @@ const extras = ref<Extra[]>([
   { id: 3, name: 'Кэшбэк', icon: '💰', description: '5% возврат с проигрышей', price: 2 },
 ])
 
-const getStarStyle = (i: number) => ({
+const getStarStyle = (_i: number) => ({
   left: `${Math.random() * 100}%`,
   top: `${Math.random() * 100}%`,
   width: `${Math.random() * 2 + 1}px`,
@@ -342,7 +342,7 @@ const selectGift = (gift: Gift) => {
   showPurchaseModal.value = true
 }
 
-const selectLootpack = (pack: Lootpack) => {
+const selectLootpack = (_pack: Lootpack) => {
   // Handle lootpack selection
 }
 

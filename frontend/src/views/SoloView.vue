@@ -72,7 +72,7 @@
           <div class="game-badge hot">HOT</div>
           <div class="game-visual">
             <div class="lucky-wheel">
-              <div class="wheel-segment" v-for="(seg, i) in luckySegments" :key="i" :style="getSegmentStyle(i)"></div>
+              <div class="wheel-segment" v-for="(_seg, i) in luckySegments" :key="i" :style="getSegmentStyle(i)"></div>
               <div class="wheel-center">?</div>
             </div>
           </div>
@@ -313,7 +313,7 @@ const totalPaid = ref('847.2K')
 const luckySegments = ['#22c55e', '#3b82f6', '#eab308', '#ec4899', '#8b5cf6', '#f97316']
 
 // Stars background
-const getStarStyle = (i: number) => ({
+const getStarStyle = (_i: number) => ({
   left: `${Math.random() * 100}%`,
   top: `${Math.random() * 100}%`,
   width: `${Math.random() * 2 + 1}px`,

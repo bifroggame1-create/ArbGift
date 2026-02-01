@@ -2,9 +2,33 @@
 
 This file provides guidance to Claude Code when working with the TON Gift Aggregator codebase.
 
+## ⚠️ КРИТИЧЕСКИЕ ПРАВИЛА (ОБЯЗАТЕЛЬНО)
+
+### НЕ ИСПОЛЬЗОВАТЬ:
+- ❌ **Celery** — для загрузки данных с маркетов писать СИНХРОННЫЙ загрузчик
+- ❌ **Новые библиотеки** — использовать только то что уже в requirements.txt/package.json
+- ❌ **Mock данные** — всегда реальные данные с API
+- ❌ **Свои идеи дизайна** — pixel-perfect копирование референсов (Portals.tg, MyBalls.io, Rolls.codes)
+
+### ОБЯЗАТЕЛЬНО:
+- ✅ Проверять `npm run build` после каждого изменения фронтенда
+- ✅ Использовать Context7 для актуальной документации TON SDK
+- ✅ Разбивать большие задачи на micro-tasks
+- ✅ PvP логика требует Ultra Think режима
+
 ## Project Overview
 
-TON Gift Aggregator is a full-stack platform for aggregating Telegram Gift NFTs from multiple TON marketplaces with integrated gaming features. Built with FastAPI backend microservices and Vue 3 + TypeScript frontend as a Telegram Mini App.
+TON Gift Aggregator — платформа-агрегатор Telegram Gift NFT с нескольких TON маркетплейсов + игровые механики. Цель: объединить функционал Portals.tg (маркет) + MyBalls.io (гемблинг) + Rolls.codes (PvP рулетка) в одном Telegram Mini App.
+
+**Референсы для клонирования:**
+- **Portals.tg** — маркетплейс гифтов (UI карточек, фильтры, покупка)
+- **MyBalls.io** — trading/crash игры (TradingView charts, анимации)
+- **Rolls.codes** — PvP рулетка на гифтах (265K MAU, стейкинг)
+
+**Деплой:**
+- Frontend: `https://arb-gift-test.vercel.app` (Vercel)
+- Backend: `https://ton-gifts-api.onrender.com` (Render)
+- Database: PostgreSQL on Render
 
 **Main API Entry Point:** `app/main.py`
 **Frontend Entry Point:** `frontend/src/main.ts`

@@ -219,7 +219,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 interface Trader {
   id: number
@@ -299,7 +299,7 @@ const ws = ref<WebSocket | null>(null)
 const chartContainer = ref<HTMLElement | null>(null)
 
 // Stars background
-const getStarStyle = (i: number) => ({
+const getStarStyle = (_i: number) => ({
   left: `${Math.random() * 100}%`,
   top: `${Math.random() * 100}%`,
   width: `${Math.random() * 2 + 1}px`,

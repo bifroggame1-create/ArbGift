@@ -281,7 +281,7 @@ const resultClass = computed(() => {
 })
 
 // Stars background
-const getStarStyle = (i: number) => ({
+const getStarStyle = (_i: number) => ({
   left: `${Math.random() * 100}%`,
   top: `${Math.random() * 100}%`,
   width: `${Math.random() * 2 + 1}px`,
@@ -325,7 +325,7 @@ const spin = async () => {
   gameStatus.value = '🎰'
 
   // Determine result
-  const colorData = colors.find(c => c.name === selectedColor.value)!
+  const _colorData = colors.find(c => c.name === selectedColor.value)!
 
   // Weighted random - house edge
   const rand = Math.random()

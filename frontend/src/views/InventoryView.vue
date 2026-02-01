@@ -216,7 +216,7 @@ const selectedValue = computed(() => {
     .reduce((sum, i) => sum + i.price, 0)
 })
 
-const getStarStyle = (i: number) => ({
+const getStarStyle = (_i: number) => ({
   left: `${Math.random() * 100}%`,
   top: `${Math.random() * 100}%`,
   width: `${Math.random() * 2 + 1}px`,

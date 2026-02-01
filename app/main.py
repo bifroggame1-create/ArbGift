@@ -43,10 +43,27 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("Database initialized")
 
+    # Запускаем синхронизацию данных при старте (если включено)
+    if settings.SYNC_ON_STARTUP:
+        logger.info("Starting data sync from markets...")
+        try:
+            from app.sync import run_sync
+            stats = await run_sync()
+            logger.info(f"Sync completed: {stats.get('total', 0)} items loaded")
+        except Exception as e:
+            logger.error(f"Sync failed: {e}")
+            # Не падаем, продолжаем работу
+
     yield
 
     # Shutdown
     logger.info("Shutting down...")
+    try:
+        from app.sync import get_loader
+        loader = await get_loader()
+        await loader.close()
+    except Exception:
+        pass
     await close_db()
     logger.info("Shutdown complete")
 
@@ -213,10 +230,71 @@ async def get_stats():
         }
 
 
-# Admin endpoints (protected in production)
-@app.post("/api/v1/admin/index-collection", tags=["Admin"])
+# =====================================
+# SYNC ENDPOINTS (БЕЗ CELERY)
+# =====================================
+
+@app.post("/api/v1/admin/sync", tags=["Admin"])
+async def sync_all_markets():
+    """
+    Синхронизировать данные со всех маркетов.
+
+    Запускает синхронный загрузчик (без Celery).
+    Загружает данные с Portals.tg и Major.tg.
+    """
+    from app.sync import run_sync
+    try:
+        stats = await run_sync()
+        return {
+            "status": "completed",
+            "stats": stats,
+        }
+    except Exception as e:
+        logger.error(f"Sync error: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+
+@app.post("/api/v1/admin/sync/portals", tags=["Admin"])
+async def sync_portals_market(max_items: int = 500):
+    """Синхронизировать только Portals.tg."""
+    from app.sync import get_loader
+    try:
+        loader = await get_loader()
+        count = await loader.sync_portals_listings(max_items)
+        return {
+            "status": "completed",
+            "market": "portals",
+            "synced": count,
+        }
+    except Exception as e:
+        logger.error(f"Portals sync error: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+
+@app.post("/api/v1/admin/sync/major", tags=["Admin"])
+async def sync_major_market(max_items: int = 500):
+    """Синхронизировать только Major.tg."""
+    from app.sync import get_loader
+    try:
+        loader = await get_loader()
+        count = await loader.sync_major_listings(max_items)
+        return {
+            "status": "completed",
+            "market": "major",
+            "synced": count,
+        }
+    except Exception as e:
+        logger.error(f"Major sync error: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+
+# =====================================
+# LEGACY CELERY ENDPOINTS (deprecated)
+# =====================================
+
+@app.post("/api/v1/admin/index-collection", tags=["Admin"], deprecated=True)
 async def trigger_index_collection(collection_address: str):
-    """Trigger collection indexing (requires Celery/Redis)."""
+    """[DEPRECATED] Trigger collection indexing (requires Celery/Redis)."""
     try:
         from app.workers.tasks.index_collection import index_collection
         task = index_collection.delay(collection_address)
@@ -229,9 +307,9 @@ async def trigger_index_collection(collection_address: str):
         return JSONResponse(status_code=503, content={"detail": f"Celery unavailable: {e}"})
 
 
-@app.post("/api/v1/admin/sync-listings", tags=["Admin"])
+@app.post("/api/v1/admin/sync-listings", tags=["Admin"], deprecated=True)
 async def trigger_sync_listings(market_slug: str = None):
-    """Trigger listings sync (requires Celery/Redis)."""
+    """[DEPRECATED] Trigger listings sync (requires Celery/Redis)."""
     try:
         if market_slug:
             from app.workers.tasks.sync_listings import sync_single_market

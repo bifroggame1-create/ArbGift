@@ -1,0 +1,56 @@
+/**
+ * PORTALS.TG Design System
+ * Extracted via reverse engineering
+ *
+ * API: https://portal-market.com/api/nfts/search
+ */
+
+:root {
+  /* Core Colors */
+  --portals-background: #141414;
+  --portals-primary: #1689ff;
+  --portals-secondary: #282727;
+  --portals-accent: #49df64;
+
+  /* Background variants */
+  --portals-bg-secondary: #282727;
+  --portals-bg-secondary-2: #3a3a3a;
+  --portals-bg-tertiary: #191919;
+  --portals-bg-dark: #121212;
+
+  /* Text */
+  --portals-text: #fff;
+  --portals-text-muted: #6d6d71;
+
+  /* Borders */
+  --portals-border: #454545;
+  --portals-radius: 16px;
+
+  /* Typography */
+  --portals-font: "SFProText", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+
+  /* Layout */
+  --portals-header-height: 54px;
+  --portals-footer-height: 34px;
+
+  /* Special colors */
+  --portals-destructive: #df494d;
+  --portals-gold: #f1aa05;
+  --portals-purple: #af51de;
+  --portals-cyan: #5ac8fa;
+
+  /* Gradients */
+  --portals-gold-gradient: linear-gradient(94.02deg, #fac297 1.95%, #ffc386 50.42%, #ca8e52 98.56%);
+}
+
+/* Gift Card Background Colors by Collection */
+.gift-bg-instant-ramen { background: linear-gradient(180deg, #E8D5B7 0%, #C4A77D 100%); }
+.gift-bg-lol-pop { background: linear-gradient(180deg, #A8D8FF 0%, #5BA3D9 100%); }
+.gift-bg-hypno-lollipop { background: linear-gradient(180deg, #D4B8E8 0%, #9B6DC6 100%); }
+.gift-bg-eternal-candle { background: linear-gradient(180deg, #4A4A4A 0%, #2A2A2A 100%); }
+.gift-bg-bling-binky { background: linear-gradient(180deg, #FFD700 0%, #FFA500 100%); }
+.gift-bg-pet-snake { background: linear-gradient(180deg, #90EE90 0%, #228B22 100%); }
+.gift-bg-happy-brownie { background: linear-gradient(180deg, #D2B48C 0%, #8B4513 100%); }
+.gift-bg-fresh-socks { background: linear-gradient(180deg, #F5DEB3 0%, #DEB887 100%); }
+.gift-bg-ice-cream { background: linear-gradient(180deg, #FFB6C1 0%, #FF69B4 100%); }
+.gift-bg-default { background: linear-gradient(180deg, #3A3A3A 0%, #282727 100%); }

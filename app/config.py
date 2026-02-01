@@ -113,9 +113,12 @@ class Settings(BaseSettings):
     # ============================================================
     # SYNC SETTINGS
     # ============================================================
+    SYNC_ON_STARTUP: bool = True  # Синхронизировать данные при старте
     SYNC_INTERVAL_LISTINGS: int = 60  # seconds
     SYNC_INTERVAL_METADATA: int = 3600  # 1 hour
     SYNC_BATCH_SIZE: int = 100
+    SYNC_MAX_ITEMS_PORTALS: int = 500  # Макс. записей с Portals.tg
+    SYNC_MAX_ITEMS_MAJOR: int = 500  # Макс. записей с Major.tg
 
     # ============================================================
     # FX RATES

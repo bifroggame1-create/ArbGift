@@ -63,11 +63,6 @@ const router = createRouter({
       name: 'lucky',
       component: () => import('../views/LuckyView.vue'),
     },
-    {
-      path: '/roll',
-      name: 'roll',
-      component: () => import('../views/RollView.vue'),
-    },
     // Gaming Hub
     {
       path: '/topup',
