@@ -258,43 +258,6 @@
       </button>
     </div>
 
-    <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
-      <router-link to="/pvp" class="nav-item">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 4l4 4m8 8l4 4M4 20l4-4m8-8l4-4M12 12l-8 8m16 0l-8-8m0 0l8-8M4 4l8 8"/>
-        </svg>
-        <span>ПвП</span>
-      </router-link>
-      <router-link to="/solo" class="nav-item active">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-        <span>Соло</span>
-      </router-link>
-      <router-link to="/inventory" class="nav-item">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="18" height="18" rx="2"/>
-          <path d="M3 9h18M9 21V9"/>
-        </svg>
-        <span>Инвентарь</span>
-      </router-link>
-      <router-link to="/shop" class="nav-item">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-        <span>Магазин</span>
-      </router-link>
-      <router-link to="/profile" class="nav-item">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-        <span>Профиль</span>
-      </router-link>
-    </nav>
   </div>
 </template>
 
@@ -1021,30 +984,4 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-/* Bottom Nav */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #000;
-  border-top: 1px solid #1c1c1e;
-  display: flex;
-  padding: 8px 0 24px;
-  z-index: 100;
-}
-
-.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  color: #6b7280;
-  text-decoration: none;
-  font-size: 10px;
-}
-
-.nav-item.active { color: #fff; }
-.nav-item svg { width: 22px; height: 22px; }
 </style>
