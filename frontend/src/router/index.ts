@@ -121,6 +121,12 @@ const router = createRouter({
       name: 'rocket',
       component: () => import('../views/RocketView.vue'),
     },
+    // Admin Panel
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('../views/AdminView.vue'),
+    },
   ],
 })
 
