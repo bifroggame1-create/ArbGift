@@ -131,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { createChart, type IChartApi, type ISeriesApi } from 'lightweight-charts'
 import { useTelegram } from '../composables/useTelegram'
 
@@ -269,7 +269,8 @@ const initChart = () => {
     },
   })
 
-  lineSeries = chart.addLineSeries({
+  lineSeries = chart.addSeries({
+    type: 'Line',
     color: '#00ff88',
     lineWidth: 2,
     priceLineVisible: false,
@@ -284,7 +285,7 @@ const initChart = () => {
       value: 1 + Math.random() * 0.1 * i,
     })
   }
-  lineSeries.setData(data)
+  lineSeries?.setData(data)
 }
 
 // Simulate game (demo)

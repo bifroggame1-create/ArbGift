@@ -52,6 +52,8 @@ export interface Gift {
   is_on_sale: boolean
   min_price_ton?: string
   listings_count: number
+  tg_id?: number
+  price?: number
 }
 
 export interface Listing {

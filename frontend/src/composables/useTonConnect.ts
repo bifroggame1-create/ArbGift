@@ -3,8 +3,8 @@
  *
  * Provides wallet connection for TON blockchain.
  */
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { TonConnectUI, type ConnectedWallet, type Wallet } from '@tonconnect/ui'
+import { ref, computed } from 'vue'
+import { TonConnectUI, type ConnectedWallet } from '@tonconnect/ui'
 
 // Singleton instance
 let tonConnectUI: TonConnectUI | null = null
@@ -53,9 +53,8 @@ export function useTonConnect() {
 
     // Set TMA return URL if in Telegram
     if (botUsername && window.Telegram?.WebApp) {
-      tonConnectUI.uiOptions = {
-        twaReturnUrl: `https://t.me/${botUsername}`,
-      }
+      // TonConnect UI options - return URL handled by manifest
+      console.log('TonConnect initialized for bot:', botUsername)
     }
 
     // Subscribe to wallet changes
@@ -126,12 +125,9 @@ export function useTonConnect() {
       throw new Error('Wallet not connected')
     }
 
-    const { nftAddress, toAddress, amount = '50000000', forwardPayload } = params
+    const { nftAddress, amount = '50000000', forwardPayload } = params
 
-    // NFT Transfer message body (op code 0x5fcc3d14)
-    const transferOpCode = '5fcc3d14'
-
-    // Build message
+    // Build NFT transfer message
     const messages = [
       {
         address: nftAddress,

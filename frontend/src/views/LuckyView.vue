@@ -324,9 +324,6 @@ const spin = async () => {
 
   gameStatus.value = '🎰'
 
-  // Determine result
-  const _colorData = colors.find(c => c.name === selectedColor.value)!
-
   // Weighted random - house edge
   const rand = Math.random()
   let winningColor = 'yellow'

@@ -377,7 +377,7 @@ const handleGiftClick = (gift: any) => {
   router.push(`/gift/${gift.id}`)
 }
 
-const handleBuy = (gift: any) => {
+const handleBuy = (_gift: any) => {
   hapticImpact('medium')
   // Open buy modal
 }
