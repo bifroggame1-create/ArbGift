@@ -47,6 +47,8 @@ export interface Gift {
   rarity?: string
   backdrop?: string
   model?: string
+  pattern?: string
+  symbol?: string
   collection_id: number
   collection_name?: string
   is_on_sale: boolean
@@ -70,6 +72,10 @@ export interface Listing {
 export const getGifts = async (params?: {
   collection_id?: number
   rarity?: string
+  model?: string
+  backdrop?: string
+  pattern?: string
+  symbol?: string
   is_on_sale?: boolean
   min_price?: number
   max_price?: number

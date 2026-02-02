@@ -20,11 +20,12 @@
 
     <!-- Toolbar: Фильтры, Поиск, Сортировка -->
     <div class="market-toolbar">
-      <button class="toolbar-btn filter-btn" @click="showFilters = true">
+      <button class="toolbar-btn filter-btn" :class="{ 'has-filters': activeFilterCount > 0 }" @click="showFilters = true">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
         </svg>
         <span>Фильтры</span>
+        <span v-if="activeFilterCount > 0" class="filter-badge">{{ activeFilterCount }}</span>
       </button>
 
       <div class="search-box">
@@ -93,6 +94,22 @@
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
         </svg>
       </button>
+    </div>
+
+    <!-- Active Filter Chips -->
+    <div v-if="activeFilterTags.length > 0" class="active-filters">
+      <button
+        v-for="tag in activeFilterTags"
+        :key="tag.key"
+        class="active-filter-chip"
+        @click="removeFilterTag(tag)"
+      >
+        <span class="af-label">{{ tag.label }}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+      <button class="clear-all-btn" @click="resetFilters(); applyFilters()">Очистить всё</button>
     </div>
 
     <!-- Sort Dropdown -->
@@ -189,6 +206,161 @@
       </div>
     </div>
 
+    <!-- Filter Sidebar (Thermos-style) -->
+    <Teleport to="body">
+      <Transition name="filter-overlay">
+        <div v-if="showFilters" class="filter-overlay" @click.self="showFilters = false">
+          <Transition name="filter-slide">
+            <div v-if="showFilters" class="filter-sidebar">
+              <div class="filter-header">
+                <h3 class="filter-title">Фильтры</h3>
+                <button class="filter-close" @click="showFilters = false">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div class="filter-body">
+                <!-- Gift Name / Collection -->
+                <div class="filter-section">
+                  <div class="filter-section-title">Подарок</div>
+                  <div class="filter-chips">
+                    <button
+                      v-for="name in availableNames"
+                      :key="name"
+                      class="filter-chip"
+                      :class="{ active: filters.names.includes(name) }"
+                      @click="toggleFilter('names', name)"
+                    >
+                      {{ name }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Model -->
+                <div class="filter-section" v-if="availableModels.length">
+                  <div class="filter-section-title">Модель</div>
+                  <div class="filter-chips">
+                    <button
+                      v-for="m in availableModels"
+                      :key="m"
+                      class="filter-chip"
+                      :class="{ active: filters.models.includes(m) }"
+                      @click="toggleFilter('models', m)"
+                    >
+                      {{ m }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Backdrop -->
+                <div class="filter-section" v-if="availableBackdrops.length">
+                  <div class="filter-section-title">Фон</div>
+                  <div class="filter-chips">
+                    <button
+                      v-for="b in availableBackdrops"
+                      :key="b"
+                      class="filter-chip"
+                      :class="{ active: filters.backdrops.includes(b) }"
+                      @click="toggleFilter('backdrops', b)"
+                    >
+                      {{ b }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Pattern -->
+                <div class="filter-section" v-if="availablePatterns.length">
+                  <div class="filter-section-title">Паттерн</div>
+                  <div class="filter-chips">
+                    <button
+                      v-for="p in availablePatterns"
+                      :key="p"
+                      class="filter-chip"
+                      :class="{ active: filters.patterns.includes(p) }"
+                      @click="toggleFilter('patterns', p)"
+                    >
+                      {{ p }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Symbol -->
+                <div class="filter-section" v-if="availableSymbols.length">
+                  <div class="filter-section-title">Символ</div>
+                  <div class="filter-chips">
+                    <button
+                      v-for="s in availableSymbols"
+                      :key="s"
+                      class="filter-chip"
+                      :class="{ active: filters.symbols.includes(s) }"
+                      @click="toggleFilter('symbols', s)"
+                    >
+                      {{ s }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Rarity -->
+                <div class="filter-section">
+                  <div class="filter-section-title">Редкость</div>
+                  <div class="filter-chips">
+                    <button
+                      v-for="r in rarityOptions"
+                      :key="r.value"
+                      class="filter-chip rarity-chip"
+                      :class="{ active: filters.rarities.includes(r.value) }"
+                      :style="filters.rarities.includes(r.value) ? { background: r.color, borderColor: r.color } : {}"
+                      @click="toggleFilter('rarities', r.value)"
+                    >
+                      {{ r.label }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Price Range -->
+                <div class="filter-section">
+                  <div class="filter-section-title">Цена (TON)</div>
+                  <div class="price-range">
+                    <div class="price-input-wrap">
+                      <input
+                        v-model.number="filters.minPrice"
+                        type="number"
+                        placeholder="Мин"
+                        class="price-input"
+                        min="0"
+                        step="0.1"
+                      />
+                    </div>
+                    <span class="price-dash">—</span>
+                    <div class="price-input-wrap">
+                      <input
+                        v-model.number="filters.maxPrice"
+                        type="number"
+                        placeholder="Макс"
+                        class="price-input"
+                        min="0"
+                        step="0.1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="filter-footer">
+                <button class="filter-reset" @click="resetFilters">Сбросить</button>
+                <button class="filter-apply" @click="applyFilters">
+                  Показать
+                  <span v-if="activeFilterCount > 0" class="filter-apply-count">{{ activeFilterCount }}</span>
+                </button>
+              </div>
+            </div>
+          </Transition>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- Footer (как у portals) -->
     <footer class="market-footer">
       <div class="footer-left">
@@ -214,7 +386,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import GiftCard from '../components/GiftCard.vue'
 import { useTelegram } from '../composables/useTelegram'
@@ -251,6 +423,122 @@ const limit = 50
 // Market stats
 const tonPrice = ref('1.33')
 const volume24h = ref('247.5K')
+
+// Filters (Thermos-style)
+interface Filters {
+  names: string[]
+  models: string[]
+  backdrops: string[]
+  patterns: string[]
+  symbols: string[]
+  rarities: string[]
+  minPrice: number | null
+  maxPrice: number | null
+}
+
+const filters = reactive<Filters>({
+  names: [],
+  models: [],
+  backdrops: [],
+  patterns: [],
+  symbols: [],
+  rarities: [],
+  minPrice: null,
+  maxPrice: null,
+})
+
+// Available filter options (populated from loaded gifts)
+const allLoadedGifts = ref<any[]>([])
+const availableNames = computed(() => [...new Set(allLoadedGifts.value.map(g => g.name).filter(Boolean))].sort())
+const availableModels = computed(() => [...new Set(allLoadedGifts.value.map(g => g.model).filter(Boolean))].sort())
+const availableBackdrops = computed(() => [...new Set(allLoadedGifts.value.map(g => g.backdrop).filter(Boolean))].sort())
+const availablePatterns = computed(() => [...new Set(allLoadedGifts.value.map(g => g.pattern).filter(Boolean))].sort())
+const availableSymbols = computed(() => [...new Set(allLoadedGifts.value.map(g => g.symbol).filter(Boolean))].sort())
+
+const rarityOptions = [
+  { value: 'common', label: 'Common', color: '#6b7280' },
+  { value: 'uncommon', label: 'Uncommon', color: '#22c55e' },
+  { value: 'rare', label: 'Rare', color: '#3b82f6' },
+  { value: 'epic', label: 'Epic', color: '#a855f7' },
+  { value: 'legendary', label: 'Legendary', color: '#f59e0b' },
+  { value: 'mythic', label: 'Mythic', color: '#ef4444' },
+]
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  count += filters.names.length
+  count += filters.models.length
+  count += filters.backdrops.length
+  count += filters.patterns.length
+  count += filters.symbols.length
+  count += filters.rarities.length
+  if (filters.minPrice !== null) count++
+  if (filters.maxPrice !== null) count++
+  return count
+})
+
+interface FilterTag {
+  key: string
+  group: string
+  value: string
+  label: string
+}
+
+const activeFilterTags = computed<FilterTag[]>(() => {
+  const tags: FilterTag[] = []
+  filters.names.forEach(v => tags.push({ key: `name-${v}`, group: 'names', value: v, label: v }))
+  filters.models.forEach(v => tags.push({ key: `model-${v}`, group: 'models', value: v, label: `Модель: ${v}` }))
+  filters.backdrops.forEach(v => tags.push({ key: `backdrop-${v}`, group: 'backdrops', value: v, label: `Фон: ${v}` }))
+  filters.patterns.forEach(v => tags.push({ key: `pattern-${v}`, group: 'patterns', value: v, label: `Паттерн: ${v}` }))
+  filters.symbols.forEach(v => tags.push({ key: `symbol-${v}`, group: 'symbols', value: v, label: `Символ: ${v}` }))
+  filters.rarities.forEach(v => {
+    const opt = rarityOptions.find(r => r.value === v)
+    tags.push({ key: `rarity-${v}`, group: 'rarities', value: v, label: opt?.label || v })
+  })
+  if (filters.minPrice !== null) tags.push({ key: 'minPrice', group: 'minPrice', value: String(filters.minPrice), label: `от ${filters.minPrice} TON` })
+  if (filters.maxPrice !== null) tags.push({ key: 'maxPrice', group: 'maxPrice', value: String(filters.maxPrice), label: `до ${filters.maxPrice} TON` })
+  return tags
+})
+
+const toggleFilter = (group: 'names' | 'models' | 'backdrops' | 'patterns' | 'symbols' | 'rarities', value: string) => {
+  const arr = filters[group]
+  const idx = arr.indexOf(value)
+  if (idx > -1) {
+    arr.splice(idx, 1)
+  } else {
+    arr.push(value)
+  }
+}
+
+const removeFilterTag = (tag: FilterTag) => {
+  if (tag.group === 'minPrice') {
+    filters.minPrice = null
+  } else if (tag.group === 'maxPrice') {
+    filters.maxPrice = null
+  } else {
+    const arr = filters[tag.group] as string[]
+    const idx = arr.indexOf(tag.value)
+    if (idx > -1) arr.splice(idx, 1)
+  }
+  applyFilters()
+}
+
+const resetFilters = () => {
+  filters.names = []
+  filters.models = []
+  filters.backdrops = []
+  filters.patterns = []
+  filters.symbols = []
+  filters.rarities = []
+  filters.minPrice = null
+  filters.maxPrice = null
+}
+
+const applyFilters = () => {
+  showFilters.value = false
+  currentPage.value = 1
+  fetchGifts()
+}
 
 // Sort options (как у portals)
 const sortOptions = [
@@ -314,15 +602,52 @@ const fetchGifts = async () => {
     if (query) {
       data = await searchGifts(query, { limit, collection_id: undefined })
     } else {
-      data = await getGifts({
+      const params: Record<string, any> = {
         is_on_sale: true,
         sort: sortBy.value,
         limit,
         offset,
-      })
+      }
+      // Apply filters
+      if (filters.rarities.length === 1) params.rarity = filters.rarities[0]
+      if (filters.models.length === 1) params.model = filters.models[0]
+      if (filters.backdrops.length === 1) params.backdrop = filters.backdrops[0]
+      if (filters.patterns.length === 1) params.pattern = filters.patterns[0]
+      if (filters.symbols.length === 1) params.symbol = filters.symbols[0]
+      if (filters.minPrice !== null) params.min_price = filters.minPrice
+      if (filters.maxPrice !== null) params.max_price = filters.maxPrice
+
+      data = await getGifts(params)
     }
 
-    gifts.value = data.items || data || []
+    let items = data.items || data || []
+
+    // Client-side filtering for multi-select and name filters
+    if (filters.names.length > 0) {
+      items = items.filter((g: any) => filters.names.includes(g.name))
+    }
+    if (filters.rarities.length > 1) {
+      items = items.filter((g: any) => filters.rarities.includes(g.rarity))
+    }
+    if (filters.models.length > 1) {
+      items = items.filter((g: any) => filters.models.includes(g.model))
+    }
+    if (filters.backdrops.length > 1) {
+      items = items.filter((g: any) => filters.backdrops.includes(g.backdrop))
+    }
+    if (filters.patterns.length > 1) {
+      items = items.filter((g: any) => filters.patterns.includes(g.pattern))
+    }
+    if (filters.symbols.length > 1) {
+      items = items.filter((g: any) => filters.symbols.includes(g.symbol))
+    }
+
+    gifts.value = items
+
+    // Populate filter options from first page load
+    if (allLoadedGifts.value.length === 0 && items.length > 0) {
+      allLoadedGifts.value = items
+    }
 
     if (data.total) {
       totalPages.value = Math.ceil(data.total / limit)
@@ -332,6 +657,18 @@ const fetchGifts = async () => {
     gifts.value = []
   } finally {
     loading.value = false
+  }
+}
+
+const fetchFilterOptions = async () => {
+  try {
+    const data = await getGifts({ is_on_sale: true, limit: 500 })
+    const items = data.items || data || []
+    if (items.length > 0) {
+      allLoadedGifts.value = items
+    }
+  } catch {
+    // Use whatever is loaded
   }
 }
 
@@ -383,6 +720,7 @@ const bulkBuy = () => {
 onMounted(() => {
   fetchGifts()
   fetchMarketStats()
+  fetchFilterOptions()
 })
 </script>
 
@@ -832,5 +1170,301 @@ onMounted(() => {
 
 .footer-btn:hover {
   color: #fff;
+}
+
+/* Filter Badge on toolbar button */
+.filter-btn.has-filters {
+  border: 1px solid #1689ff;
+}
+
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #1689ff;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+/* Active Filter Chips Bar */
+.active-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px 8px;
+  flex-wrap: wrap;
+}
+
+.active-filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: rgba(22, 137, 255, 0.15);
+  border: 1px solid rgba(22, 137, 255, 0.3);
+  border-radius: 8px;
+  color: #1689ff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.active-filter-chip:hover {
+  background: rgba(22, 137, 255, 0.25);
+}
+
+.active-filter-chip svg {
+  opacity: 0.7;
+}
+
+.clear-all-btn {
+  padding: 6px 10px;
+  background: none;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #6d6d71;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clear-all-btn:hover {
+  color: #fff;
+  border-color: #6d6d71;
+}
+
+/* Filter Overlay & Sidebar */
+.filter-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.filter-sidebar {
+  width: 340px;
+  max-width: 90vw;
+  height: 100%;
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+}
+
+.filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #282727;
+}
+
+.filter-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.filter-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #282727;
+  border: none;
+  border-radius: 10px;
+  color: #6d6d71;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-close:hover {
+  background: #3a3a3a;
+  color: #fff;
+}
+
+.filter-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.filter-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6d6d71;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter-chip {
+  padding: 7px 12px;
+  background: #282727;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #b0b0b0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-chip:hover {
+  background: #333;
+  color: #fff;
+}
+
+.filter-chip.active {
+  background: rgba(22, 137, 255, 0.15);
+  border-color: #1689ff;
+  color: #1689ff;
+}
+
+.rarity-chip.active {
+  color: #fff;
+}
+
+/* Price Range */
+.price-range {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.price-input-wrap {
+  flex: 1;
+}
+
+.price-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: #282727;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  -moz-appearance: textfield;
+}
+
+.price-input::-webkit-inner-spin-button,
+.price-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+.price-input:focus {
+  border-color: #1689ff;
+}
+
+.price-input::placeholder {
+  color: #6d6d71;
+}
+
+.price-dash {
+  color: #6d6d71;
+  font-size: 16px;
+}
+
+/* Filter Footer */
+.filter-footer {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #282727;
+}
+
+.filter-reset {
+  flex: 1;
+  padding: 12px;
+  background: #282727;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.filter-reset:hover {
+  background: #3a3a3a;
+}
+
+.filter-apply {
+  flex: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: #1689ff;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.filter-apply:hover {
+  background: #1478e0;
+}
+
+.filter-apply-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Filter Transitions */
+.filter-overlay-enter-active,
+.filter-overlay-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.filter-overlay-enter-from,
+.filter-overlay-leave-to {
+  opacity: 0;
+}
+
+.filter-slide-enter-active {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.filter-slide-leave-active {
+  transition: transform 0.2s ease-in;
+}
+
+.filter-slide-enter-from,
+.filter-slide-leave-to {
+  transform: translateX(100%);
 }
 </style>
