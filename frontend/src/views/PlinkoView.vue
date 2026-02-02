@@ -224,13 +224,27 @@ let ball: Ball | null = null
 let pegs: Peg[] = []
 let particles: Particle[] = []
 let animationId: number | null = null
+let idleAnimId: number | null = null
 let targetSlot = 0
+
+// Tube (pendulum) state
+const TUBE_WIDTH = 30
+const TUBE_HEIGHT = 38
+const TUBE_TOP = 4
+let tubeX = 0              // Current X position of tube center
+let tubeAngle = 0          // Pendulum angle in radians
+let tubeAngularVel = 0     // Angular velocity
+const TUBE_AMPLITUDE = 0.12  // Max swing angle (~7 degrees) — almost stopped
+const TUBE_DAMPING = 0.998   // Very slow decay
+const TUBE_FREQ = 0.015      // Slow swing frequency
+let dropPhase: 'idle' | 'holding' | 'releasing' | 'falling' = 'idle'
+let holdTimer = 0
 
 // Peg layout config
 let pegSpacingX = 28
 let pegSpacingY = 0
 let pegRadius = 4
-let startY = 50  // First row Y
+let startY = 80  // First row Y — shifted down for tube space
 let endY = 0     // Last row Y
 
 const computePegs = () => {
@@ -249,7 +263,7 @@ const computePegs = () => {
     pegRadius = 3.5
   }
 
-  startY = 45
+  startY = TUBE_TOP + TUBE_HEIGHT + 30  // Below tube with gap
   const slotHeight = 36
   endY = canvasHeight - slotHeight - 10
   pegSpacingY = (endY - startY) / (rows - 1)
@@ -346,16 +360,23 @@ const playGame = async () => {
 
   computePegs()
 
-  // Drop ball from top center with slight random offset
-  const offset = (Math.random() - 0.5) * pegSpacingX * 0.3
+  // Stop idle animation — game animation takes over
+  if (idleAnimId) {
+    cancelAnimationFrame(idleAnimId)
+    idleAnimId = null
+  }
+
+  // Ball starts inside the tube
   ball = {
-    x: canvasWidth / 2 + offset,
-    y: -BALL_RADIUS * 2,
-    vx: (Math.random() - 0.5) * 0.8,
+    x: tubeX,
+    y: TUBE_TOP + TUBE_HEIGHT - BALL_RADIUS,
+    vx: 0,
     vy: 0,
     trail: [],
   }
 
+  dropPhase = 'holding'
+  holdTimer = 0
   particles = []
   animate()
 }
@@ -368,7 +389,47 @@ const animate = () => {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  // === PHYSICS UPDATE ===
+  // === TUBE PENDULUM UPDATE (always swings) ===
+  tubeAngle += tubeAngularVel
+  tubeAngularVel += -TUBE_FREQ * tubeAngle  // Restoring force
+  tubeAngularVel *= TUBE_DAMPING
+  // Re-energize pendulum subtly so it never fully stops
+  if (Math.abs(tubeAngle) < 0.01 && Math.abs(tubeAngularVel) < 0.001) {
+    tubeAngularVel += (Math.random() - 0.5) * 0.005
+  }
+  tubeX = canvasWidth / 2 + Math.sin(tubeAngle) * canvasWidth * 0.12
+
+  // === DROP PHASE HANDLING ===
+  if (dropPhase === 'holding') {
+    // Ball sits in tube, moves with it
+    ball.x = tubeX
+    ball.y = TUBE_TOP + TUBE_HEIGHT - BALL_RADIUS - 2
+    holdTimer++
+    if (holdTimer > 25) {
+      // Release!
+      dropPhase = 'releasing'
+      ball.vx = tubeAngularVel * canvasWidth * 0.08 // Inherit tube momentum
+      ball.vy = 0.5
+    }
+    draw(ctx)
+    animationId = requestAnimationFrame(animate)
+    return
+  }
+
+  if (dropPhase === 'releasing') {
+    // Ball accelerates out of tube bottom
+    ball.vy += GRAVITY * 0.8
+    ball.x += ball.vx
+    ball.y += ball.vy
+    if (ball.y > TUBE_TOP + TUBE_HEIGHT + 15) {
+      dropPhase = 'falling'
+    }
+    draw(ctx)
+    animationId = requestAnimationFrame(animate)
+    return
+  }
+
+  // === FALLING PHASE — full physics ===
 
   // Gravity
   ball.vy += GRAVITY
@@ -508,17 +569,28 @@ const finishGame = () => {
   showResult.value = true
   ball = null
   isPlaying.value = false
+  dropPhase = 'idle'
 
-  // Keep drawing for particle effects
+  // Keep drawing for particle effects, then restart idle
   const fadeOut = () => {
     const canvas = gameCanvas.value
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+
+    // Keep pendulum moving during fadeout
+    tubeAngle += tubeAngularVel
+    tubeAngularVel += -TUBE_FREQ * tubeAngle
+    tubeAngularVel *= TUBE_DAMPING
+    tubeX = canvasWidth / 2 + Math.sin(tubeAngle) * canvasWidth * 0.12
+
     updateParticles()
     draw(ctx)
     if (particles.length > 0) {
       animationId = requestAnimationFrame(fadeOut)
+    } else {
+      // Restart idle animation
+      startIdleAnimation()
     }
   }
   fadeOut()
@@ -548,6 +620,58 @@ const draw = (ctx: CanvasRenderingContext2D) => {
   bgGrad.addColorStop(1, 'rgba(0, 0, 0, 0)')
   ctx.fillStyle = bgGrad
   ctx.fillRect(0, 0, w, h)
+
+  // === DRAW TUBE (pendulum dispenser) ===
+  const tubeLeft = tubeX - TUBE_WIDTH / 2
+  const tubeBottom = TUBE_TOP + TUBE_HEIGHT
+
+  // Tube body — metallic blue gradient
+  const tubeGrad = ctx.createLinearGradient(tubeLeft, 0, tubeLeft + TUBE_WIDTH, 0)
+  tubeGrad.addColorStop(0, '#1e3a5f')
+  tubeGrad.addColorStop(0.2, '#2563eb')
+  tubeGrad.addColorStop(0.5, '#3b82f6')
+  tubeGrad.addColorStop(0.8, '#2563eb')
+  tubeGrad.addColorStop(1, '#1e3a5f')
+
+  ctx.fillStyle = tubeGrad
+  ctx.beginPath()
+  ctx.roundRect(tubeLeft, TUBE_TOP, TUBE_WIDTH, TUBE_HEIGHT, [6, 6, 4, 4])
+  ctx.fill()
+
+  // Tube inner dark channel
+  const innerW = TUBE_WIDTH * 0.55
+  const innerGrad = ctx.createLinearGradient(tubeX - innerW / 2, 0, tubeX + innerW / 2, 0)
+  innerGrad.addColorStop(0, 'rgba(0,0,0,0.5)')
+  innerGrad.addColorStop(0.5, 'rgba(0,0,0,0.25)')
+  innerGrad.addColorStop(1, 'rgba(0,0,0,0.5)')
+  ctx.fillStyle = innerGrad
+  ctx.fillRect(tubeX - innerW / 2, TUBE_TOP + 3, innerW, TUBE_HEIGHT - 3)
+
+  // Tube bottom lip (wider, like a funnel exit)
+  ctx.fillStyle = '#2563eb'
+  ctx.beginPath()
+  ctx.roundRect(tubeLeft - 3, tubeBottom - 6, TUBE_WIDTH + 6, 6, [0, 0, 4, 4])
+  ctx.fill()
+
+  // Tube highlight line
+  ctx.strokeStyle = 'rgba(147, 197, 253, 0.4)'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(tubeLeft + 4, TUBE_TOP + 3)
+  ctx.lineTo(tubeLeft + 4, tubeBottom - 8)
+  ctx.stroke()
+
+  // Tube glow when ball is inside
+  if (dropPhase === 'holding' || dropPhase === 'releasing') {
+    ctx.save()
+    ctx.shadowColor = 'rgba(236, 72, 153, 0.6)'
+    ctx.shadowBlur = 15
+    ctx.fillStyle = 'rgba(236, 72, 153, 0.15)'
+    ctx.beginPath()
+    ctx.ellipse(tubeX, tubeBottom, TUBE_WIDTH * 0.6, 6, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+  }
 
   // === DRAW PEGS ===
   const rows = rowCount.value
@@ -723,11 +847,8 @@ const resizeCanvas = () => {
     ctx.scale(dpr, dpr)
   }
 
+  tubeX = canvasWidth / 2
   computePegs()
-  if (!ball) {
-    const ctx2 = canvas.getContext('2d')
-    if (ctx2) draw(ctx2)
-  }
 }
 
 const onRowCountChange = () => {
@@ -745,14 +866,44 @@ watch(riskLevel, () => {
   }
 })
 
+// Idle animation — tube sways even when no game is active
+const startIdleAnimation = () => {
+  // Initialize pendulum with small random swing
+  tubeAngle = (Math.random() - 0.5) * TUBE_AMPLITUDE
+  tubeAngularVel = (Math.random() - 0.5) * 0.008
+  tubeX = canvasWidth / 2
+
+  const idleLoop = () => {
+    const canvas = gameCanvas.value
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Update pendulum
+    tubeAngle += tubeAngularVel
+    tubeAngularVel += -TUBE_FREQ * tubeAngle
+    tubeAngularVel *= TUBE_DAMPING
+    if (Math.abs(tubeAngle) < 0.01 && Math.abs(tubeAngularVel) < 0.001) {
+      tubeAngularVel += (Math.random() - 0.5) * 0.004
+    }
+    tubeX = canvasWidth / 2 + Math.sin(tubeAngle) * canvasWidth * 0.12
+
+    draw(ctx)
+    idleAnimId = requestAnimationFrame(idleLoop)
+  }
+  idleLoop()
+}
+
 onMounted(async () => {
   await nextTick()
   resizeCanvas()
+  startIdleAnimation()
   window.addEventListener('resize', resizeCanvas)
 })
 
 onUnmounted(() => {
   if (animationId) cancelAnimationFrame(animationId)
+  if (idleAnimId) cancelAnimationFrame(idleAnimId)
   window.removeEventListener('resize', resizeCanvas)
 })
 </script>
