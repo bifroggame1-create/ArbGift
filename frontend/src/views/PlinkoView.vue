@@ -233,12 +233,21 @@ const currentMultipliers = computed(() => {
   return set[rowCount.value as keyof typeof set] || set[12]
 })
 
-// Plinko physics - FIXED values for better flow
-const PEG_RADIUS = 4
-const BALL_RADIUS = 5
-const GRAVITY = 0.4  // Stronger gravity
-const BOUNCE = 0.5   // Less bounce to prevent getting stuck
-const MAX_FRAMES = 500 // Fallback timeout
+// Plinko physics - slower, more realistic
+const PEG_RADIUS = 5
+const BALL_RADIUS = 6
+const GRAVITY = 0.15  // Slower fall for drama
+const BOUNCE = 0.6    // Good bounce off pegs
+const MAX_FRAMES = 800 // More time for slower fall
+
+// Tube visual
+const TUBE_WIDTH = 28
+const TUBE_HEIGHT = 35
+const TUBE_Y = 0
+
+// Ball drop animation
+let dropPhase: 'in_tube' | 'dropping' | 'falling' = 'in_tube'
+let dropTimer = 0
 
 interface Ball {
   x: number
@@ -286,14 +295,14 @@ const doubleBet = () => {
 const computePegs = () => {
   pegs = []
   const rows = rowCount.value
-  const topY = 40
-  const bottomY = canvasHeight - 50
+  const topY = TUBE_HEIGHT + 15 // Start below tube
+  const bottomY = canvasHeight - 45
   const rowHeight = (bottomY - topY) / rows
   const centerX = canvasWidth / 2
 
   for (let row = 0; row < rows; row++) {
     const numPegs = row + 3
-    const spacing = 20
+    const spacing = 22
     const startX = centerX - ((numPegs - 1) * spacing) / 2
 
     for (let col = 0; col < numPegs; col++) {
@@ -328,15 +337,17 @@ const playGame = async () => {
     }
   }
 
-  // Start ball with better initial conditions
+  // Start ball in tube
   ball = {
-    x: canvasWidth / 2 + (Math.random() - 0.5) * 20,
-    y: 15,
-    vx: (Math.random() - 0.5) * 3,
-    vy: 3
+    x: canvasWidth / 2,
+    y: 8,
+    vx: 0,
+    vy: 0
   }
 
   frameCount = 0
+  dropPhase = 'in_tube'
+  dropTimer = 0
   computePegs()
   animate()
 }
@@ -351,23 +362,52 @@ const animate = () => {
 
   frameCount++
 
+  // === DROP PHASES ===
+  if (dropPhase === 'in_tube') {
+    // Ball waits in tube for a moment
+    dropTimer++
+    if (dropTimer > 30) {
+      dropPhase = 'dropping'
+      ball.vy = 0.5 // Start slow
+      ball.vx = (Math.random() - 0.5) * 0.5
+    }
+    draw(ctx)
+    animationId = requestAnimationFrame(animate)
+    return
+  }
+
+  if (dropPhase === 'dropping') {
+    // Ball exits tube slowly
+    ball.vy += 0.08 // Very gentle acceleration
+    ball.y += ball.vy
+
+    if (ball.y > TUBE_HEIGHT + 10) {
+      dropPhase = 'falling'
+    }
+
+    draw(ctx)
+    animationId = requestAnimationFrame(animate)
+    return
+  }
+
+  // === FALLING PHASE ===
   // Timeout - force finish if stuck too long
   if (frameCount > MAX_FRAMES) {
     ball.y = canvasHeight - 25
     ball.vy = 0
   }
 
-  // Physics
+  // Physics with slower gravity for dramatic effect
   ball.vy += GRAVITY
   ball.x += ball.vx
   ball.y += ball.vy
 
-  // Limit max velocity to prevent tunneling
-  const maxVel = 12
+  // Limit max velocity
+  const maxVel = 8 // Lower max for more controlled movement
   ball.vx = Math.max(-maxVel, Math.min(maxVel, ball.vx))
   ball.vy = Math.max(-maxVel, Math.min(maxVel, ball.vy))
 
-  // Peg collisions
+  // Peg collisions - satisfying bounces
   for (const peg of pegs) {
     const dx = ball.x - peg.x
     const dy = ball.y - peg.y
@@ -378,32 +418,37 @@ const animate = () => {
       const nx = dx / dist
       const ny = dy / dist
 
-      // Push ball out of peg
-      const overlap = minDist - dist + 1
+      // Push ball out of peg smoothly
+      const overlap = minDist - dist + 0.5
       ball.x += nx * overlap
       ball.y += ny * overlap
 
-      // Reflect velocity
+      // Reflect velocity with satisfying bounce
       const dot = ball.vx * nx + ball.vy * ny
       if (dot < 0) {
-        ball.vx -= 2 * dot * nx * BOUNCE
-        ball.vy -= 2 * dot * ny * BOUNCE
+        // Strong horizontal deflection for drama
+        ball.vx -= 2 * dot * nx * BOUNCE * 1.2
+        ball.vy -= 2 * dot * ny * BOUNCE * 0.8
+
+        // Slow down slightly on each hit for "weight" feel
+        ball.vx *= 0.95
+        ball.vy *= 0.95
       }
 
-      // Add randomness for natural movement
-      ball.vx += (Math.random() - 0.5) * 1.5
+      // Random deflection for unpredictability
+      ball.vx += (Math.random() - 0.5) * 1.0
 
-      // Only steer toward target in lower half
-      if (ball.y > canvasHeight * 0.5) {
+      // Subtle steering toward target in lower half
+      if (ball.y > canvasHeight * 0.6) {
         const mults = currentMultipliers.value
         const slotWidth = canvasWidth / mults.length
         const targetX = targetSlot * slotWidth + slotWidth / 2
-        ball.vx += (targetX - ball.x) * 0.005
+        ball.vx += (targetX - ball.x) * 0.003
       }
 
-      // Ensure ball keeps moving down
-      if (Math.abs(ball.vy) < 1) {
-        ball.vy = 2
+      // Minimum downward velocity
+      if (ball.vy < 0.5) {
+        ball.vy = 0.8
       }
     }
   }
@@ -462,6 +507,39 @@ const draw = (ctx: CanvasRenderingContext2D) => {
   ctx.fillStyle = '#0a1628'
   ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
+  // === TUBE at top center ===
+  const tubeX = canvasWidth / 2 - TUBE_WIDTH / 2
+  const tubeGradient = ctx.createLinearGradient(tubeX, 0, tubeX + TUBE_WIDTH, 0)
+  tubeGradient.addColorStop(0, '#374151')
+  tubeGradient.addColorStop(0.3, '#4b5563')
+  tubeGradient.addColorStop(0.7, '#4b5563')
+  tubeGradient.addColorStop(1, '#374151')
+
+  // Tube body
+  ctx.fillStyle = tubeGradient
+  ctx.beginPath()
+  ctx.roundRect(tubeX, TUBE_Y, TUBE_WIDTH, TUBE_HEIGHT, [0, 0, 8, 8])
+  ctx.fill()
+
+  // Tube inner shadow
+  const innerGradient = ctx.createLinearGradient(tubeX + 4, 0, tubeX + TUBE_WIDTH - 4, 0)
+  innerGradient.addColorStop(0, 'rgba(0,0,0,0.4)')
+  innerGradient.addColorStop(0.5, 'rgba(0,0,0,0.1)')
+  innerGradient.addColorStop(1, 'rgba(0,0,0,0.4)')
+  ctx.fillStyle = innerGradient
+  ctx.fillRect(tubeX + 3, TUBE_Y, TUBE_WIDTH - 6, TUBE_HEIGHT - 4)
+
+  // Tube opening glow when ball is dropping
+  if (dropPhase === 'dropping' || dropPhase === 'in_tube') {
+    ctx.shadowColor = 'rgba(236, 72, 153, 0.5)'
+    ctx.shadowBlur = 10
+    ctx.fillStyle = 'rgba(236, 72, 153, 0.2)'
+    ctx.beginPath()
+    ctx.ellipse(canvasWidth / 2, TUBE_HEIGHT, 12, 4, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.shadowBlur = 0
+  }
+
   // Draw pegs
   const rows = rowCount.value
   for (let i = 0; i < pegs.length; i++) {
@@ -485,19 +563,43 @@ const draw = (ctx: CanvasRenderingContext2D) => {
 
   // Draw ball
   if (ball) {
-    ctx.fillStyle = '#ec4899'
-    ctx.shadowColor = 'rgba(236,72,153,0.7)'
-    ctx.shadowBlur = 12
-    ctx.beginPath()
-    ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.shadowBlur = 0
+    // Ball visibility based on phase
+    let ballVisible = true
+    let ballY = ball.y
 
-    // Highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'
-    ctx.beginPath()
-    ctx.arc(ball.x - 2, ball.y - 2, BALL_RADIUS * 0.4, 0, Math.PI * 2)
-    ctx.fill()
+    if (dropPhase === 'in_tube') {
+      // Ball visible in tube opening
+      ballY = TUBE_HEIGHT - 4
+      // Wobble animation
+      ball.x = canvasWidth / 2 + Math.sin(frameCount * 0.15) * 2
+    }
+
+    if (ballVisible) {
+      // Ball glow
+      ctx.shadowColor = 'rgba(236, 72, 153, 0.8)'
+      ctx.shadowBlur = 15
+
+      // Ball gradient for 3D effect
+      const ballGrad = ctx.createRadialGradient(
+        ball.x - 2, ballY - 2, 0,
+        ball.x, ballY, BALL_RADIUS
+      )
+      ballGrad.addColorStop(0, '#f472b6')
+      ballGrad.addColorStop(0.5, '#ec4899')
+      ballGrad.addColorStop(1, '#be185d')
+
+      ctx.fillStyle = ballGrad
+      ctx.beginPath()
+      ctx.arc(ball.x, ballY, BALL_RADIUS, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.shadowBlur = 0
+
+      // Highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
+      ctx.beginPath()
+      ctx.arc(ball.x - 2, ballY - 2, BALL_RADIUS * 0.35, 0, Math.PI * 2)
+      ctx.fill()
+    }
   }
 
   // Draw slot zones

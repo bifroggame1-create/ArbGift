@@ -1,122 +1,142 @@
 <template>
-  <div class="ball-escape-view min-h-screen flex flex-col" style="background: #000; padding-bottom: 16px;">
-    <div class="px-3 pt-3 flex flex-col gap-2">
-      <!-- Tournament Banner -->
-      <div class="rounded-xl px-4 py-2.5 flex items-center justify-between"
-        style="background: linear-gradient(135deg, #ca8a04 0%, #22c55e 60%, #4ade80 100%);">
-        <span class="text-white font-bold text-sm">Giftomania</span>
-        <span class="text-white/70 text-xs font-mono">3:04:57:06</span>
+  <div class="ball-escape-view">
+    <!-- Header -->
+    <header class="game-header">
+      <button class="header-close" @click="$router.back()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+        <span>Закрыть</span>
+      </button>
+      <div class="game-id">
+        <span class="label">Game #{{ gameId }}</span>
       </div>
-      <!-- Header Row -->
-      <div class="flex items-center justify-between">
-        <div class="flex gap-2">
-          <button class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.06);">
-            <svg class="w-4 h-4" fill="none" stroke="rgba(255,255,255,0.45)" viewBox="0 0 24 24">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="1.5"/>
-              <path d="M16 2v4M8 2v4M3 10h18" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <div class="flex items-center gap-1 rounded-full px-3 py-1" style="background: rgba(255,255,255,0.08);">
-            <span class="text-white/50 text-xs">Max Prize</span>
-            <span class="text-white/40 text-xs">▼</span>
-            <span class="text-white font-bold text-sm">30</span>
-          </div>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <button class="flex items-center gap-1.5 rounded-full px-3 py-1.5" style="background: rgba(255,255,255,0.08);">
-            <span class="text-white/45 text-xs">▼</span>
-            <span class="text-white font-bold text-sm">{{ balance.toFixed(2) }}</span>
-          </button>
-          <button class="w-7 h-7 rounded-full flex items-center justify-center text-white/50 text-sm" style="background: rgba(255,255,255,0.12);">+</button>
-        </div>
+      <div class="balance-badge">
+        <span>{{ balance.toFixed(2) }} ◇</span>
       </div>
-    </div>
+    </header>
 
     <!-- Game Arena -->
-    <div class="mx-3 mt-2 flex-1 flex items-center justify-center" style="min-height: 300px;">
-      <div class="relative" style="width: 300px; height: 300px;">
-        <canvas ref="gameCanvas" class="absolute inset-0 w-full h-full cursor-pointer"
-          :width="300" :height="300" @click="onTap"></canvas>
+    <div class="arena-container">
+      <canvas
+        ref="gameCanvas"
+        class="game-canvas"
+        :width="canvasWidth"
+        :height="canvasHeight"
+      ></canvas>
+
+      <!-- Multiplier overlay -->
+      <div class="multiplier-overlay" :class="gameState">
+        <div class="multiplier-value" :style="{ color: multiplierColor }">
+          {{ multiplier.toFixed(2) }}x
+        </div>
+        <div v-if="gameState === 'won'" class="result-text won">ESCAPED! 🎉</div>
+        <div v-if="gameState === 'lost'" class="result-text lost">CAUGHT! 💀</div>
       </div>
     </div>
 
-    <!-- Bottom Controls -->
-    <div class="px-3 py-3">
-      <div class="flex gap-2 mb-3">
-        <button v-for="amount in betAmounts" :key="amount" @click="selectBet(amount)"
-          class="flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-1 transition-all"
-          :style="selectedBet === amount
-            ? { background: 'rgba(34,211,238,0.2)', border: '1px solid rgba(34,211,238,0.4)' }
-            : { background: 'rgba(255,255,255,0.06)', border: '1px solid transparent' }">
-          <span class="text-white/75 text-sm">{{ amount }}</span>
-          <span class="text-white/30 text-xs">▼</span>
-        </button>
-      </div>
-      <div class="flex items-center gap-2">
-        <button class="flex flex-col items-center gap-0.5">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.06);">
-            <div class="w-5 h-5 rounded-full flex items-center justify-center" style="background: #3b82f6;">
-              <span class="text-white text-xs font-bold">▼</span>
-            </div>
-          </div>
-          <span class="text-white/35 text-xs">Swap ☆</span>
-        </button>
-        <button @click="startGame" :disabled="gameState === 'playing' || balance < selectedBet"
-          class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          style="background: linear-gradient(135deg, #22d3ee, #06b6d4);">
-          {{ gameState === 'playing' ? 'Tap to escape!' : `Play ▼ ${selectedBet}` }}
-        </button>
-        <button class="flex flex-col items-center gap-0.5">
-          <div class="w-10 h-10 rounded-full flex items-center justify-center text-white/50 text-lg" style="background: rgba(255,255,255,0.10);">+</div>
-          <span class="text-white/35 text-xs">Deposit</span>
-        </button>
-      </div>
-      <div class="text-center mt-2">
-        <span class="text-white/20 text-xs">⏱ Hash: {{ currentHash }}</span>
-      </div>
+    <!-- Hash display -->
+    <div class="hash-row">
+      <span class="hash-label">Hash:</span>
+      <span class="hash-value">{{ serverHash }}</span>
+    </div>
+
+    <!-- Bet buttons -->
+    <div class="bet-row">
+      <button
+        v-for="amount in betAmounts"
+        :key="amount"
+        class="bet-btn"
+        :class="{ active: selectedBet === amount }"
+        @click="selectBet(amount)"
+        :disabled="gameState === 'playing'"
+      >
+        {{ amount }} ◇
+      </button>
+    </div>
+
+    <!-- Play button -->
+    <div class="action-row">
+      <button
+        class="play-btn"
+        :class="{ playing: gameState === 'playing' }"
+        :disabled="gameState === 'playing' || balance < selectedBet"
+        @click="startGame"
+      >
+        <span v-if="gameState === 'idle'">Play {{ selectedBet }} ◇</span>
+        <span v-else-if="gameState === 'playing'">{{ multiplier.toFixed(2) }}x</span>
+        <span v-else>Play Again</span>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, useTemplateRef } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { escapePlay } from '../api/client'
 
-const gameCanvas = useTemplateRef<HTMLCanvasElement>('gameCanvas')
+// Canvas
+const gameCanvas = ref<HTMLCanvasElement | null>(null)
+const canvasWidth = 320
+const canvasHeight = 420 // Taller for floor area
 
-const balance = ref(3.16)
-const betAmounts = [1, 3, 10, 30, 50]
+// Game state
+const balance = ref(10.0)
+const betAmounts = [0.5, 1, 3, 5, 10]
 const selectedBet = ref(1)
 const gameState = ref<'idle' | 'playing' | 'won' | 'lost'>('idle')
-const currentHash = ref('502d...1c83')
+const multiplier = ref(1.0)
+const gameId = ref(Math.floor(Math.random() * 900000) + 100000)
+const serverHash = ref('---')
 
-const SIZE = 300
-const CENTER = SIZE / 2
-const RING_RADIUS = 105
-const RING_WIDTH = 14
-const CHAR_RADIUS = 22
-const RING_CY = CENTER - 18 // ring center Y (shifted up to make room for bottom bars)
-
+// Physics
 let animationId: number | null = null
-let progress = 0
-let multiplier = 1.0
-let charAngle = -Math.PI / 2
-let targetAngle = -Math.PI / 2
-let resultTimeout: number | null = null
-let nonce = Date.now()
+let sphereRotation = 0
+let sphereAngularVelocity = 0 // radians per frame
+let holeAngle = 0
+let ballX = 0
+let ballY = 0
+let ballVX = 0
+let ballVY = 0
+const SPHERE_RADIUS = 120
+const BALL_RADIUS = 12
+const HOLE_SIZE = 0.45 // radians
+const GRAVITY = 0.12
+const BOUNCE = 0.65 // inelastic collisions
+const FRICTION = 0.992
+const CENTRIFUGAL_FACTOR = 0.008 // centrifugal force strength
+const CORIOLIS_FACTOR = 0.02 // Coriolis deflection
+
+// Trail effect
+const TRAIL_LENGTH = 12
+let ballTrail: { x: number; y: number }[] = []
+
+// Sphere position (centered horizontally, upper area)
+const SPHERE_CENTER_X = 160
+const SPHERE_CENTER_Y = 140
+
+// Floor area
+const FLOOR_Y = 340 // Where the floor starts
+const FLOOR_HEIGHT = 60
+
+// Game phases
+let startTime = 0
+let gameDuration = 5000
+let willEscape = false
+let targetMultiplier = 1.0
+let isFalling = false // Ball escaped and is falling
+let landedSide: 'green' | 'red' | null = null
+
+const multiplierColor = computed(() => {
+  if (gameState.value === 'won') return '#4ade80'
+  if (gameState.value === 'lost') return '#ef4444'
+  if (multiplier.value >= 2) return '#4ade80'
+  return '#22d3ee'
+})
 
 function selectBet(amount: number) {
   if (gameState.value !== 'idle') return
   selectedBet.value = amount
-}
-
-function generateHash(): string {
-  return Math.random().toString(36).substring(2, 6) + '...' + Math.random().toString(36).substring(2, 6)
-}
-
-function onTap() {
-  if (gameState.value !== 'playing') return
-  targetAngle = charAngle + (Math.random() - 0.3) * Math.PI * 0.8
 }
 
 async function startGame() {
@@ -124,61 +144,234 @@ async function startGame() {
 
   balance.value -= selectedBet.value
   gameState.value = 'playing'
-  progress = 0
-  multiplier = 1.0
-  charAngle = -Math.PI / 2 + (Math.random() - 0.5) * 0.5
-  targetAngle = charAngle
+  multiplier.value = 1.0
+  gameId.value = Math.floor(Math.random() * 900000) + 100000
 
-  let willEscape = Math.random() < 0.35
-  let gameDuration = 3000 + Math.random() * 2000
-  let serverMultiplier = 3.75
+  // Reset ball slightly off-center for initial motion
+  const startAngle = Math.random() * Math.PI * 2
+  const startDist = 20 + Math.random() * 30
+  ballX = Math.cos(startAngle) * startDist
+  ballY = Math.sin(startAngle) * startDist
+  ballVX = (Math.random() - 0.5) * 2
+  ballVY = (Math.random() - 0.5) * 2 + 1 // slight downward bias
+  sphereRotation = 0
+  sphereAngularVelocity = 0.02
+  holeAngle = Math.random() * Math.PI * 2
+  ballTrail = []
+  isFalling = false
+  landedSide = null
 
+  // Get server result
   try {
-    nonce++
-    const serverResult = await escapePlay({
+    const result = await escapePlay({
       amount: selectedBet.value,
-      client_seed: generateHash(),
-      nonce,
-      user_id: 'anonymous'
+      client_seed: Math.random().toString(36).substring(2, 10),
+      nonce: Date.now(),
+      user_id: 'user'
     })
-    willEscape = serverResult.escaped
-    gameDuration = serverResult.duration_ms
-    serverMultiplier = serverResult.multiplier
-    currentHash.value = serverResult.server_seed_hash
+    willEscape = result.escaped
+    gameDuration = result.duration_ms
+    targetMultiplier = result.multiplier
+    serverHash.value = result.server_seed_hash.slice(0, 6) + '...' + result.server_seed_hash.slice(-4)
   } catch {
-    currentHash.value = generateHash()
+    // Fallback random
+    willEscape = Math.random() < 0.4
+    gameDuration = 4000 + Math.random() * 3000
+    targetMultiplier = 1.5 + Math.random() * 3.5
+    serverHash.value = Math.random().toString(36).slice(2, 8) + '...'
   }
 
-  const startTime = Date.now()
+  startTime = Date.now()
+  animationId = requestAnimationFrame(gameLoop)
+}
 
-  function gameLoop() {
-    const elapsed = Date.now() - startTime
-    progress = Math.min(elapsed / gameDuration, 1)
-    multiplier = 1.0 + progress * (serverMultiplier - 1.0)
+function gameLoop() {
+  const elapsed = Date.now() - startTime
+  const progress = Math.min(elapsed / gameDuration, 1)
 
-    charAngle += (targetAngle - charAngle) * 0.08
-    charAngle += (Math.random() - 0.5) * 0.05
+  // Update multiplier
+  multiplier.value = 1 + (targetMultiplier - 1) * progress
 
-    if (progress >= 1) {
-      multiplier = serverMultiplier
-      if (willEscape) {
-        charAngle = Math.PI + 0.4 + Math.random() * 0.3
-        gameState.value = 'won'
-        balance.value += selectedBet.value * serverMultiplier
-      } else {
-        charAngle = -0.1 - Math.random() * 0.3
-        gameState.value = 'lost'
-      }
-      draw()
-      resultTimeout = setTimeout(() => { gameState.value = 'idle'; progress = 0 }, 2000) as unknown as number
+  // Keep sphere rotating
+  sphereAngularVelocity = 0.02 + progress * 0.025
+  sphereRotation += sphereAngularVelocity
+  const currentHoleAngle = holeAngle + sphereRotation
+
+  if (isFalling) {
+    // === FALLING PHASE ===
+    ballVY += 0.4 // gravity
+    ballVX *= 0.99 // air resistance
+
+    // Subtle correction to guide ball to correct side (server result)
+    const absoluteX = SPHERE_CENTER_X + ballX
+    const targetSide = willEscape ? canvasWidth * 0.25 : canvasWidth * 0.75
+    const correction = (targetSide - absoluteX) * 0.003
+    ballVX += correction
+
+    ballX += ballVX
+    ballY += ballVY
+
+    // Update trail
+    ballTrail.unshift({ x: SPHERE_CENTER_X + ballX, y: SPHERE_CENTER_Y + ballY })
+    if (ballTrail.length > TRAIL_LENGTH) {
+      ballTrail.pop()
+    }
+
+    // Check if landed on floor
+    const absoluteY = SPHERE_CENTER_Y + ballY
+    if (absoluteY >= FLOOR_Y - BALL_RADIUS) {
+      // Landed!
+      const finalX = SPHERE_CENTER_X + ballX
+      landedSide = finalX < canvasWidth / 2 ? 'green' : 'red'
+
+      // Stop ball on floor
+      ballY = FLOOR_Y - BALL_RADIUS - SPHERE_CENTER_Y
+      ballVY = 0
+      ballVX = 0
+
+      // End game based on where it landed
+      const won = landedSide === 'green'
+      endGame(won)
       return
     }
 
     draw()
     animationId = requestAnimationFrame(gameLoop)
+    return
   }
 
+  // === INSIDE SPHERE PHASE ===
+  const dist = Math.sqrt(ballX * ballX + ballY * ballY)
+
+  // === CENTRIFUGAL FORCE ===
+  if (dist > 0.1) {
+    const centrifugalMagnitude = CENTRIFUGAL_FACTOR * sphereAngularVelocity * sphereAngularVelocity * dist
+    const outwardX = (ballX / dist) * centrifugalMagnitude
+    const outwardY = (ballY / dist) * centrifugalMagnitude
+    ballVX += outwardX
+    ballVY += outwardY
+  }
+
+  // === CORIOLIS EFFECT ===
+  const coriolisStrength = CORIOLIS_FACTOR * sphereAngularVelocity
+  const coriolisX = -ballVY * coriolisStrength
+  const coriolisY = ballVX * coriolisStrength
+  ballVX += coriolisX
+  ballVY += coriolisY
+
+  // === GRAVITY ===
+  ballVY += GRAVITY
+
+  // === FRICTION ===
+  ballVX *= FRICTION
+  ballVY *= FRICTION
+
+  // Update position
+  ballX += ballVX
+  ballY += ballVY
+
+  // Update trail
+  ballTrail.unshift({ x: ballX, y: ballY })
+  if (ballTrail.length > TRAIL_LENGTH) {
+    ballTrail.pop()
+  }
+
+  // === WALL COLLISION ===
+  const maxDist = SPHERE_RADIUS - BALL_RADIUS
+
+  if (dist > maxDist) {
+    const angle = Math.atan2(ballY, ballX)
+
+    // Check if near hole
+    const angleDiff = Math.abs(normalizeAngle(angle - currentHoleAngle))
+    const nearHole = angleDiff < HOLE_SIZE / 2
+
+    // Ball escapes through hole
+    if (nearHole && dist > maxDist - 5) {
+      // Escape! Start falling phase
+      isFalling = true
+      ballTrail = [] // Clear trail for fresh absolute tracking
+
+      // Give ball some outward velocity
+      ballVX = Math.cos(angle) * 3
+      ballVY = Math.sin(angle) * 3 + 2 // slight downward boost
+
+      draw()
+      animationId = requestAnimationFrame(gameLoop)
+      return
+    }
+
+    // Inelastic bounce off sphere wall
+    ballX = Math.cos(angle) * maxDist
+    ballY = Math.sin(angle) * maxDist
+
+    // Reflect velocity with energy loss
+    const nx = Math.cos(angle)
+    const ny = Math.sin(angle)
+    const dot = ballVX * nx + ballVY * ny
+
+    // Only bounce if moving outward
+    if (dot > 0) {
+      ballVX = (ballVX - 2 * dot * nx) * BOUNCE
+      ballVY = (ballVY - 2 * dot * ny) * BOUNCE
+
+      // Wall imparts some rotational velocity
+      const tangentX = -ny
+      const tangentY = nx
+      const wallSpeed = sphereAngularVelocity * dist * 0.3
+      ballVX += tangentX * wallSpeed
+      ballVY += tangentY * wallSpeed
+
+      // Add chaos at high speeds
+      const chaosLevel = sphereAngularVelocity * 8
+      ballVX += (Math.random() - 0.5) * chaosLevel
+      ballVY += (Math.random() - 0.5) * chaosLevel
+    }
+  }
+
+  // Time's up - force escape
+  if (progress >= 1 && !isFalling) {
+    // Force ball to escape towards correct side based on server result
+    isFalling = true
+    ballTrail = []
+
+    const targetX = willEscape ? -60 : 60 // Left for win, right for lose
+    ballX = 0
+    ballY = SPHERE_RADIUS // At bottom of sphere
+    ballVX = targetX / 25 // Velocity towards correct side
+    ballVY = 2
+  }
+
+  draw()
   animationId = requestAnimationFrame(gameLoop)
+}
+
+function endGame(escaped: boolean) {
+  if (animationId) cancelAnimationFrame(animationId)
+
+  multiplier.value = targetMultiplier
+
+  if (escaped) {
+    gameState.value = 'won'
+    balance.value += selectedBet.value * targetMultiplier
+  } else {
+    gameState.value = 'lost'
+  }
+
+  draw()
+
+  // Reset after delay
+  setTimeout(() => {
+    gameState.value = 'idle'
+    multiplier.value = 1.0
+    draw()
+  }, 2500)
+}
+
+function normalizeAngle(angle: number): number {
+  while (angle > Math.PI) angle -= Math.PI * 2
+  while (angle < -Math.PI) angle += Math.PI * 2
+  return angle
 }
 
 function draw() {
@@ -187,131 +380,376 @@ function draw() {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  ctx.clearRect(0, 0, SIZE, SIZE)
+  const cx = SPHERE_CENTER_X
+  const cy = SPHERE_CENTER_Y
+
+  // Clear
   ctx.fillStyle = '#0a0c14'
-  ctx.fillRect(0, 0, SIZE, SIZE)
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
-  // --- Bottom zone bars ---
-  const barY = SIZE - 50
-  const barH = 44
-  const greenW = Math.floor(SIZE * 0.62)
+  // === FLOOR (Green/Red halves) ===
+  // Green left half (WIN)
+  const floorGradientGreen = ctx.createLinearGradient(0, FLOOR_Y, 0, FLOOR_Y + FLOOR_HEIGHT)
+  floorGradientGreen.addColorStop(0, 'rgba(34, 197, 94, 0.4)')
+  floorGradientGreen.addColorStop(1, 'rgba(34, 197, 94, 0.2)')
+  ctx.fillStyle = floorGradientGreen
+  ctx.fillRect(0, FLOOR_Y, canvasWidth / 2, FLOOR_HEIGHT)
 
-  ctx.fillStyle = 'rgba(34, 197, 94, 0.2)'
+  // Red right half (LOSE)
+  const floorGradientRed = ctx.createLinearGradient(0, FLOOR_Y, 0, FLOOR_Y + FLOOR_HEIGHT)
+  floorGradientRed.addColorStop(0, 'rgba(239, 68, 68, 0.4)')
+  floorGradientRed.addColorStop(1, 'rgba(239, 68, 68, 0.2)')
+  ctx.fillStyle = floorGradientRed
+  ctx.fillRect(canvasWidth / 2, FLOOR_Y, canvasWidth / 2, FLOOR_HEIGHT)
+
+  // Floor divider line
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
+  ctx.lineWidth = 2
   ctx.beginPath()
-  ctx.roundRect(4, barY, greenW - 6, barH, [8, 0, 0, 8])
-  ctx.fill()
-
-  ctx.fillStyle = 'rgba(239, 68, 68, 0.2)'
-  ctx.beginPath()
-  ctx.roundRect(greenW + 2, barY, SIZE - greenW - 6, barH, [0, 8, 8, 0])
-  ctx.fill()
-
-  // Zone emojis
-  ctx.font = '15px sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  const barCY = barY + barH / 2
-  ctx.fillText('🚀', 28, barCY)
-  ctx.fillText('👑', greenW / 2, barCY)
-  ctx.fillText('🎁', greenW - 22, barCY)
-  ctx.fillText('💀', greenW + (SIZE - greenW) / 2, barCY)
-
-  // --- Ring background ---
-  ctx.beginPath()
-  ctx.arc(CENTER, RING_CY, RING_RADIUS, 0, 2 * Math.PI)
-  ctx.strokeStyle = 'rgba(255,255,255,0.07)'
-  ctx.lineWidth = RING_WIDTH
+  ctx.moveTo(canvasWidth / 2, FLOOR_Y)
+  ctx.lineTo(canvasWidth / 2, FLOOR_Y + FLOOR_HEIGHT)
   ctx.stroke()
 
-  // --- Progress ring (MAGENTA) ---
-  const progressAngle = -Math.PI / 2 + progress * 2 * Math.PI
-  if (gameState.value === 'playing' || gameState.value === 'won' || gameState.value === 'lost') {
-    ctx.shadowColor = 'rgba(217, 70, 239, 0.55)'
-    ctx.shadowBlur = 18
-    ctx.beginPath()
-    ctx.arc(CENTER, RING_CY, RING_RADIUS, -Math.PI / 2, progressAngle)
-    ctx.strokeStyle = '#d946ef'
-    ctx.lineWidth = RING_WIDTH
-    ctx.lineCap = 'round'
-    ctx.stroke()
-    ctx.shadowBlur = 0
-  }
-
-  // --- Character ---
-  const cx = CENTER + Math.cos(charAngle) * (RING_RADIUS - RING_WIDTH * 0.3)
-  const cy = RING_CY + Math.sin(charAngle) * (RING_RADIUS - RING_WIDTH * 0.3)
-
-  ctx.shadowColor = gameState.value === 'won' ? 'rgba(34,197,94,0.5)' : 'rgba(217,70,239,0.4)'
-  ctx.shadowBlur = 14
-
-  // Body
-  ctx.fillStyle = '#4ade80'
+  // Floor top edge
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'
+  ctx.lineWidth = 1
   ctx.beginPath()
-  ctx.arc(cx, cy, CHAR_RADIUS * 0.65, 0, Math.PI * 2)
-  ctx.fill()
-  // Helmet
-  ctx.fillStyle = '#60a5fa'
-  ctx.beginPath()
-  ctx.arc(cx, cy - 3, CHAR_RADIUS * 0.55, Math.PI, 0)
-  ctx.fill()
-  // Visor
-  ctx.fillStyle = '#1e3a5f'
-  ctx.beginPath()
-  ctx.arc(cx, cy - 1, CHAR_RADIUS * 0.38, Math.PI + 0.25, -0.25)
-  ctx.fill()
-  // Eyes
-  ctx.fillStyle = '#fff'
-  ctx.beginPath()
-  ctx.arc(cx - 4, cy + 2, 2.5, 0, Math.PI * 2)
-  ctx.arc(cx + 4, cy + 2, 2.5, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = '#000'
-  ctx.beginPath()
-  ctx.arc(cx - 4, cy + 2.5, 1.2, 0, Math.PI * 2)
-  ctx.arc(cx + 4, cy + 2.5, 1.2, 0, Math.PI * 2)
-  ctx.fill()
+  ctx.moveTo(0, FLOOR_Y)
+  ctx.lineTo(canvasWidth, FLOOR_Y)
+  ctx.stroke()
 
-  ctx.shadowBlur = 0
-
-  // --- Center content ---
+  // Floor labels
+  ctx.font = 'bold 14px -apple-system, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
+  ctx.fillStyle = landedSide === 'green' ? '#4ade80' : 'rgba(74, 222, 128, 0.6)'
+  ctx.fillText('WIN', canvasWidth / 4, FLOOR_Y + FLOOR_HEIGHT / 2)
+  ctx.fillStyle = landedSide === 'red' ? '#ef4444' : 'rgba(239, 68, 68, 0.6)'
+  ctx.fillText('LOSE', canvasWidth * 3 / 4, FLOOR_Y + FLOOR_HEIGHT / 2)
 
-  if (gameState.value === 'idle') {
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'
-    ctx.font = 'bold 15px -apple-system, sans-serif'
-    ctx.fillText('This is Preview', CENTER, RING_CY - 2)
-    ctx.fillStyle = 'rgba(255,255,255,0.28)'
-    ctx.font = '11px -apple-system, sans-serif'
-    ctx.fillText('Tap button below to play', CENTER, RING_CY + 18)
-  } else {
-    const color = gameState.value === 'won' ? '#4ade80' : gameState.value === 'lost' ? '#ef4444' : '#4ade80'
-    ctx.fillStyle = color
-    ctx.font = 'bold 30px -apple-system, sans-serif'
-    ctx.fillText(`${multiplier.toFixed(2)}x`, CENTER, RING_CY - 6)
+  // === SPHERE ===
+  const currentHoleAngle = holeAngle + sphereRotation
 
-    if (gameState.value === 'won') {
-      ctx.fillStyle = '#4ade80'
-      ctx.font = 'bold 14px -apple-system, sans-serif'
-      ctx.fillText('Escaped!', CENTER, RING_CY + 22)
-      ctx.fillStyle = 'rgba(255,255,255,0.5)'
-      ctx.font = '11px -apple-system, sans-serif'
-      ctx.fillText(`+${(selectedBet.value * multiplier).toFixed(2)} ▼`, CENTER, RING_CY + 40)
-    } else if (gameState.value === 'lost') {
-      ctx.fillStyle = '#ef4444'
-      ctx.font = 'bold 14px -apple-system, sans-serif'
-      ctx.fillText('Caught!', CENTER, RING_CY + 22)
-      ctx.fillStyle = 'rgba(255,255,255,0.4)'
-      ctx.font = '11px -apple-system, sans-serif'
-      ctx.fillText(`-${selectedBet.value.toFixed(2)} ▼`, CENTER, RING_CY + 40)
+  // Outer glow
+  const gradient = ctx.createRadialGradient(cx, cy, SPHERE_RADIUS - 20, cx, cy, SPHERE_RADIUS + 10)
+  gradient.addColorStop(0, 'rgba(139, 92, 246, 0.0)')
+  gradient.addColorStop(0.7, 'rgba(139, 92, 246, 0.15)')
+  gradient.addColorStop(1, 'rgba(139, 92, 246, 0.0)')
+  ctx.fillStyle = gradient
+  ctx.beginPath()
+  ctx.arc(cx, cy, SPHERE_RADIUS + 10, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Sphere ring with hole
+  ctx.strokeStyle = 'rgba(139, 92, 246, 0.6)'
+  ctx.lineWidth = 8
+  ctx.lineCap = 'round'
+
+  const holeStart = currentHoleAngle - HOLE_SIZE / 2
+  const holeEnd = currentHoleAngle + HOLE_SIZE / 2
+
+  ctx.beginPath()
+  ctx.arc(cx, cy, SPHERE_RADIUS, holeEnd, holeStart + Math.PI * 2)
+  ctx.stroke()
+
+  // Hole glow effect
+  const holeX = cx + Math.cos(currentHoleAngle) * SPHERE_RADIUS
+  const holeY = cy + Math.sin(currentHoleAngle) * SPHERE_RADIUS
+  const holeGlow = ctx.createRadialGradient(holeX, holeY, 0, holeX, holeY, 35)
+  const pulseAlpha = 0.3 + Math.sin(Date.now() / 200) * 0.15
+  holeGlow.addColorStop(0, `rgba(251, 191, 36, ${pulseAlpha})`)
+  holeGlow.addColorStop(1, 'rgba(251, 191, 36, 0)')
+  ctx.fillStyle = holeGlow
+  ctx.beginPath()
+  ctx.arc(holeX, holeY, 35, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Hole indicator arc
+  ctx.strokeStyle = '#fbbf24'
+  ctx.lineWidth = 4
+  ctx.beginPath()
+  ctx.arc(cx, cy, SPHERE_RADIUS + 6, holeStart, holeEnd)
+  ctx.stroke()
+
+  // Rotation arrows
+  if (gameState.value === 'playing' && !isFalling) {
+    const arrowCount = 4
+    for (let i = 0; i < arrowCount; i++) {
+      const arrowAngle = sphereRotation + (i * Math.PI * 2) / arrowCount
+      const arrowX = cx + Math.cos(arrowAngle) * (SPHERE_RADIUS - 15)
+      const arrowY = cy + Math.sin(arrowAngle) * (SPHERE_RADIUS - 15)
+
+      ctx.save()
+      ctx.translate(arrowX, arrowY)
+      ctx.rotate(arrowAngle + Math.PI / 2)
+      ctx.fillStyle = `rgba(139, 92, 246, ${0.3 + sphereAngularVelocity * 5})`
+      ctx.beginPath()
+      ctx.moveTo(0, -6)
+      ctx.lineTo(4, 2)
+      ctx.lineTo(-4, 2)
+      ctx.closePath()
+      ctx.fill()
+      ctx.restore()
     }
+  }
+
+  // Inner sphere effect
+  const innerGradient = ctx.createRadialGradient(cx - 30, cy - 30, 0, cx, cy, SPHERE_RADIUS)
+  innerGradient.addColorStop(0, 'rgba(139, 92, 246, 0.1)')
+  innerGradient.addColorStop(0.5, 'rgba(139, 92, 246, 0.03)')
+  innerGradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+  ctx.fillStyle = innerGradient
+  ctx.beginPath()
+  ctx.arc(cx, cy, SPHERE_RADIUS - 10, 0, Math.PI * 2)
+  ctx.fill()
+
+  // === BALL TRAIL ===
+  if (ballTrail.length > 1 && gameState.value === 'playing') {
+    for (let i = 1; i < ballTrail.length; i++) {
+      const alpha = 1 - i / TRAIL_LENGTH
+      const radius = BALL_RADIUS * (1 - i / TRAIL_LENGTH * 0.7)
+
+      ctx.fillStyle = `rgba(34, 211, 238, ${alpha * 0.4})`
+      ctx.beginPath()
+      // Trail stored as absolute during falling, relative during inside sphere
+      const trailX = isFalling ? ballTrail[i].x : cx + ballTrail[i].x
+      const trailY = isFalling ? ballTrail[i].y : cy + ballTrail[i].y
+      ctx.arc(trailX, trailY, radius, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
+  // === BALL ===
+  let ballScreenX: number, ballScreenY: number
+  if (isFalling) {
+    ballScreenX = SPHERE_CENTER_X + ballX
+    ballScreenY = SPHERE_CENTER_Y + ballY
+  } else {
+    ballScreenX = cx + ballX
+    ballScreenY = cy + ballY
+  }
+
+  // Ball shadow/glow
+  ctx.shadowColor = gameState.value === 'won' ? 'rgba(74, 222, 128, 0.6)' :
+                    gameState.value === 'lost' ? 'rgba(239, 68, 68, 0.6)' :
+                    'rgba(34, 211, 238, 0.6)'
+  ctx.shadowBlur = 15
+
+  // Ball gradient
+  const ballGradient = ctx.createRadialGradient(
+    ballScreenX - 3, ballScreenY - 3, 0,
+    ballScreenX, ballScreenY, BALL_RADIUS
+  )
+
+  if (gameState.value === 'won') {
+    ballGradient.addColorStop(0, '#86efac')
+    ballGradient.addColorStop(1, '#22c55e')
+  } else if (gameState.value === 'lost') {
+    ballGradient.addColorStop(0, '#fca5a5')
+    ballGradient.addColorStop(1, '#ef4444')
+  } else {
+    ballGradient.addColorStop(0, '#67e8f9')
+    ballGradient.addColorStop(1, '#06b6d4')
+  }
+
+  ctx.fillStyle = ballGradient
+  ctx.beginPath()
+  ctx.arc(ballScreenX, ballScreenY, BALL_RADIUS, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Ball highlight
+  ctx.shadowBlur = 0
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'
+  ctx.beginPath()
+  ctx.arc(ballScreenX - 3, ballScreenY - 3, BALL_RADIUS * 0.3, 0, Math.PI * 2)
+  ctx.fill()
+
+  // === IDLE STATE TEXT ===
+  if (gameState.value === 'idle') {
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
+    ctx.font = '13px -apple-system, sans-serif'
+    ctx.fillText('Шарик вылетает через дырку', cx, cy - 10)
+    ctx.fillText('Падает на зелёное = WIN', cx, cy + 10)
   }
 }
 
-onMounted(() => { draw() })
+onMounted(() => {
+  draw()
+})
 
 onUnmounted(() => {
   if (animationId) cancelAnimationFrame(animationId)
-  if (resultTimeout) clearTimeout(resultTimeout)
 })
 </script>
+
+<style scoped>
+.ball-escape-view {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0a0c14 0%, #0f1219 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 100px;
+}
+
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+
+.header-close {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.game-id {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.balance-badge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.arena-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 20px;
+}
+
+.game-canvas {
+  border-radius: 24px;
+}
+
+.multiplier-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.multiplier-overlay.playing,
+.multiplier-overlay.won,
+.multiplier-overlay.lost {
+  opacity: 1;
+}
+
+.multiplier-value {
+  font-size: 48px;
+  font-weight: 700;
+  text-shadow: 0 0 20px currentColor;
+}
+
+.result-text {
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.result-text.won {
+  color: #4ade80;
+}
+
+.result-text.lost {
+  color: #ef4444;
+}
+
+.hash-row {
+  text-align: center;
+  padding: 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.hash-label {
+  margin-right: 4px;
+}
+
+.hash-value {
+  font-family: monospace;
+}
+
+.bet-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px;
+  margin-bottom: 12px;
+}
+
+.bet-btn {
+  flex: 1;
+  padding: 10px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bet-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bet-btn.active {
+  background: rgba(34, 211, 238, 0.15);
+  border-color: rgba(34, 211, 238, 0.4);
+  color: #22d3ee;
+}
+
+.action-row {
+  padding: 0 16px;
+}
+
+.play-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border: none;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.play-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.play-btn.playing {
+  background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+}
+
+.play-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+}
+</style>
