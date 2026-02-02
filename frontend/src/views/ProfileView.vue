@@ -50,8 +50,11 @@
         </div>
       </div>
       <div class="balance-actions">
-        <button class="btn-deposit" @click="$router.push('/topup')">
-          <span>+</span> Пополнить
+        <button class="btn-deposit" @click="openDepositModal">
+          <span>+</span> Пополнить TON
+        </button>
+        <button class="btn-stars" @click="openStarsModal">
+          <span>⭐</span> Купить Stars
         </button>
         <button class="btn-withdraw">
           <span>↓</span> Вывести
@@ -189,6 +192,73 @@
     <div class="version-info">
       <span>Gift Aggregator v1.0.0</span>
     </div>
+
+    <!-- Deposit Modal -->
+    <Teleport to="body">
+      <div v-if="showDepositModal" class="modal-overlay" @click.self="closeDepositModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>💎 Пополнить TON</h3>
+            <button class="modal-close" @click="closeDepositModal">×</button>
+          </div>
+          <div class="modal-body">
+            <div v-if="!tonConnect.isConnected.value" class="connect-wallet-section">
+              <p class="modal-text">Подключите кошелёк для просмотра адреса пополнения</p>
+              <button class="btn-connect-wallet" @click="connectWallet" :disabled="tonConnect.isConnecting.value">
+                {{ tonConnect.isConnecting.value ? 'Подключение...' : '🔗 Подключить кошелёк' }}
+              </button>
+            </div>
+            <div v-else class="deposit-info">
+              <p class="modal-text">Отправьте TON на адрес проекта:</p>
+              <div class="wallet-address-box">
+                <span class="wallet-address">{{ projectWalletAddress }}</span>
+                <button class="copy-btn-sm" @click="copyProjectAddress">📋</button>
+              </div>
+              <p class="modal-hint">После отправки баланс обновится автоматически</p>
+              <div class="connected-wallet-info">
+                <span class="label">Ваш кошелёк:</span>
+                <span class="value">{{ tonConnect.shortAddress.value }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Stars Modal -->
+    <Teleport to="body">
+      <div v-if="showStarsModal" class="modal-overlay" @click.self="closeStarsModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>⭐ Купить Stars</h3>
+            <button class="modal-close" @click="closeStarsModal">×</button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-text">Выберите количество Stars</p>
+            <div class="stars-packages">
+              <button
+                v-for="pkg in starsPackages"
+                :key="pkg.amount"
+                class="stars-package"
+                :class="{ selected: selectedStarsPackage === pkg.amount }"
+                @click="selectedStarsPackage = pkg.amount"
+              >
+                <span class="pkg-stars">⭐ {{ pkg.amount }}</span>
+                <span class="pkg-price">≈ {{ pkg.priceRub }} ₽</span>
+              </button>
+            </div>
+            <button
+              class="btn-buy-stars"
+              @click="buyStars"
+              :disabled="!selectedStarsPackage || isProcessingStars"
+            >
+              {{ isProcessingStars ? 'Обработка...' : 'Купить Stars' }}
+            </button>
+            <p class="modal-hint">Оплата через Telegram Stars</p>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -240,6 +310,89 @@ const referralLink = computed(() => {
   const id = user.value?.id || ''
   return `t.me/giftbot?start=ref${id}`
 })
+
+// Deposit Modal
+const showDepositModal = ref(false)
+const projectWalletAddress = 'UQBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' // TODO: Replace with actual project wallet
+
+// Stars Modal
+const showStarsModal = ref(false)
+const selectedStarsPackage = ref<number | null>(null)
+const isProcessingStars = ref(false)
+const starsPackages = [
+  { amount: 50, priceRub: 90 },
+  { amount: 100, priceRub: 180 },
+  { amount: 250, priceRub: 450 },
+  { amount: 500, priceRub: 900 },
+]
+
+const openDepositModal = () => {
+  showDepositModal.value = true
+}
+
+const closeDepositModal = () => {
+  showDepositModal.value = false
+}
+
+const openStarsModal = () => {
+  showStarsModal.value = true
+  selectedStarsPackage.value = null
+}
+
+const closeStarsModal = () => {
+  showStarsModal.value = false
+  selectedStarsPackage.value = null
+}
+
+const connectWallet = async () => {
+  try {
+    await tonConnect.connect()
+  } catch (e) {
+    console.error('Wallet connection failed:', e)
+  }
+}
+
+const copyProjectAddress = () => {
+  navigator.clipboard.writeText(projectWalletAddress)
+}
+
+const buyStars = async () => {
+  if (!selectedStarsPackage.value) return
+
+  isProcessingStars.value = true
+  try {
+    // Create Stars invoice via backend API
+    const response = await fetch('/api/v1/stars/invoice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: user.value?.id,
+        amount: selectedStarsPackage.value
+      })
+    })
+
+    if (!response.ok) throw new Error('Failed to create invoice')
+
+    const data = await response.json()
+
+    // Open Telegram Stars payment via WebApp
+    if (window.Telegram?.WebApp?.openInvoice) {
+      window.Telegram.WebApp.openInvoice(data.invoice_url, (status: string) => {
+        if (status === 'paid') {
+          starsBalance.value += selectedStarsPackage.value!
+          closeStarsModal()
+        }
+      })
+    } else {
+      // Fallback for web
+      window.open(data.invoice_url, '_blank')
+    }
+  } catch (e) {
+    console.error('Stars purchase failed:', e)
+  } finally {
+    isProcessingStars.value = false
+  }
+}
 
 // Activity
 const recentActivity = ref<Activity[]>([])
@@ -433,20 +586,23 @@ onMounted(async () => {
 
 .balance-actions {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.btn-deposit, .btn-withdraw {
+.btn-deposit, .btn-withdraw, .btn-stars {
   flex: 1;
-  padding: 12px;
+  min-width: 80px;
+  padding: 12px 8px;
   border: none;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
+  white-space: nowrap;
 }
 
 .btn-deposit {
@@ -454,10 +610,197 @@ onMounted(async () => {
   color: #000;
 }
 
+.btn-stars {
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  color: #fff;
+}
+
 .btn-withdraw {
   background: #1c1c1e;
   border: 1px solid #3a3a3c;
   color: #fff;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-content {
+  background: #1c1c1e;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 360px;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #3a3a3c;
+}
+
+.modal-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  background: #27272a;
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-text {
+  font-size: 14px;
+  color: #9ca3af;
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.modal-hint {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+  margin-top: 12px;
+}
+
+.connect-wallet-section {
+  text-align: center;
+}
+
+.btn-connect-wallet {
+  width: 100%;
+  padding: 14px;
+  background: #3b82f6;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.btn-connect-wallet:disabled {
+  opacity: 0.6;
+}
+
+.wallet-address-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #27272a;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.wallet-address {
+  flex: 1;
+  font-family: monospace;
+  font-size: 12px;
+  color: #9ca3af;
+  word-break: break-all;
+}
+
+.copy-btn-sm {
+  width: 36px;
+  height: 36px;
+  background: #3a3a3c;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.connected-wallet-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #3a3a3c;
+}
+
+.connected-wallet-info .label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.connected-wallet-info .value {
+  font-size: 12px;
+  font-family: monospace;
+  color: #4ade80;
+}
+
+.stars-packages {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.stars-package {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px;
+  background: #27272a;
+  border: 2px solid #3a3a3c;
+  border-radius: 12px;
+  color: #fff;
+  transition: all 0.2s;
+}
+
+.stars-package.selected {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.pkg-stars {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.pkg-price {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.btn-buy-stars {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.btn-buy-stars:disabled {
+  opacity: 0.6;
 }
 
 /* Section Title */

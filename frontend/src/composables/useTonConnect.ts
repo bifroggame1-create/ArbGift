@@ -62,17 +62,24 @@ export function useTonConnect() {
     if (tonConnectUI) return tonConnectUI
 
     try {
-      // Dynamic import to avoid build-time module resolution
-      const module = await (Function('return import("@tonconnect/ui")')() as Promise<{ TonConnectUI: new (opts: { manifestUrl: string }) => unknown }>)
+      // Dynamic import for @tonconnect/ui
+      const { TonConnectUI } = await import('@tonconnect/ui')
       const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`
 
-      tonConnectUI = new module.TonConnectUI({
+      tonConnectUI = new TonConnectUI({
         manifestUrl,
+        uiPreferences: {
+          theme: 'DARK'
+        }
       })
 
-      // Set TMA return URL if in Telegram
-      if (botUsername && window.Telegram?.WebApp) {
-        console.log('TonConnect initialized for bot:', botUsername)
+      // Set TMA return URL if in Telegram Mini App
+      if (window.Telegram?.WebApp) {
+        const returnUrl = `https://t.me/${botUsername || 'giftmarket_bot'}/app`
+        tonConnectUI.uiOptions = {
+          twaReturnUrl: returnUrl
+        }
+        console.log('TonConnect initialized for TMA with return URL:', returnUrl)
       }
 
       // Subscribe to wallet changes

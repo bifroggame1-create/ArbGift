@@ -390,10 +390,12 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import GiftCard from '../components/GiftCard.vue'
 import { useTelegram } from '../composables/useTelegram'
+import { useMarketAggregator } from '../composables/useMarketAggregator'
 import { getGifts, searchGifts, getStats } from '../api/client'
 
 const router = useRouter()
 const { hapticImpact } = useTelegram()
+const { preloadPrices, enrichGiftsWithPrices, isLoading: aggregatorLoading } = useMarketAggregator()
 
 // Tabs
 const tabs = [
@@ -642,8 +644,6 @@ const fetchGifts = async () => {
       items = items.filter((g: any) => filters.symbols.includes(g.symbol))
     }
 
-    gifts.value = items
-
     // Populate filter options from first page load
     if (allLoadedGifts.value.length === 0 && items.length > 0) {
       allLoadedGifts.value = items
@@ -651,6 +651,20 @@ const fetchGifts = async () => {
 
     if (data.total) {
       totalPages.value = Math.ceil(data.total / limit)
+    }
+
+    // Preload aggregated prices from multiple markets
+    const giftIds = items.map((g: any) => g.id || g.gift_id).filter(Boolean)
+    if (giftIds.length > 0) {
+      // Start with API data immediately
+      gifts.value = items
+
+      // Enrich with aggregated prices in background
+      preloadPrices(giftIds).then(() => {
+        gifts.value = enrichGiftsWithPrices(items)
+      })
+    } else {
+      gifts.value = items
     }
   } catch (err) {
     console.error('Fetch gifts error:', err)
