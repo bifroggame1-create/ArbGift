@@ -1,5 +1,10 @@
 <template>
   <div class="trading-view">
+    <!-- Game Plate Background -->
+    <div class="game-plate trading-plate">
+      <div class="plate-title">Gift Trading</div>
+    </div>
+
     <!-- Tournament Banner -->
     <div class="tournament-banner" @click="$router.push('/tournament')">
       <span class="banner-emoji">&#127942;</span>
@@ -683,6 +688,38 @@ onUnmounted(() => {
   font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 15px;
   padding-bottom: 100px;
+  position: relative;
+}
+
+/* Game Plate Background */
+.game-plate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 180px;
+  background: linear-gradient(135deg, #0d1a2d 0%, #0a1525 50%, #061020 100%);
+  background-image: url('/images/trading-plate.png');
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+  border-radius: 0 0 32px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trading-plate {
+  background: linear-gradient(135deg, #0a1a30 0%, #061428 100%);
+}
+
+.plate-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+  letter-spacing: 1px;
+  opacity: 0.9;
 }
 
 /* Tournament Banner */

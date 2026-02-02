@@ -1,5 +1,10 @@
 <template>
   <div class="plinko-view">
+    <!-- Game Plate Background -->
+    <div class="game-plate">
+      <div class="plate-title">Gift Plinko</div>
+    </div>
+
     <!-- Animated stars background -->
     <div class="stars-bg">
       <div v-for="i in 20" :key="i" class="star" :style="getStarStyle(i)"></div>
@@ -17,7 +22,10 @@
         <span class="title-badge">x1000</span>
       </div>
       <div class="header-balance">
-        <span class="balance-icon">💎</span>
+        <svg class="balance-icon-svg" width="16" height="16" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+        </svg>
         <span class="balance-value">{{ balance.toFixed(2) }}</span>
         <button class="balance-add">+</button>
       </div>
@@ -73,7 +81,11 @@
           @click="selectedBet = amount"
           :disabled="isPlaying"
         >
-          {{ amount }} 💎
+          {{ amount }}
+          <svg class="bet-ton-icon" width="14" height="14" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+          </svg>
         </button>
       </div>
 
@@ -917,6 +929,42 @@ onUnmounted(() => {
   overflow-x: hidden;
   padding-bottom: 90px;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+}
+
+/* Game Plate Background */
+.game-plate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: linear-gradient(135deg, #1a4a7c 0%, #0d2847 50%, #061428 100%);
+  background-image: url('/images/plinko-plate.png');
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+  border-radius: 0 0 32px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plate-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+  letter-spacing: 1px;
+}
+
+/* TON Icon */
+.balance-icon-svg {
+  flex-shrink: 0;
+}
+
+.bet-ton-icon {
+  margin-left: 4px;
+  flex-shrink: 0;
 }
 
 /* Stars */

@@ -41,7 +41,10 @@
     <div class="balance-card">
       <div class="balance-row">
         <div class="balance-item">
-          <span class="balance-icon">💎</span>
+          <svg class="balance-icon-svg" width="24" height="24" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+          </svg>
           <div class="balance-info">
             <span class="balance-label">TON Баланс</span>
             <span class="balance-value">{{ tonBalance }} TON</span>
@@ -49,7 +52,7 @@
         </div>
         <div class="balance-divider"></div>
         <div class="balance-item">
-          <span class="balance-icon">⭐</span>
+          <img src="/icons/stars.png" alt="Stars" class="balance-icon-img" width="24" height="24" />
           <div class="balance-info">
             <span class="balance-label">Stars Баланс</span>
             <span class="balance-value">{{ starsBalance }} Stars</span>
@@ -57,7 +60,11 @@
         </div>
       </div>
       <button class="btn-deposit" @click="$router.push('/topup')">
-        <span>+</span> Пополнить баланс
+        <svg class="btn-icon-svg" width="14" height="14" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+        </svg>
+        Пополнить баланс
       </button>
     </div>
 
@@ -447,6 +454,20 @@ onUnmounted(() => {
 
 .balance-icon {
   font-size: 24px;
+}
+
+.balance-icon-svg {
+  flex-shrink: 0;
+}
+
+.balance-icon-img {
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.btn-icon-svg {
+  flex-shrink: 0;
+  margin-right: 4px;
 }
 
 .balance-info {
