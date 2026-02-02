@@ -257,7 +257,7 @@ const doubleBet = () => {
 const computePegs = () => {
   pegs = []
   const rows = rowCount.value
-  const topY = TUBE_HEIGHT + 15 // Start below tube
+  const topY = TUBE_HEIGHT + 40 // Well below tube — leaves gap for ball to gain speed
   const bottomY = canvasHeight - 45
   const rowHeight = (bottomY - topY) / rows
   const centerX = canvasWidth / 2
@@ -339,12 +339,16 @@ const animate = () => {
   }
 
   if (dropPhase === 'dropping') {
-    // Ball exits tube slowly
-    ball.vy += 0.08 // Very gentle acceleration
+    // Ball exits tube with acceleration
+    ball.vy += 0.12
     ball.y += ball.vy
 
-    if (ball.y > TUBE_HEIGHT + 10) {
+    // Wait until ball is well clear of tube before starting physics
+    if (ball.y > TUBE_HEIGHT + 25) {
       dropPhase = 'falling'
+      // Give ball good initial velocity to avoid getting stuck
+      ball.vy = Math.max(ball.vy, 2.5)
+      ball.vx = (Math.random() - 0.5) * 2
     }
 
     draw(ctx)
@@ -365,34 +369,46 @@ const animate = () => {
   ball.y += ball.vy
 
   // Limit max velocity
-  const maxVel = 8 // Lower max for more controlled movement
+  const maxVel = 8
   ball.vx = Math.max(-maxVel, Math.min(maxVel, ball.vx))
   ball.vy = Math.max(-maxVel, Math.min(maxVel, ball.vy))
 
-  // Peg collisions - satisfying bounces
+  // Anti-stuck: ensure ball always moves downward
+  if (ball.vy < 0.3) {
+    ball.vy = 0.3 + GRAVITY
+  }
+
+  // Peg collisions - only one peg per frame to prevent multi-collision stuck
+  let collided = false
   for (const peg of pegs) {
+    if (collided) break  // Only handle first collision per frame
+
     const dx = ball.x - peg.x
     const dy = ball.y - peg.y
     const dist = Math.sqrt(dx * dx + dy * dy)
     const minDist = PEG_RADIUS + BALL_RADIUS
 
     if (dist < minDist && dist > 0.1) {
+      collided = true
       const nx = dx / dist
       const ny = dy / dist
 
-      // Push ball out of peg smoothly
-      const overlap = minDist - dist + 0.5
+      // Push ball fully out of peg
+      const overlap = minDist - dist + 1.0
       ball.x += nx * overlap
       ball.y += ny * overlap
+
+      // Always push ball downward if collision pushes it up
+      if (ball.y < peg.y) {
+        ball.y = peg.y + minDist + 1
+      }
 
       // Reflect velocity with satisfying bounce
       const dot = ball.vx * nx + ball.vy * ny
       if (dot < 0) {
-        // Strong horizontal deflection for drama
         ball.vx -= 2 * dot * nx * BOUNCE * 1.2
         ball.vy -= 2 * dot * ny * BOUNCE * 0.8
 
-        // Slow down slightly on each hit for "weight" feel
         ball.vx *= 0.95
         ball.vy *= 0.95
       }
@@ -408,9 +424,9 @@ const animate = () => {
         ball.vx += (targetX - ball.x) * 0.003
       }
 
-      // Minimum downward velocity
-      if (ball.vy < 0.5) {
-        ball.vy = 0.8
+      // Enforce minimum downward velocity after every collision
+      if (ball.vy < 1.0) {
+        ball.vy = 1.5
       }
     }
   }
