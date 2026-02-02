@@ -328,7 +328,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { usePvP } from '@/composables/usePvP'
+import { useTonConnect } from '@/composables/useTonConnect'
+import { useTelegram } from '@/composables/useTelegram'
 
 interface Player {
   id: number
@@ -341,30 +345,28 @@ interface Player {
 }
 
 interface Gift {
-  id: number
+  id: number | string
   name: string
   image: string
   price: number
+  address?: string
 }
+
+const route = useRoute()
+const pvp = usePvP()
+const tonConnect = useTonConnect()
+const telegram = useTelegram()
 
 // Rolls.codes colors
 const playerColors = [
-  '#22d3ee', // cyan
-  '#22c55e', // green
-  '#ec4899', // pink
-  '#8b5cf6', // purple
-  '#f97316', // orange
-  '#eab308', // yellow
-  '#3b82f6', // blue
-  '#14b8a6', // teal
+  '#22d3ee', '#22c55e', '#ec4899', '#8b5cf6',
+  '#f97316', '#eab308', '#3b82f6', '#14b8a6',
 ]
 
-// State
-const onlineCount = ref(98)
-const totalPool = ref(3.98)
-const gameId = ref(315993)
-const gameStatus = ref('ИГРА')
-const statusText = ref('PvP начался')
+// Room code from route or create new
+const roomCode = ref((route.params.roomCode as string) || '')
+
+// UI state
 const wheelRotation = ref(0)
 const isSpinning = ref(false)
 const showBetModal = ref(false)
@@ -373,67 +375,125 @@ const giftTab = ref<'ton' | 'stars'>('ton')
 const giftSearch = ref('')
 const selectedGift = ref<Gift | null>(null)
 const userBalance = ref(0)
-const serverHash = ref('1a418...f6d87')
 const winner = ref<Player | null>(null)
 const winAmount = ref(0)
 
-const prevGame = ref({ name: 'Сосредоточен', avatar: '', amount: 53, chance: 4 })
-const topGame = ref({ name: '@giftgambl...', avatar: '', amount: 48603, chance: 82 })
+// Computed from real data
+const onlineCount = computed(() => pvp.currentRoom.value?.online_count || 0)
+const totalPool = computed(() =>
+  pvp.currentRoom.value ? parseFloat(pvp.currentRoom.value.total_pool_ton) : 0
+)
+const gameId = computed(() => pvp.currentRoom.value?.room_code || '---')
+const serverHash = computed(() => {
+  const hash = pvp.currentRoom.value?.server_seed_hash || ''
+  return hash ? `${hash.slice(0, 5)}...${hash.slice(-5)}` : '---'
+})
+const gameStatus = computed(() => {
+  const s = pvp.currentRoom.value?.status
+  if (!s) return 'ОЖИДАНИЕ'
+  const map: Record<string, string> = {
+    waiting: 'ОЖИДАНИЕ', countdown: 'СТАРТ', spinning: 'СПИН', finished: 'ФИНИШ',
+  }
+  return map[s] || 'ИГРА'
+})
+const statusText = computed(() => {
+  const s = pvp.currentRoom.value?.status
+  if (!s || s === 'waiting') return 'Ожидание игроков'
+  if (s === 'countdown') return `Начинаем через ${pvp.countdownRemaining.value} сек`
+  if (s === 'spinning') return 'Определяем победителя...'
+  if (s === 'finished') return 'Игра завершена'
+  return 'PvP начался'
+})
 
-const players = ref<Player[]>([
-  { id: 1, name: 'ybuval', username: 'ybuval', bet: 1.59, chance: 40.2, color: playerColors[0] },
-  { id: 2, name: 'Player2', username: 'player2', bet: 1.2, chance: 30.2, color: playerColors[1] },
-  { id: 3, name: 'Player3', username: 'player3', bet: 0.8, chance: 20.1, color: playerColors[2] },
-  { id: 4, name: 'Player4', username: 'player4', bet: 0.39, chance: 9.5, color: playerColors[3] },
-])
+const prevGame = ref({ name: '---', avatar: '', amount: 0, chance: 0 })
+const topGame = ref({ name: '---', avatar: '', amount: 0, chance: 0 })
 
-const trendingGifts = ref<Gift[]>([
-  { id: 1, name: 'Input Key', image: '/gifts/key.webp', price: 0.06 },
-  { id: 2, name: 'Diamond Ring', image: '/gifts/ring.webp', price: 1.02 },
-  { id: 3, name: 'Voodoo Doll', image: '/gifts/doll.webp', price: 0.45 },
-])
+// Players derived from room bets
+const players = computed<Player[]>(() => {
+  if (!pvp.currentRoom.value?.bets) return []
+  const bets = pvp.currentRoom.value.bets
+  const userMap = new Map<number, Player>()
 
-const allGifts = ref<Gift[]>([
-  { id: 4, name: 'Eternal Rose', image: '/gifts/rose.webp', price: 0.27 },
-  { id: 5, name: 'Cupid Charm', image: '/gifts/cupid.webp', price: 0.24 },
-  { id: 6, name: 'Love Potion', image: '/gifts/potion.webp', price: 0.18 },
-])
+  bets.forEach((bet, i) => {
+    const existing = userMap.get(bet.user_id)
+    if (existing) {
+      existing.bet += parseFloat(bet.gift_value_ton)
+      existing.chance = parseFloat(bet.win_chance_percent)
+    } else {
+      userMap.set(bet.user_id, {
+        id: bet.user_id,
+        name: bet.user_name,
+        username: bet.user_name,
+        avatar: bet.user_avatar,
+        bet: parseFloat(bet.gift_value_ton),
+        chance: parseFloat(bet.win_chance_percent),
+        color: playerColors[i % playerColors.length],
+      })
+    }
+  })
 
-// Stars background
-const getStarStyle = (_i: number) => ({
+  return Array.from(userMap.values())
+})
+
+// Gifts from inventory
+const trendingGifts = computed<Gift[]>(() =>
+  pvp.inventory.value.slice(0, 3).map((nft, i) => ({
+    id: nft.address || i,
+    name: nft.name,
+    image: nft.image_url || '/gifts/default.webp',
+    price: nft.price_ton ? parseFloat(nft.price_ton) : 0,
+    address: nft.address,
+  }))
+)
+
+const allGifts = computed<Gift[]>(() =>
+  pvp.inventory.value.slice(3).map((nft, i) => ({
+    id: nft.address || i + 3,
+    name: nft.name,
+    image: nft.image_url || '/gifts/default.webp',
+    price: nft.price_ton ? parseFloat(nft.price_ton) : 0,
+    address: nft.address,
+  }))
+)
+
+// Pre-generate star styles
+const starStyles = Array.from({ length: 30 }, () => ({
   left: `${Math.random() * 100}%`,
   top: `${Math.random() * 100}%`,
   width: `${Math.random() * 2 + 1}px`,
   height: `${Math.random() * 2 + 1}px`,
   animationDelay: `${Math.random() * 3}s`,
-  animationDuration: `${Math.random() * 2 + 2}s`
-})
+  animationDuration: `${Math.random() * 2 + 2}s`,
+}))
+const getStarStyle = (i: number) => starStyles[i - 1]
 
-// Wheel calculations based on chance percentages
+// Wheel calculations
 const getSegmentPath = (index: number) => {
-  const total = players.value.reduce((sum, p) => sum + p.chance, 0)
+  const ps = players.value
+  const total = ps.reduce((sum, p) => sum + p.chance, 0)
+  if (total === 0) return ''
   let startAngle = -90
   for (let i = 0; i < index; i++) {
-    startAngle += (players.value[i].chance / total) * 360
+    startAngle += (ps[i].chance / total) * 360
   }
-  const sweepAngle = (players.value[index].chance / total) * 360
+  const sweepAngle = (ps[index].chance / total) * 360
   const endAngle = startAngle + sweepAngle
-
   const cx = 150, cy = 150, r = 140
   const start = polarToCartesian(cx, cy, r, endAngle)
   const end = polarToCartesian(cx, cy, r, startAngle)
   const largeArc = sweepAngle > 180 ? 1 : 0
-
   return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y} Z`
 }
 
 const getAvatarTransform = (index: number) => {
-  const total = players.value.reduce((sum, p) => sum + p.chance, 0)
+  const ps = players.value
+  const total = ps.reduce((sum, p) => sum + p.chance, 0)
+  if (total === 0) return 'translate(150, 150)'
   let startAngle = -90
   for (let i = 0; i < index; i++) {
-    startAngle += (players.value[i].chance / total) * 360
+    startAngle += (ps[i].chance / total) * 360
   }
-  const midAngle = startAngle + (players.value[index].chance / total) * 180
+  const midAngle = startAngle + (ps[index].chance / total) * 180
   const pos = polarToCartesian(150, 150, 95, midAngle)
   return `translate(${pos.x}, ${pos.y})`
 }
@@ -443,22 +503,74 @@ const polarToCartesian = (cx: number, cy: number, r: number, angle: number) => {
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
 }
 
-const placeBet = () => {
+// Actions
+const placeBet = async () => {
   if (!selectedGift.value) return
-  showBetModal.value = false
-  selectedGift.value = null
+
+  const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user
+  const userId = tgUser?.id || Math.floor(Math.random() * 100000)
+  const userName = tgUser?.username || tgUser?.first_name || 'Player'
+
+  const result = await pvp.placeBet(
+    roomCode.value,
+    {
+      user_id: userId,
+      user_telegram_id: userId,
+      user_name: userName,
+      gift_address: selectedGift.value.address || `gift_${selectedGift.value.id}`,
+      gift_name: selectedGift.value.name,
+      gift_image_url: selectedGift.value.image,
+      gift_value_ton: selectedGift.value.price,
+    },
+    tonConnect.address.value || undefined,
+  )
+
+  if (result) {
+    telegram.hapticNotification('success')
+    showBetModal.value = false
+    selectedGift.value = null
+  }
 }
 
-let pollInterval: number | null = null
+// WebSocket event handlers
+pvp.onSpinStart.value = () => {
+  isSpinning.value = true
+  telegram.hapticImpact('heavy')
+}
 
-onMounted(() => {
-  pollInterval = window.setInterval(() => {
-    onlineCount.value = Math.floor(Math.random() * 50) + 80
-  }, 5000)
-})
+pvp.onSpinResult.value = (result) => {
+  const spinDeg = parseFloat(result.spin_degree)
+  wheelRotation.value = 360 * 3 + spinDeg
 
-onUnmounted(() => {
-  if (pollInterval) clearInterval(pollInterval)
+  setTimeout(() => {
+    isSpinning.value = false
+    winner.value = players.value.find(p => p.id === result.winner_user_id) || null
+    winAmount.value = parseFloat(result.winnings_ton)
+    showWinnerModal.value = true
+    telegram.hapticNotification('success')
+  }, 8000)
+}
+
+// Init
+onMounted(async () => {
+  // Initialize TON Connect
+  await tonConnect.init('giftmarket_bot')
+
+  if (!roomCode.value) {
+    // Auto-create room if none specified
+    const room = await pvp.createRoom({ min_bet_ton: 0.01, max_players: 10 })
+    if (room) roomCode.value = room.room_code
+  }
+
+  if (roomCode.value) {
+    await pvp.fetchRoom(roomCode.value)
+    pvp.connectWS(roomCode.value)
+  }
+
+  // Load inventory if wallet connected
+  if (tonConnect.isConnected.value && tonConnect.address.value) {
+    await pvp.fetchInventory(tonConnect.address.value)
+  }
 })
 </script>
 

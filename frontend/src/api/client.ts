@@ -343,3 +343,140 @@ export const escapePlay = async (data: EscapeBuyRequest): Promise<EscapeBuyRespo
   const response = await axios.post(`${SOLO_GAMES_BASE}/api/solo-escape-game/buy/ton`, data)
   return response.data
 }
+
+// === PVP GIFT ROULETTE ===
+
+const PVP_BASE = import.meta.env.VITE_PVP_URL || 'http://localhost:8009'
+
+// Types
+
+export interface PvPRoom {
+  room_code: string
+  room_type: string
+  status: string
+  total_pool_ton: string
+  total_bets: number
+  total_players: number
+  server_seed_hash: string
+  max_players: number
+  min_bet_ton: string
+  online_count: number
+}
+
+export interface PvPBetInfo {
+  bet_id: number
+  user_id: number
+  user_name: string
+  user_avatar?: string
+  gift_name: string
+  gift_image_url?: string
+  gift_value_ton: string
+  tickets_count: number
+  win_chance_percent: string
+}
+
+export interface PvPRoomState {
+  room_code: string
+  room_type: string
+  status: string
+  total_pool_ton: string
+  total_bets: number
+  total_players: number
+  bets: PvPBetInfo[]
+  server_seed_hash: string
+  countdown_seconds: number
+  online_count: number
+}
+
+export interface PvPSpinResult {
+  room_code: string
+  winner_user_id: number
+  winner_user_name: string
+  winning_ticket: number
+  total_tickets: number
+  spin_degree: string
+  winnings_ton: string
+  house_fee_ton: string
+  server_seed: string
+}
+
+export interface PvPUserStats {
+  user_id: number
+  total_wins: number
+  total_losses: number
+  total_games: number
+  total_wagered_ton: string
+  total_won_ton: string
+  total_profit_ton: string
+  current_win_streak: number
+  max_win_streak: number
+  biggest_win_ton: string
+}
+
+export interface InventoryNFT {
+  address: string
+  name: string
+  collection_name: string
+  image_url?: string
+  price_ton?: string
+}
+
+// API calls
+
+export const pvpCreateRoom = async (params: {
+  room_type?: string
+  min_bet_ton?: number
+  max_bet_ton?: number
+  max_players?: number
+}) => {
+  const resp = await axios.post(`${PVP_BASE}/api/pvp/rooms`, params)
+  return resp.data as { room_code: string; server_seed_hash: string; status: string; countdown_seconds: number }
+}
+
+export const pvpPlaceBet = async (roomCode: string, data: {
+  user_id: number
+  user_telegram_id: number
+  user_name: string
+  user_avatar?: string
+  gift_address: string
+  gift_name: string
+  gift_image_url?: string
+  gift_value_ton: number
+}, walletAddress?: string) => {
+  const headers: Record<string, string> = {}
+  if (walletAddress) headers['X-Wallet-Address'] = walletAddress
+  const resp = await axios.post(`${PVP_BASE}/api/pvp/rooms/${roomCode}/bet`, data, { headers })
+  return resp.data
+}
+
+export const pvpGetRoom = async (roomCode: string): Promise<PvPRoomState> => {
+  const resp = await axios.get(`${PVP_BASE}/api/pvp/rooms/${roomCode}`)
+  return resp.data
+}
+
+export const pvpListRooms = async (status?: string, limit = 20): Promise<{ total: number; rooms: PvPRoom[] }> => {
+  const resp = await axios.get(`${PVP_BASE}/api/pvp/rooms`, { params: { status, limit } })
+  return resp.data
+}
+
+export const pvpSpinWheel = async (roomCode: string, clientSeed?: string): Promise<PvPSpinResult> => {
+  const resp = await axios.post(`${PVP_BASE}/api/pvp/rooms/${roomCode}/spin`, null, { params: { client_seed: clientSeed } })
+  return resp.data
+}
+
+export const pvpVerify = async (roomCode: string, serverSeed: string, clientSeed: string, nonce = 0) => {
+  const resp = await axios.post(`${PVP_BASE}/api/pvp/rooms/${roomCode}/verify`, null, {
+    params: { server_seed: serverSeed, client_seed: clientSeed, nonce },
+  })
+  return resp.data
+}
+
+export const pvpGetUserStats = async (userId: number): Promise<PvPUserStats> => {
+  const resp = await axios.get(`${PVP_BASE}/api/pvp/stats/${userId}`)
+  return resp.data
+}
+
+export const pvpGetInventory = async (walletAddress: string): Promise<InventoryNFT[]> => {
+  const resp = await axios.get(`${PVP_BASE}/api/pvp/inventory/user/${walletAddress}`)
+  return resp.data
+}

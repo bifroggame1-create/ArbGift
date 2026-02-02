@@ -1,38 +1,40 @@
 """
-PvP Rooms API.
-
-Endpoints по образцу Rolls.codes.
+PvP Rooms API — PostgreSQL + WebSocket.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional, List
 import secrets
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services import PvPGameEngine
+from app.config import settings
+from app.database import get_db
+from app.models import RoomStatus
+from app.repositories.room_repository import RoomRepository
+from app.services import PvPGameEngine, ProvablyFairEngine
+from app.services.escrow import EscrowService
+from app.services.websocket_manager import ws_manager
 
 router = APIRouter(prefix="/api/pvp", tags=["PvP"])
 
-# Глобальный движок (в проде будет DI)
 engine = PvPGameEngine()
 
 
-# =============================================================================
-# Pydantic Schemas
-# =============================================================================
+# ═══════════════════════════════════════════════════════════════════════
+# Schemas
+# ═══════════════════════════════════════════════════════════════════════
 
 class CreateRoomRequest(BaseModel):
-    """Запрос на создание комнаты."""
-    room_type: str = "classic"  # classic, lucky, mono
+    room_type: str = "classic"
     min_bet_ton: Decimal = Field(default=Decimal("1"), ge=0)
     max_bet_ton: Optional[Decimal] = None
     max_players: int = Field(default=10, ge=2, le=50)
 
 
 class CreateRoomResponse(BaseModel):
-    """Ответ создания комнаты."""
     room_code: str
     server_seed_hash: str
     status: str
@@ -43,8 +45,6 @@ class CreateRoomResponse(BaseModel):
 
 
 class PlaceBetRequest(BaseModel):
-    """Запрос на ставку."""
-    room_code: str
     user_id: int
     user_telegram_id: int
     user_name: str
@@ -56,32 +56,31 @@ class PlaceBetRequest(BaseModel):
 
 
 class BetInfo(BaseModel):
-    """Информация о ставке."""
     bet_id: int
     user_id: int
     user_name: str
-    user_avatar: Optional[str]
+    user_avatar: Optional[str] = None
     gift_name: str
-    gift_image_url: Optional[str]
+    gift_image_url: Optional[str] = None
     gift_value_ton: Decimal
     tickets_count: int
     win_chance_percent: Decimal
 
 
 class RoomState(BaseModel):
-    """Текущее состояние комнаты."""
     room_code: str
+    room_type: str = "classic"
     status: str
     total_pool_ton: Decimal
     total_bets: int
     total_players: int
     bets: List[BetInfo]
     server_seed_hash: str
-    countdown_seconds: Optional[int] = None
+    countdown_seconds: int = 30
+    online_count: int = 0
 
 
 class SpinResultResponse(BaseModel):
-    """Результат спина."""
     room_code: str
     winner_user_id: int
     winner_user_name: str
@@ -90,31 +89,22 @@ class SpinResultResponse(BaseModel):
     spin_degree: Decimal
     winnings_ton: Decimal
     house_fee_ton: Decimal
-    server_seed: str  # Раскрываем для верификации
+    server_seed: str
 
 
-# =============================================================================
-# In-memory storage (в проде будет PostgreSQL)
-# =============================================================================
-
-rooms_db: dict = {}
-bets_db: dict = {}
-bet_id_counter = 0
-
-
-# =============================================================================
-# API Endpoints
-# =============================================================================
+# ═══════════════════════════════════════════════════════════════════════
+# Endpoints
+# ═══════════════════════════════════════════════════════════════════════
 
 @router.post("/rooms", response_model=CreateRoomResponse)
-async def create_room(req: CreateRoomRequest):
-    """
-    Создать новую PvP комнату.
+async def create_room(
+    req: CreateRoomRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create new PvP room with provably fair seed."""
+    repo = RoomRepository(db)
 
-    Генерирует server_seed и возвращает его хеш.
-    """
     room_code = secrets.token_urlsafe(8)[:8].upper()
-
     room_params = engine.create_room(
         room_code=room_code,
         min_bet_ton=req.min_bet_ton,
@@ -122,223 +112,287 @@ async def create_room(req: CreateRoomRequest):
         max_players=req.max_players,
     )
 
-    rooms_db[room_code] = {
-        **room_params,
-        "bets": [],
-        "total_pool_ton": Decimal("0"),
-        "total_bets": 0,
-        "total_players": 0,
-        "created_at": datetime.utcnow(),
-    }
+    room = await repo.create_room(**room_params)
 
     return CreateRoomResponse(
-        room_code=room_code,
-        server_seed_hash=room_params["server_seed_hash"],
-        status="waiting",
-        min_bet_ton=req.min_bet_ton,
-        max_bet_ton=req.max_bet_ton,
-        max_players=req.max_players,
-        countdown_seconds=30,
+        room_code=room.room_code,
+        server_seed_hash=room.server_seed_hash,
+        status=room.status.value,
+        min_bet_ton=room.min_bet_ton,
+        max_bet_ton=room.max_bet_ton,
+        max_players=room.max_players,
+        countdown_seconds=room.countdown_seconds,
     )
 
 
 @router.post("/rooms/{room_code}/bet")
-async def place_bet(room_code: str, req: PlaceBetRequest):
+async def place_bet(
+    room_code: str,
+    req: PlaceBetRequest,
+    db: AsyncSession = Depends(get_db),
+    x_wallet_address: Optional[str] = Header(None),
+):
     """
-    Поставить гифт в комнату.
+    Place bet in room.
 
-    Проверяет:
-    - Комната существует и в статусе waiting/countdown
-    - Ставка в пределах min/max
-    - Игрок не превысил лимит
+    Optionally verifies NFT ownership if X-Wallet-Address header provided.
     """
-    global bet_id_counter
+    repo = RoomRepository(db)
 
-    room = rooms_db.get(room_code)
+    room = await repo.get_room(room_code)
     if not room:
         raise HTTPException(404, "Room not found")
 
-    if room["status"] not in ("waiting", "countdown"):
+    if room.status not in (RoomStatus.WAITING, RoomStatus.COUNTDOWN):
         raise HTTPException(400, "Room is not accepting bets")
 
-    if req.gift_value_ton < room["min_bet_ton"]:
-        raise HTTPException(400, f"Minimum bet is {room['min_bet_ton']} TON")
+    if req.gift_value_ton < room.min_bet_ton:
+        raise HTTPException(400, f"Minimum bet is {room.min_bet_ton} TON")
 
-    if room["max_bet_ton"] and req.gift_value_ton > room["max_bet_ton"]:
-        raise HTTPException(400, f"Maximum bet is {room['max_bet_ton']} TON")
+    if room.max_bet_ton and req.gift_value_ton > room.max_bet_ton:
+        raise HTTPException(400, f"Maximum bet is {room.max_bet_ton} TON")
 
-    bet_id_counter += 1
-    bet = {
-        "id": bet_id_counter,
-        "room_code": room_code,
-        "user_id": req.user_id,
-        "user_telegram_id": req.user_telegram_id,
-        "user_name": req.user_name,
-        "user_avatar": req.user_avatar,
-        "gift_address": req.gift_address,
-        "gift_name": req.gift_name,
-        "gift_image_url": req.gift_image_url,
-        "gift_value_ton": req.gift_value_ton,
-        "tickets_start": 0,
-        "tickets_end": 0,
-        "tickets_count": 0,
-        "win_chance_percent": Decimal("0"),
-        "is_winner": False,
-        "placed_at": datetime.utcnow(),
-    }
+    # Verify NFT ownership if wallet provided
+    if x_wallet_address:
+        escrow = EscrowService(
+            db,
+            tonapi_key=getattr(settings, "TONAPI_KEY", None),
+        )
+        try:
+            price = await escrow.verify_and_price_nft(
+                x_wallet_address,
+                req.gift_address,
+            )
+            if price is None:
+                raise HTTPException(403, "NFT ownership verification failed or NFT already in use")
+        finally:
+            await escrow.close()
 
-    room["bets"].append(bet)
-    room["total_pool_ton"] += req.gift_value_ton
-    room["total_bets"] += 1
+    # Check NFT not already locked
+    locked = await repo.is_nft_locked(req.gift_address)
+    if locked:
+        raise HTTPException(409, "This NFT is already in an active game")
 
-    # Подсчёт уникальных игроков
-    unique_users = set(b["user_id"] for b in room["bets"])
-    room["total_players"] = len(unique_users)
+    # Add bet
+    bet = await repo.add_bet(
+        room,
+        user_id=req.user_id,
+        user_telegram_id=req.user_telegram_id,
+        user_name=req.user_name,
+        user_avatar=req.user_avatar,
+        gift_address=req.gift_address,
+        gift_name=req.gift_name,
+        gift_image_url=req.gift_image_url,
+        gift_value_ton=req.gift_value_ton,
+        tickets_start=0,
+        tickets_end=0,
+        tickets_count=0,
+        win_chance_percent=Decimal("0"),
+    )
 
-    # Если достигли 2+ игроков — начинаем countdown
-    if room["total_players"] >= 2 and room["status"] == "waiting":
-        room["status"] = "countdown"
-        room["countdown_started_at"] = datetime.utcnow()
+    # Ensure stats exist
+    await repo.get_or_create_stats(req.user_id, req.user_telegram_id)
+
+    # Refresh room state
+    room = await repo.get_room(room_code)
+
+    # Start countdown if 2+ unique players
+    unique_users = {b.user_id for b in room.bets}
+    if len(unique_users) >= 2 and room.status == RoomStatus.WAITING:
+        await repo.update_room(
+            room_code,
+            status=RoomStatus.COUNTDOWN,
+            started_at=datetime.now(timezone.utc),
+        )
+
+        await ws_manager.broadcast(room_code, {
+            "type": "countdown_start",
+            "data": {"countdown_seconds": room.countdown_seconds},
+        })
+
+    # Broadcast bet placed
+    await ws_manager.broadcast(room_code, {
+        "type": "bet_placed",
+        "data": {
+            "bet_id": bet.id,
+            "user_id": req.user_id,
+            "user_name": req.user_name,
+            "user_avatar": req.user_avatar,
+            "gift_name": req.gift_name,
+            "gift_image_url": req.gift_image_url,
+            "gift_value_ton": str(req.gift_value_ton),
+            "total_pool_ton": str(room.total_pool_ton),
+            "total_bets": room.total_bets,
+            "total_players": room.total_players,
+        },
+    })
 
     return {
-        "bet_id": bet["id"],
+        "bet_id": bet.id,
         "room_code": room_code,
-        "status": room["status"],
-        "total_pool_ton": str(room["total_pool_ton"]),
-        "total_bets": room["total_bets"],
+        "status": room.status.value,
+        "total_pool_ton": str(room.total_pool_ton),
+        "total_bets": room.total_bets,
+        "total_players": room.total_players,
     }
 
 
 @router.get("/rooms/{room_code}", response_model=RoomState)
-async def get_room(room_code: str):
-    """Получить состояние комнаты."""
-    room = rooms_db.get(room_code)
+async def get_room(
+    room_code: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get room state with bets and chances."""
+    repo = RoomRepository(db)
+
+    room = await repo.get_room(room_code)
     if not room:
         raise HTTPException(404, "Room not found")
 
-    # Рассчитываем тикеты и шансы
-    bets_info = []
-    total_tickets = 0
+    # Calculate tickets and chances
+    total_tickets = engine.assign_tickets(room.bets)
+    engine.calculate_win_chances(room.bets, total_tickets)
 
-    for bet in room["bets"]:
-        tickets = engine.calculate_tickets(bet["gift_value_ton"])
-        bet["tickets_count"] = tickets
-        total_tickets += tickets
-
-    for bet in room["bets"]:
-        if total_tickets > 0:
-            chance = (Decimal(bet["tickets_count"]) / Decimal(total_tickets)) * 100
-        else:
-            chance = Decimal("0")
-
-        bets_info.append(BetInfo(
-            bet_id=bet["id"],
-            user_id=bet["user_id"],
-            user_name=bet["user_name"],
-            user_avatar=bet["user_avatar"],
-            gift_name=bet["gift_name"],
-            gift_image_url=bet["gift_image_url"],
-            gift_value_ton=bet["gift_value_ton"],
-            tickets_count=bet["tickets_count"],
-            win_chance_percent=round(chance, 2),
-        ))
+    bets_info = [
+        BetInfo(
+            bet_id=bet.id,
+            user_id=bet.user_id,
+            user_name=bet.user_name,
+            user_avatar=bet.user_avatar,
+            gift_name=bet.gift_name,
+            gift_image_url=bet.gift_image_url,
+            gift_value_ton=bet.gift_value_ton,
+            tickets_count=bet.tickets_count,
+            win_chance_percent=round(bet.win_chance_percent, 2),
+        )
+        for bet in room.bets
+    ]
 
     return RoomState(
-        room_code=room_code,
-        status=room["status"],
-        total_pool_ton=room["total_pool_ton"],
-        total_bets=room["total_bets"],
-        total_players=room["total_players"],
+        room_code=room.room_code,
+        room_type=room.room_type.value,
+        status=room.status.value,
+        total_pool_ton=room.total_pool_ton,
+        total_bets=room.total_bets,
+        total_players=room.total_players,
         bets=bets_info,
-        server_seed_hash=room["server_seed_hash"],
+        server_seed_hash=room.server_seed_hash,
+        countdown_seconds=room.countdown_seconds,
+        online_count=ws_manager.get_room_count(room_code),
     )
 
 
 @router.post("/rooms/{room_code}/spin", response_model=SpinResultResponse)
-async def spin_wheel(room_code: str, client_seed: Optional[str] = None):
-    """
-    Крутить рулетку и определить победителя.
+async def spin_wheel(
+    room_code: str,
+    client_seed: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Spin wheel manually (auto-spin handles this normally)."""
+    repo = RoomRepository(db)
 
-    Требует минимум 2 игроков.
-    После спина раскрывается server_seed для верификации.
-    """
-    room = rooms_db.get(room_code)
+    room = await repo.get_room(room_code)
     if not room:
         raise HTTPException(404, "Room not found")
 
-    if room["status"] == "finished":
+    if room.status == RoomStatus.FINISHED:
         raise HTTPException(400, "Room already finished")
 
-    if room["total_players"] < 2:
+    unique_users = {b.user_id for b in room.bets}
+    if len(unique_users) < 2:
         raise HTTPException(400, "Need at least 2 players")
 
-    room["status"] = "spinning"
+    await repo.update_room(room_code, status=RoomStatus.SPINNING)
+    await ws_manager.broadcast(room_code, {"type": "spin_start", "data": {}})
 
-    # Конвертируем dict в объекты для движка
-    class BetObj:
-        def __init__(self, d):
-            for k, v in d.items():
-                setattr(self, k, v)
+    result = engine.spin_wheel(room, room.bets, client_seed)
 
-    bet_objs = [BetObj(b) for b in room["bets"]]
-
-    class RoomObj:
-        server_seed = room["server_seed"]
-        nonce = 0
-
-    # Спиним
-    result = engine.spin_wheel(RoomObj(), bet_objs, client_seed)
-
-    # Находим победителя
-    winner_bet = None
-    for bet in room["bets"]:
-        if bet["id"] == result.winning_bet_id:
-            bet["is_winner"] = True
-            winner_bet = bet
-            break
-
-    # Рассчитываем выигрыш
-    winnings, fee = engine.calculate_winnings(
-        room["total_pool_ton"],
-        Decimal("5"),  # 5% комиссия
+    winner_bet = next(
+        (b for b in room.bets if b.id == result.winning_bet_id),
+        None,
     )
 
-    room["status"] = "finished"
-    room["winner_user_id"] = result.winner_user_id
-    room["finished_at"] = datetime.utcnow()
+    winnings, fee = engine.calculate_winnings(
+        room.total_pool_ton,
+        room.house_fee_percent,
+    )
+
+    await repo.update_room(
+        room_code,
+        status=RoomStatus.FINISHED,
+        winner_user_id=result.winner_user_id,
+        winner_ticket=result.winning_ticket,
+        winning_spin_degree=result.spin_degree,
+        finished_at=datetime.now(timezone.utc),
+    )
+
+    # Update stats
+    for bet in room.bets:
+        if bet.user_id == result.winner_user_id:
+            await repo.update_stats_win(bet.user_id, bet.gift_value_ton, winnings)
+        else:
+            await repo.update_stats_loss(bet.user_id, bet.gift_value_ton)
+
+    # Broadcast result
+    await ws_manager.broadcast(room_code, {
+        "type": "spin_result",
+        "data": {
+            "winner_user_id": result.winner_user_id,
+            "winner_user_name": winner_bet.user_name if winner_bet else "Unknown",
+            "winning_ticket": result.winning_ticket,
+            "total_tickets": sum(b.tickets_count for b in room.bets),
+            "spin_degree": str(result.spin_degree),
+            "winnings_ton": str(winnings),
+            "house_fee_ton": str(fee),
+            "server_seed": room.server_seed,
+        },
+    })
 
     return SpinResultResponse(
         room_code=room_code,
         winner_user_id=result.winner_user_id,
-        winner_user_name=winner_bet["user_name"] if winner_bet else "Unknown",
+        winner_user_name=winner_bet.user_name if winner_bet else "Unknown",
         winning_ticket=result.winning_ticket,
-        total_tickets=sum(b["tickets_count"] for b in room["bets"]),
+        total_tickets=sum(b.tickets_count for b in room.bets),
         spin_degree=result.spin_degree,
         winnings_ton=winnings,
         house_fee_ton=fee,
-        server_seed=room["server_seed"],  # Раскрываем для проверки!
+        server_seed=room.server_seed,
     )
 
 
 @router.get("/rooms")
-async def list_rooms(status: Optional[str] = None, limit: int = 20):
-    """Список комнат."""
-    rooms = list(rooms_db.values())
+async def list_rooms(
+    status: Optional[str] = None,
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db),
+):
+    """List rooms."""
+    repo = RoomRepository(db)
 
     if status:
-        rooms = [r for r in rooms if r["status"] == status]
-
-    rooms = sorted(rooms, key=lambda x: x["created_at"], reverse=True)[:limit]
+        try:
+            room_status = RoomStatus(status)
+        except ValueError:
+            raise HTTPException(400, f"Invalid status: {status}")
+        rooms = await repo.list_rooms(status=room_status, limit=limit)
+    else:
+        rooms = await repo.list_rooms(limit=limit)
 
     return {
         "total": len(rooms),
         "rooms": [
             {
-                "room_code": r["room_code"],
-                "status": r["status"],
-                "total_pool_ton": str(r["total_pool_ton"]),
-                "total_players": r["total_players"],
-                "server_seed_hash": r["server_seed_hash"],
+                "room_code": r.room_code,
+                "room_type": r.room_type.value,
+                "status": r.status.value,
+                "total_pool_ton": str(r.total_pool_ton),
+                "total_bets": r.total_bets,
+                "total_players": r.total_players,
+                "server_seed_hash": r.server_seed_hash,
+                "max_players": r.max_players,
+                "min_bet_ton": str(r.min_bet_ton),
+                "online_count": ws_manager.get_room_count(r.room_code),
             }
             for r in rooms
         ],
@@ -351,31 +405,49 @@ async def verify_result(
     server_seed: str,
     client_seed: str,
     nonce: int = 0,
+    db: AsyncSession = Depends(get_db),
 ):
-    """
-    Проверить честность результата.
+    """Verify provably fair result."""
+    repo = RoomRepository(db)
 
-    Клиент может независимо проверить что результат был честным.
-    """
-    from app.services import ProvablyFairEngine
-
-    room = rooms_db.get(room_code)
+    room = await repo.get_room(room_code)
     if not room:
         raise HTTPException(404, "Room not found")
 
-    if room["status"] != "finished":
+    if room.status != RoomStatus.FINISHED:
         raise HTTPException(400, "Room not finished yet")
 
-    # Проверяем что server_seed соответствует хешу
     actual_hash = ProvablyFairEngine.hash_server_seed(server_seed)
-    if actual_hash != room["server_seed_hash"]:
+    if actual_hash != room.server_seed_hash:
         return {"valid": False, "reason": "Server seed does not match hash"}
 
-    # Вычисляем результат
     result = ProvablyFairEngine.generate_result(server_seed, client_seed, nonce)
 
     return {
         "valid": True,
         "computed_result": result,
         "server_seed_hash": actual_hash,
+    }
+
+
+@router.get("/stats/{user_id}")
+async def get_user_stats(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get user PvP statistics."""
+    repo = RoomRepository(db)
+    stats = await repo.get_or_create_stats(user_id, user_id)
+
+    return {
+        "user_id": stats.user_id,
+        "total_wins": stats.total_wins,
+        "total_losses": stats.total_losses,
+        "total_games": stats.total_games,
+        "total_wagered_ton": str(stats.total_wagered_ton),
+        "total_won_ton": str(stats.total_won_ton),
+        "total_profit_ton": str(stats.total_profit_ton),
+        "current_win_streak": stats.current_win_streak,
+        "max_win_streak": stats.max_win_streak,
+        "biggest_win_ton": str(stats.biggest_win_ton),
     }
