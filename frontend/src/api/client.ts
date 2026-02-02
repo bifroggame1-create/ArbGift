@@ -291,7 +291,7 @@ export interface PlinkoBuyResponse {
   nonce: number
 }
 
-export const plinkoPlay = async (data: PlinkoBuyRequest): Promise<PlinkoBuyResponse> => {
+export const soloPlinkoPlay = async (data: PlinkoBuyRequest): Promise<PlinkoBuyResponse> => {
   const response = await axios.post(`${SOLO_GAMES_BASE}/api/solo-plinko-game/buy/ton`, data)
   return response.data
 }
