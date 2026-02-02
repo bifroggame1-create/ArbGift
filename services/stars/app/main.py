@@ -1,7 +1,7 @@
 """
-Staking Service - Main Entry Point.
+Stars Purchase Service - FastAPI Application.
 
-Стейкинг NFT гифтов для получения наград.
+Service for purchasing Telegram Stars with TON.
 """
 import logging
 from contextlib import asynccontextmanager
@@ -9,11 +9,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.stakes import router as stakes_router
 from app.config import settings
-from app.database import init_db
+from app.models import init_db, close_db
+from app.api import router
 
-# Logging
+# Configure logging
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -23,24 +23,27 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup and shutdown events."""
-    logger.info("Starting Staking service...")
-    logger.info("Initializing database...")
+    """Application lifespan handler."""
+    logger.info(f"Starting {settings.APP_NAME}")
+    
+    # Initialize database
     await init_db()
     logger.info("Database initialized")
+    
     yield
-    logger.info("Shutting down Staking service...")
+    
+    # Cleanup
+    await close_db()
+    logger.info("Database connections closed")
 
 
-# Create app
 app = FastAPI(
-    title="Gift Staking",
-    description="Стейкинг NFT гифтов для получения наград",
+    title=settings.APP_NAME,
     version="1.0.0",
     lifespan=lifespan,
 )
 
-# CORS
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -50,25 +53,22 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(stakes_router)
+app.include_router(router)
 
 
 @app.get("/health")
 async def health_check():
-    """Health check."""
-    return {"status": "healthy", "service": "staking"}
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "service": settings.APP_NAME,
+    }
 
 
 @app.get("/")
 async def root():
     """Root endpoint."""
     return {
-        "service": "Gift Staking",
-        "version": "1.0.0",
+        "service": settings.APP_NAME,
         "docs": "/docs",
     }
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)

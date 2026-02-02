@@ -1,6 +1,4 @@
-from .pricing import PricingService
-from .telegram_bot import TelegramBotService
-from .ton_payment import TonPaymentService
-from .stars_delivery import StarsDeliveryService
+"""Stars services."""
+from app.services.order_service import OrderService
 
-__all__ = ["PricingService", "TelegramBotService", "TonPaymentService", "StarsDeliveryService"]
+__all__ = ["OrderService"]

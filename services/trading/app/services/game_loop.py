@@ -1,16 +1,26 @@
+"""
+Trading Game Loop.
+
+Background task that runs continuous trading/crash games.
+"""
 import asyncio
-from datetime import datetime, timedelta
+import logging
+from datetime import datetime
+from decimal import Decimal
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
-from ..models.game import TradingGame, GameStatus
-from ..models.bet import Bet, BetStatus
-from ..services.game_engine import TradingGameEngine
-from ..websocket.manager import manager
+from app.models.game import TradingGame, GameStatus
+from app.models.bet import TradingBet, BetStatus
+from app.services.game_engine import TradingGameEngine
+from app.websocket.manager import manager
+
+logger = logging.getLogger(__name__)
 
 
 class GameLoop:
-    """Background task that runs trading games"""
+    """Background task that runs trading games."""
 
     def __init__(self, db_session_factory):
         self.db_session_factory = db_session_factory
@@ -20,25 +30,41 @@ class GameLoop:
         self.game_counter = 1
 
     async def start(self):
-        """Start the game loop"""
+        """Start the game loop."""
         self.is_running = True
+        logger.info("Game loop started")
+
+        # Get latest game number from DB
+        async for session in self.db_session_factory():
+            result = await session.execute(
+                select(TradingGame.game_number)
+                .order_by(TradingGame.game_number.desc())
+                .limit(1)
+            )
+            last_number = result.scalar_one_or_none()
+            if last_number:
+                self.game_counter = last_number + 1
+            break
+
         while self.is_running:
             try:
                 await self.run_game()
             except Exception as e:
-                print(f"Error in game loop: {e}")
+                logger.error(f"Error in game loop: {e}")
                 await asyncio.sleep(5)
 
     async def stop(self):
-        """Stop the game loop"""
+        """Stop the game loop."""
         self.is_running = False
+        logger.info("Game loop stopped")
 
     async def run_game(self):
-        """Run a single game cycle"""
+        """Run a single game cycle."""
         # Create new game
-        async with self.db_session_factory() as session:
-            server_seed = self.engine.generate_server_seed()
-            server_seed_hash = self.engine.generate_server_seed()  # Hash for public display
+        async for session in self.db_session_factory():
+            server_seed, server_seed_hash, crash_point = self.engine.create_new_game(
+                self.game_counter
+            )
 
             game = TradingGame(
                 game_number=self.game_counter,
@@ -46,7 +72,7 @@ class GameLoop:
                 server_seed_hash=server_seed_hash,
                 server_seed=server_seed,
                 nonce=self.game_counter,
-                crash_point=self.engine.generate_crash_point(server_seed, self.game_counter)
+                crash_point=crash_point,
             )
 
             session.add(game)
@@ -55,23 +81,26 @@ class GameLoop:
 
             self.current_game = game
             self.game_counter += 1
+            break
 
         # Betting phase (5 seconds)
         await manager.broadcast_game_state(
             game_number=game.game_number,
             status="pending",
-            multiplier=1.00
+            multiplier=1.00,
+            server_seed_hash=game.server_seed_hash,
         )
         await asyncio.sleep(5)
 
         # Start game
-        async with self.db_session_factory() as session:
+        async for session in self.db_session_factory():
             await session.execute(
                 update(TradingGame)
                 .where(TradingGame.id == game.id)
                 .values(status=GameStatus.ACTIVE, started_at=datetime.utcnow())
             )
             await session.commit()
+            break
 
         # Game loop - update multiplier every 100ms
         start_time = datetime.utcnow()
@@ -87,26 +116,27 @@ class GameLoop:
                 current_multiplier = game.crash_point
 
             # Update database
-            async with self.db_session_factory() as session:
+            async for session in self.db_session_factory():
                 await session.execute(
                     update(TradingGame)
                     .where(TradingGame.id == game.id)
                     .values(current_multiplier=current_multiplier)
                 )
                 await session.commit()
+                break
 
             # Broadcast to clients
             await manager.broadcast_game_state(
                 game_number=game.game_number,
                 status="active",
-                multiplier=current_multiplier
+                multiplier=float(current_multiplier),
             )
 
             if not crashed:
                 await asyncio.sleep(0.1)  # 100ms update interval
 
         # Game crashed
-        async with self.db_session_factory() as session:
+        async for session in self.db_session_factory():
             # Mark game as crashed
             await session.execute(
                 update(TradingGame)
@@ -114,25 +144,26 @@ class GameLoop:
                 .values(
                     status=GameStatus.CRASHED,
                     crashed_at=datetime.utcnow(),
-                    current_multiplier=game.crash_point
+                    current_multiplier=game.crash_point,
                 )
             )
 
             # Mark all active bets as lost
             await session.execute(
-                update(Bet)
-                .where(Bet.game_id == game.id)
-                .where(Bet.status == BetStatus.ACTIVE)
+                update(TradingBet)
+                .where(TradingBet.game_id == game.id)
+                .where(TradingBet.status == BetStatus.ACTIVE)
                 .values(status=BetStatus.LOST)
             )
 
             await session.commit()
+            break
 
         # Broadcast crash event
         await manager.broadcast_crash(
             game_number=game.game_number,
-            crash_point=game.crash_point,
-            server_seed=game.server_seed
+            crash_point=float(game.crash_point),
+            server_seed=game.server_seed,
         )
 
         # Wait 3 seconds before next game

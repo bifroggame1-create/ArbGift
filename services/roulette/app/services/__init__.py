@@ -1,5 +1,4 @@
-"""Services for the roulette game logic."""
+"""Roulette services."""
 from app.services.roulette_engine import RouletteEngine
-from app.services.prize_manager import PrizeManager
 
-__all__ = ["RouletteEngine", "PrizeManager"]
+__all__ = ["RouletteEngine"]

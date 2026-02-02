@@ -1,44 +1,87 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Enum
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.declarative import declarative_base
+"""
+Trading Game Model.
+
+SQLAlchemy 2.0 style with Mapped[] annotations.
+"""
 from datetime import datetime
-import enum
-import uuid
+from decimal import Decimal
+from enum import Enum
+from typing import Optional
+from uuid import uuid4
 
-Base = declarative_base()
+from sqlalchemy import String, Integer, Numeric, DateTime, Index, Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.models.base import Base
 
 
-class GameStatus(str, enum.Enum):
-    PENDING = "pending"
-    ACTIVE = "active"
-    CRASHED = "crashed"
-    COMPLETED = "completed"
+class GameStatus(str, Enum):
+    """Game status."""
+    PENDING = "pending"      # Accepting bets
+    ACTIVE = "active"        # Multiplier is growing
+    CRASHED = "crashed"      # Game ended
+    COMPLETED = "completed"  # Payouts processed
 
 
 class TradingGame(Base):
+    """
+    Trading/Crash game.
+
+    Multiplier grows until it crashes at a pre-determined point.
+    """
     __tablename__ = "trading_games"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    game_number = Column(Integer, unique=True, nullable=False, index=True)
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+    )
+
+    game_number: Mapped[int] = mapped_column(
+        Integer,
+        unique=True,
+        nullable=False,
+        index=True,
+    )
 
     # Game state
-    status = Column(Enum(GameStatus), default=GameStatus.PENDING, nullable=False, index=True)
-    current_multiplier = Column(Float, default=1.0, nullable=False)
-    crash_point = Column(Float, nullable=True)  # Pre-determined crash point
+    status: Mapped[GameStatus] = mapped_column(
+        SQLEnum(GameStatus),
+        default=GameStatus.PENDING,
+        nullable=False,
+        index=True,
+    )
+    current_multiplier: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        default=Decimal("1.00"),
+        nullable=False,
+    )
+    crash_point: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(10, 2),
+        nullable=True,
+    )
 
     # Provably fair
-    server_seed_hash = Column(String(64), nullable=False)
-    server_seed = Column(String(128), nullable=True)  # Revealed after crash
-    nonce = Column(Integer, nullable=False)
+    server_seed_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    server_seed: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    nonce: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    started_at = Column(DateTime, nullable=True)
-    crashed_at = Column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    crashed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
-    # Meta
-    total_bets = Column(Integer, default=0)
-    total_volume = Column(Float, default=0.0)
+    # Stats
+    total_bets: Mapped[int] = mapped_column(Integer, default=0)
+    total_volume_ton: Mapped[Decimal] = mapped_column(
+        Numeric(18, 9),
+        default=Decimal("0"),
+    )
 
-    def __repr__(self):
+    __table_args__ = (
+        Index("ix_trading_game_status_created", "status", "created_at"),
+    )
+
+    def __repr__(self) -> str:
         return f"<TradingGame #{self.game_number} {self.status.value} {self.current_multiplier}x>"

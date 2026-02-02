@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.orm import selectinload
 
-from app.core.database import get_async_session, AsyncSession
+from app.core.database import get_db_session, AsyncSession
 from app.models.collection import Collection
 from app.models.nft import NFT
 from app.models.listing import Listing
@@ -125,7 +125,7 @@ async def list_gifts(
     # Sorting
     sort_by: str = Query("price_asc", description="Sort order"),
 
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = Depends(get_db_session),
 ):
     """
     List gifts with filters and pagination.
@@ -240,7 +240,7 @@ async def list_gifts(
 async def get_gift(
     gift_id: int,
     include_listings: bool = Query(True, description="Include active listings"),
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = Depends(get_db_session),
 ):
     """
     Get gift details by ID.
@@ -316,7 +316,7 @@ async def get_gift(
 async def get_gift_by_address(
     nft_address: str,
     include_listings: bool = Query(True, description="Include active listings"),
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = Depends(get_db_session),
 ):
     """
     Get gift details by TON address.
@@ -337,7 +337,7 @@ async def get_gift_by_address(
 @router.get("/gifts/{gift_id}/listings", response_model=List[MarketListingSchema])
 async def get_gift_listings(
     gift_id: int,
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = Depends(get_db_session),
 ):
     """
     Get all active listings for a gift across all markets.
@@ -373,7 +373,7 @@ async def get_gift_listings(
 @router.get("/collections")
 async def list_collections(
     telegram_gifts_only: bool = Query(False, description="Only Telegram Gift collections"),
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = Depends(get_db_session),
 ):
     """
     List all indexed collections.
@@ -411,7 +411,7 @@ async def list_collections(
 @router.get("/collections/{collection_id}")
 async def get_collection(
     collection_id: int,
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = Depends(get_db_session),
 ):
     """
     Get collection details.
