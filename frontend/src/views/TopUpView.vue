@@ -79,26 +79,6 @@
           <div class="text-white font-bold text-center">Gift Plinko</div>
         </div>
 
-        <!-- Gonka Card -->
-        <div
-          class="relative bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-4 overflow-hidden cursor-pointer hover:scale-105 transition-transform"
-          @click="navigateTo('/gonka')"
-        >
-          <div class="h-32 relative overflow-hidden mb-2">
-            <div class="absolute top-4 left-4 w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center text-lg font-bold">
-              X1.7
-            </div>
-            <div class="absolute top-12 left-2 w-10 h-10 rounded-full bg-yellow-300 flex items-center justify-center text-sm font-bold">
-              X0.3
-            </div>
-            <div class="absolute bottom-8 right-4 w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center text-lg font-bold">
-              X2
-            </div>
-          </div>
-          <div class="text-white font-bold text-center mb-1">Gonka</div>
-          <div class="text-green-200 text-xs text-center">Отскочил — победил</div>
-        </div>
-
         <!-- Ball Escape Card -->
         <div
           class="relative bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-4 overflow-hidden cursor-pointer hover:scale-105 transition-transform"

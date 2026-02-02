@@ -393,10 +393,8 @@ const initChart = () => {
     timeScale: {
       visible: false,
       borderVisible: false,
-      rightOffset: 5,
-      barSpacing: 8,
-      fixLeftEdge: true,
-      shiftVisibleRangeOnNewBar: true,
+      rightOffset: 12,
+      barSpacing: 6,
     },
     handleScroll: false,
     handleScale: false,
@@ -523,11 +521,6 @@ const startGame = () => {
       low: 1.0,
       close: 1.0,
     })
-  }
-
-  // Set visible range so candles start from left
-  if (chart) {
-    chart.timeScale().setVisibleLogicalRange({ from: -2, to: 40 })
   }
 
   // Simulate other traders joining

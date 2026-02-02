@@ -107,11 +107,6 @@ const router = createRouter({
       component: () => import('../views/PlinkoView.vue'),
     },
     {
-      path: '/gonka',
-      name: 'gonka',
-      component: () => import('../views/GonkaView.vue'),
-    },
-    {
       path: '/ball-escape',
       name: 'ball-escape',
       component: () => import('../views/BallEscapeView.vue'),

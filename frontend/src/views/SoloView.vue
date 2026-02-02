@@ -196,22 +196,6 @@
           <div class="game-multiplier">до x10</div>
         </router-link>
 
-        <router-link to="/gonka" class="game-card giftomania">
-          <div class="game-visual">
-            <div class="giftomania-preview">
-              <div class="wheel-ring">
-                <div class="wheel-progress"></div>
-              </div>
-              <span class="wheel-gift">🎁</span>
-            </div>
-          </div>
-          <div class="game-info">
-            <span class="game-name">Giftomania</span>
-            <span class="game-desc">Crash колесо</span>
-          </div>
-          <div class="game-multiplier">до x100</div>
-        </router-link>
-
         <router-link to="/rocket" class="game-card rocket">
           <div class="game-visual">
             <div class="rocket-preview">
@@ -275,15 +259,18 @@ const totalPaid = ref('847.2K')
 // Lucky wheel segments
 const luckySegments = ['#22c55e', '#3b82f6', '#eab308', '#ec4899', '#8b5cf6', '#f97316']
 
-// Stars background
-const getStarStyle = (_i: number) => ({
+// Pre-generate star styles once (not on every render)
+const starStyles = Array.from({ length: 30 }, () => ({
   left: `${Math.random() * 100}%`,
   top: `${Math.random() * 100}%`,
   width: `${Math.random() * 2 + 1}px`,
   height: `${Math.random() * 2 + 1}px`,
   animationDelay: `${Math.random() * 3}s`,
   animationDuration: `${Math.random() * 2 + 2}s`
-})
+}))
+
+// Stars background - use pre-generated styles
+const getStarStyle = (i: number) => starStyles[i - 1]
 
 // Lucky wheel segment style
 const getSegmentStyle = (index: number) => {
