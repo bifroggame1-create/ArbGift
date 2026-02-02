@@ -1,6 +1,7 @@
 <template>
   <div id="app" class="min-h-screen bg-gray-950 text-white">
-    <Navigation />
+    <!-- Hide top nav on game/detail pages that have their own headers -->
+    <Navigation v-if="showTopNav" />
 
     <main class="pb-20">
       <router-view v-slot="{ Component }">
@@ -15,12 +16,24 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useTelegram } from './composables/useTelegram'
 import Navigation from './components/Navigation.vue'
 import BottomNavigation from './components/BottomNavigation.vue'
 
+const route = useRoute()
 const { initWebApp, setHeaderColor, ready } = useTelegram()
+
+// Hide top nav on pages with their own headers
+const showTopNav = computed(() => {
+  const hiddenPaths = [
+    '/plinko', '/lucky', '/rocket', '/trading', '/escape',
+    '/aviator', '/roulette', '/pvp', '/topup', '/contracts',
+    '/upgrade', '/stars', '/gift/'
+  ]
+  return !hiddenPaths.some(p => route.path.startsWith(p))
+})
 
 onMounted(() => {
   // Initialize Telegram Web App
