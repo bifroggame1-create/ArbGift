@@ -39,7 +39,7 @@
       </div>
       <div class="info-item">
         <span class="info-label">РЯДЫ</span>
-        <select v-model="rowCount" class="rows-select">
+        <select v-model="rowCount" class="rows-select" @change="onRowCountChange">
           <option :value="8">8</option>
           <option :value="12">12</option>
           <option :value="16">16</option>
@@ -48,12 +48,10 @@
     </div>
 
     <!-- Game Canvas -->
-    <div class="game-container">
+    <div class="game-container" ref="gameContainer">
       <canvas
         ref="gameCanvas"
         class="game-canvas"
-        :width="canvasWidth"
-        :height="canvasHeight"
       ></canvas>
 
       <!-- Result Overlay -->
@@ -62,17 +60,6 @@
         <div class="result-amount" :class="{ positive: lastWin > 0 }">
           {{ lastWin > 0 ? '+' : '' }}{{ lastWin.toFixed(2) }} TON
         </div>
-      </div>
-    </div>
-
-    <!-- Multiplier Slots Preview -->
-    <div class="multipliers-row">
-      <div
-        v-for="(mult, i) in currentMultipliers"
-        :key="i"
-        :class="['mult-slot', getMultiplierClass(mult)]"
-      >
-        {{ mult }}x
       </div>
     </div>
 
@@ -141,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 
 interface HistoryItem {
   multiplier: number
@@ -166,17 +153,20 @@ const autoPlay = ref(false)
 const autoPlayCount = ref(10)
 const history = ref<HistoryItem[]>([])
 
-// Canvas
+// Canvas refs
 const gameCanvas = ref<HTMLCanvasElement | null>(null)
-const canvasWidth = 340
-const canvasHeight = 280
+const gameContainer = ref<HTMLDivElement | null>(null)
+
+// Responsive canvas sizing
+let canvasWidth = 380
+let canvasHeight = 500
 
 // Multipliers based on risk
-const multiplierSets = {
+const multiplierSets: Record<string, Record<number, number[]>> = {
   low: {
     8: [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6],
-    12: [8.9, 3, 1.4, 1.1, 1, 0.5, 1, 1.1, 1.4, 3, 8.9],
-    16: [16, 9, 2, 1.4, 1.1, 1, 0.5, 1, 1.1, 1.4, 2, 9, 16]
+    12: [8.9, 3, 1.4, 1.1, 1, 0.5, 0.3, 0.5, 1, 1.1, 1.4, 3, 8.9],
+    16: [16, 9, 2, 1.4, 1.1, 1, 0.5, 0.3, 0.3, 0.5, 1, 1.1, 1.4, 2, 9, 16]
   },
   medium: {
     8: [13, 3, 1.3, 0.7, 0.4, 0.7, 1.3, 3, 13],
@@ -192,42 +182,126 @@ const multiplierSets = {
 
 const currentMultipliers = computed(() => {
   const set = multiplierSets[riskLevel.value]
-  return set[rowCount.value as keyof typeof set] || set[12]
+  return set[rowCount.value] || set[12]
 })
 
-// Plinko physics - slower, more realistic
-const PEG_RADIUS = 5
-const BALL_RADIUS = 6
-const GRAVITY = 0.15  // Slower fall for drama
-const BOUNCE = 0.6    // Good bounce off pegs
-const MAX_FRAMES = 800 // More time for slower fall
+// ========== PHYSICS ENGINE ==========
 
-// Tube visual
-const TUBE_WIDTH = 28
-const TUBE_HEIGHT = 35
-const TUBE_Y = 0
-
-// Ball drop animation
-let dropPhase: 'in_tube' | 'dropping' | 'falling' = 'in_tube'
-let dropTimer = 0
+const BALL_RADIUS = 7
+const GRAVITY = 0.25
+const FRICTION = 0.99        // Air friction
+const BOUNCE_COEFF = 0.65    // Elasticity on peg hit
+const WALL_BOUNCE = 0.4
+const MAX_SPEED = 12
 
 interface Ball {
   x: number
   y: number
   vx: number
   vy: number
+  trail: { x: number; y: number; age: number }[]
 }
 
 interface Peg {
   x: number
   y: number
+  radius: number
+  glowIntensity: number  // For hit glow effect
+}
+
+interface Particle {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  life: number
+  maxLife: number
+  color: string
+  size: number
 }
 
 let ball: Ball | null = null
 let pegs: Peg[] = []
+let particles: Particle[] = []
 let animationId: number | null = null
 let targetSlot = 0
-let frameCount = 0
+
+// Peg layout config
+let pegSpacingX = 28
+let pegSpacingY = 0
+let pegRadius = 4
+let startY = 50  // First row Y
+let endY = 0     // Last row Y
+
+const computePegs = () => {
+  pegs = []
+  const rows = rowCount.value
+
+  // Adjust sizing based on row count
+  if (rows <= 8) {
+    pegSpacingX = 36
+    pegRadius = 5
+  } else if (rows <= 12) {
+    pegSpacingX = 28
+    pegRadius = 4
+  } else {
+    pegSpacingX = 22
+    pegRadius = 3.5
+  }
+
+  startY = 45
+  const slotHeight = 36
+  endY = canvasHeight - slotHeight - 10
+  pegSpacingY = (endY - startY) / (rows - 1)
+
+  const centerX = canvasWidth / 2
+
+  for (let row = 0; row < rows; row++) {
+    const numPegs = row + 3
+    const rowWidth = (numPegs - 1) * pegSpacingX
+    const rowStartX = centerX - rowWidth / 2
+
+    for (let col = 0; col < numPegs; col++) {
+      pegs.push({
+        x: rowStartX + col * pegSpacingX,
+        y: startY + row * pegSpacingY,
+        radius: pegRadius,
+        glowIntensity: 0,
+      })
+    }
+  }
+}
+
+const spawnParticles = (x: number, y: number, color: string, count: number) => {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2
+    const speed = 1 + Math.random() * 3
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      maxLife: 15 + Math.random() * 15,
+      color,
+      size: 1.5 + Math.random() * 2,
+    })
+  }
+}
+
+const updateParticles = () => {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]
+    p.x += p.vx
+    p.y += p.vy
+    p.vy += 0.05  // Slight gravity on particles
+    p.vx *= 0.97
+    p.life += 1
+    if (p.life >= p.maxLife) {
+      particles.splice(i, 1)
+    }
+  }
+}
 
 // Stars background
 const getStarStyle = (_i: number) => ({
@@ -239,41 +313,12 @@ const getStarStyle = (_i: number) => ({
   animationDuration: `${Math.random() * 2 + 2}s`
 })
 
-const getMultiplierClass = (mult: number) => {
-  if (mult >= 10) return 'high'
-  if (mult >= 2) return 'medium'
-  if (mult >= 1) return 'low'
-  return 'lose'
-}
-
 const halveBet = () => {
   selectedBet.value = Math.max(0.1, selectedBet.value / 2)
 }
 
 const doubleBet = () => {
   selectedBet.value = Math.min(balance.value, selectedBet.value * 2)
-}
-
-const computePegs = () => {
-  pegs = []
-  const rows = rowCount.value
-  const topY = TUBE_HEIGHT + 40 // Well below tube — leaves gap for ball to gain speed
-  const bottomY = canvasHeight - 45
-  const rowHeight = (bottomY - topY) / rows
-  const centerX = canvasWidth / 2
-
-  for (let row = 0; row < rows; row++) {
-    const numPegs = row + 3
-    const spacing = 22
-    const startX = centerX - ((numPegs - 1) * spacing) / 2
-
-    for (let col = 0; col < numPegs; col++) {
-      pegs.push({
-        x: startX + col * spacing,
-        y: topY + row * rowHeight
-      })
-    }
-  }
 }
 
 const playGame = async () => {
@@ -286,8 +331,8 @@ const playGame = async () => {
 
   // Determine outcome
   const mults = currentMultipliers.value
-  const weights = mults.map(m => 1 / (m + 0.1)) // Lower multipliers more likely
-  const totalWeight = weights.reduce((a, b) => a + b, 0)
+  const weights = mults.map((m: number) => 1 / (m + 0.1))
+  const totalWeight = weights.reduce((a: number, b: number) => a + b, 0)
   let r = Math.random() * totalWeight
   targetSlot = Math.floor(mults.length / 2)
 
@@ -299,18 +344,19 @@ const playGame = async () => {
     }
   }
 
-  // Start ball in tube
+  computePegs()
+
+  // Drop ball from top center with slight random offset
+  const offset = (Math.random() - 0.5) * pegSpacingX * 0.3
   ball = {
-    x: canvasWidth / 2,
-    y: 8,
-    vx: 0,
-    vy: 0
+    x: canvasWidth / 2 + offset,
+    y: -BALL_RADIUS * 2,
+    vx: (Math.random() - 0.5) * 0.8,
+    vy: 0,
+    trail: [],
   }
 
-  frameCount = 0
-  dropPhase = 'in_tube'
-  dropTimer = 0
-  computePegs()
+  particles = []
   animate()
 }
 
@@ -322,306 +368,392 @@ const animate = () => {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  frameCount++
+  // === PHYSICS UPDATE ===
 
-  // === DROP PHASES ===
-  if (dropPhase === 'in_tube') {
-    // Ball waits in tube for a moment
-    dropTimer++
-    if (dropTimer > 30) {
-      dropPhase = 'dropping'
-      ball.vy = 0.5 // Start slow
-      ball.vx = (Math.random() - 0.5) * 0.5
-    }
-    draw(ctx)
-    animationId = requestAnimationFrame(animate)
-    return
-  }
-
-  if (dropPhase === 'dropping') {
-    // Ball exits tube with acceleration
-    ball.vy += 0.12
-    ball.y += ball.vy
-
-    // Wait until ball is well clear of tube before starting physics
-    if (ball.y > TUBE_HEIGHT + 25) {
-      dropPhase = 'falling'
-      // Give ball good initial velocity to avoid getting stuck
-      ball.vy = Math.max(ball.vy, 2.5)
-      ball.vx = (Math.random() - 0.5) * 2
-    }
-
-    draw(ctx)
-    animationId = requestAnimationFrame(animate)
-    return
-  }
-
-  // === FALLING PHASE ===
-  // Timeout - force finish if stuck too long
-  if (frameCount > MAX_FRAMES) {
-    ball.y = canvasHeight - 25
-    ball.vy = 0
-  }
-
-  // Physics with slower gravity for dramatic effect
+  // Gravity
   ball.vy += GRAVITY
+
+  // Air friction
+  ball.vx *= FRICTION
+  ball.vy *= FRICTION
+
+  // Update position
   ball.x += ball.vx
   ball.y += ball.vy
 
-  // Limit max velocity
-  const maxVel = 8
-  ball.vx = Math.max(-maxVel, Math.min(maxVel, ball.vx))
-  ball.vy = Math.max(-maxVel, Math.min(maxVel, ball.vy))
-
-  // Anti-stuck: ensure ball always moves downward
-  if (ball.vy < 0.3) {
-    ball.vy = 0.3 + GRAVITY
+  // Speed limit
+  const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy)
+  if (speed > MAX_SPEED) {
+    ball.vx = (ball.vx / speed) * MAX_SPEED
+    ball.vy = (ball.vy / speed) * MAX_SPEED
   }
 
-  // Peg collisions - only one peg per frame to prevent multi-collision stuck
-  let collided = false
-  for (const peg of pegs) {
-    if (collided) break  // Only handle first collision per frame
+  // Trail
+  ball.trail.push({ x: ball.x, y: ball.y, age: 0 })
+  if (ball.trail.length > 12) ball.trail.shift()
+  for (const t of ball.trail) t.age++
 
+  // === PEG COLLISIONS ===
+  for (const peg of pegs) {
     const dx = ball.x - peg.x
     const dy = ball.y - peg.y
-    const dist = Math.sqrt(dx * dx + dy * dy)
-    const minDist = PEG_RADIUS + BALL_RADIUS
+    const distSq = dx * dx + dy * dy
+    const minDist = peg.radius + BALL_RADIUS
+    const minDistSq = minDist * minDist
 
-    if (dist < minDist && dist > 0.1) {
-      collided = true
+    if (distSq < minDistSq && distSq > 0.01) {
+      const dist = Math.sqrt(distSq)
       const nx = dx / dist
       const ny = dy / dist
 
-      // Push ball fully out of peg
-      const overlap = minDist - dist + 1.0
-      ball.x += nx * overlap
-      ball.y += ny * overlap
+      // Separate ball from peg (push out)
+      const overlap = minDist - dist
+      ball.x += nx * (overlap + 0.5)
+      ball.y += ny * (overlap + 0.5)
 
-      // Always push ball downward if collision pushes it up
-      if (ball.y < peg.y) {
-        ball.y = peg.y + minDist + 1
+      // Relative velocity along normal
+      const velAlongNormal = ball.vx * nx + ball.vy * ny
+
+      // Only resolve if moving toward peg
+      if (velAlongNormal < 0) {
+        // Reflect with bounce coefficient
+        ball.vx -= (1 + BOUNCE_COEFF) * velAlongNormal * nx
+        ball.vy -= (1 + BOUNCE_COEFF) * velAlongNormal * ny
+
+        // Add random horizontal deflection (the key to natural plinko feel)
+        const deflection = (Math.random() - 0.5) * 1.8
+        ball.vx += deflection
+
+        // Subtle steering toward target (only in bottom 40%)
+        const progress = ball.y / canvasHeight
+        if (progress > 0.6) {
+          const mults = currentMultipliers.value
+          const slotWidth = canvasWidth / mults.length
+          const targetX = (targetSlot + 0.5) * slotWidth
+          const steerForce = (targetX - ball.x) * 0.005 * (progress - 0.6)
+          ball.vx += steerForce
+        }
       }
 
-      // Reflect velocity with satisfying bounce
-      const dot = ball.vx * nx + ball.vy * ny
-      if (dot < 0) {
-        ball.vx -= 2 * dot * nx * BOUNCE * 1.2
-        ball.vy -= 2 * dot * ny * BOUNCE * 0.8
+      // Peg glow effect
+      peg.glowIntensity = 1.0
 
-        ball.vx *= 0.95
-        ball.vy *= 0.95
-      }
-
-      // Random deflection for unpredictability
-      ball.vx += (Math.random() - 0.5) * 1.0
-
-      // Subtle steering toward target in lower half
-      if (ball.y > canvasHeight * 0.6) {
-        const mults = currentMultipliers.value
-        const slotWidth = canvasWidth / mults.length
-        const targetX = targetSlot * slotWidth + slotWidth / 2
-        ball.vx += (targetX - ball.x) * 0.003
-      }
-
-      // Enforce minimum downward velocity after every collision
-      if (ball.vy < 1.0) {
-        ball.vy = 1.5
-      }
+      // Spawn particles on hit
+      const pegRow = Math.round((peg.y - startY) / pegSpacingY)
+      const t = pegRow / rowCount.value
+      const pr = Math.round(59 + (14 - 59) * t)
+      const pg = Math.round(130 + (211 - 130) * t)
+      const pb = Math.round(246 + (238 - 246) * t)
+      spawnParticles(peg.x, peg.y, `rgb(${pr},${pg},${pb})`, 4)
     }
   }
 
-  // Wall collisions
-  if (ball.x < BALL_RADIUS) {
-    ball.x = BALL_RADIUS
-    ball.vx = Math.abs(ball.vx) * BOUNCE
+  // Wall collisions with bounce
+  if (ball.x < BALL_RADIUS + 10) {
+    ball.x = BALL_RADIUS + 10
+    ball.vx = Math.abs(ball.vx) * WALL_BOUNCE
   }
-  if (ball.x > canvasWidth - BALL_RADIUS) {
-    ball.x = canvasWidth - BALL_RADIUS
-    ball.vx = -Math.abs(ball.vx) * BOUNCE
+  if (ball.x > canvasWidth - BALL_RADIUS - 10) {
+    ball.x = canvasWidth - BALL_RADIUS - 10
+    ball.vx = -Math.abs(ball.vx) * WALL_BOUNCE
   }
 
-  // Draw
+  // Decay peg glow
+  for (const peg of pegs) {
+    if (peg.glowIntensity > 0) {
+      peg.glowIntensity *= 0.9
+      if (peg.glowIntensity < 0.01) peg.glowIntensity = 0
+    }
+  }
+
+  // Update particles
+  updateParticles()
+
+  // Draw everything
   draw(ctx)
 
-  // Check if ball reached bottom
-  if (ball.y > canvasHeight - 30) {
-    const mults = currentMultipliers.value
-    const slotWidth = canvasWidth / mults.length
-    const landedSlot = Math.floor(ball.x / slotWidth)
-    const finalSlot = Math.max(0, Math.min(mults.length - 1, landedSlot))
-
-    lastMultiplier.value = mults[finalSlot]
-    lastWin.value = selectedBet.value * mults[finalSlot] - selectedBet.value
-    balance.value += selectedBet.value * mults[finalSlot]
-
-    history.value.unshift({
-      multiplier: mults[finalSlot],
-      win: lastWin.value,
-      bet: selectedBet.value
-    })
-
-    showResult.value = true
-    ball = null
-    isPlaying.value = false
-
-    setTimeout(() => {
-      showResult.value = false
-      if (autoPlay.value && autoPlayCount.value > 0) {
-        autoPlayCount.value--
-        if (autoPlayCount.value > 0 && balance.value >= selectedBet.value) {
-          playGame()
-        }
-      }
-    }, 1500)
+  // Check if ball reached bottom slots
+  const slotY = canvasHeight - 36
+  if (ball.y > slotY) {
+    finishGame()
     return
   }
 
   animationId = requestAnimationFrame(animate)
 }
 
-const draw = (ctx: CanvasRenderingContext2D) => {
-  // Clear
-  ctx.fillStyle = '#0a1628'
-  ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+const finishGame = () => {
+  if (!ball) return
 
-  // === TUBE at top center ===
-  const tubeX = canvasWidth / 2 - TUBE_WIDTH / 2
-  const tubeGradient = ctx.createLinearGradient(tubeX, 0, tubeX + TUBE_WIDTH, 0)
-  tubeGradient.addColorStop(0, '#374151')
-  tubeGradient.addColorStop(0.3, '#4b5563')
-  tubeGradient.addColorStop(0.7, '#4b5563')
-  tubeGradient.addColorStop(1, '#374151')
-
-  // Tube body
-  ctx.fillStyle = tubeGradient
-  ctx.beginPath()
-  ctx.roundRect(tubeX, TUBE_Y, TUBE_WIDTH, TUBE_HEIGHT, [0, 0, 8, 8])
-  ctx.fill()
-
-  // Tube inner shadow
-  const innerGradient = ctx.createLinearGradient(tubeX + 4, 0, tubeX + TUBE_WIDTH - 4, 0)
-  innerGradient.addColorStop(0, 'rgba(0,0,0,0.4)')
-  innerGradient.addColorStop(0.5, 'rgba(0,0,0,0.1)')
-  innerGradient.addColorStop(1, 'rgba(0,0,0,0.4)')
-  ctx.fillStyle = innerGradient
-  ctx.fillRect(tubeX + 3, TUBE_Y, TUBE_WIDTH - 6, TUBE_HEIGHT - 4)
-
-  // Tube opening glow when ball is dropping
-  if (dropPhase === 'dropping' || dropPhase === 'in_tube') {
-    ctx.shadowColor = 'rgba(236, 72, 153, 0.5)'
-    ctx.shadowBlur = 10
-    ctx.fillStyle = 'rgba(236, 72, 153, 0.2)'
-    ctx.beginPath()
-    ctx.ellipse(canvasWidth / 2, TUBE_HEIGHT, 12, 4, 0, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.shadowBlur = 0
-  }
-
-  // Draw pegs
-  const rows = rowCount.value
-  for (let i = 0; i < pegs.length; i++) {
-    const peg = pegs[i]
-    const row = Math.floor((-3 + Math.sqrt(9 + 8 * i)) / 2)
-    const t = row / rows
-
-    // Gradient from blue to cyan
-    const r = Math.round(59 + (34 - 59) * t)
-    const g = Math.round(130 + (211 - 130) * t)
-    const b = Math.round(246 + (238 - 246) * t)
-
-    ctx.fillStyle = `rgb(${r},${g},${b})`
-    ctx.shadowColor = `rgba(${r},${g},${b},0.5)`
-    ctx.shadowBlur = 6
-    ctx.beginPath()
-    ctx.arc(peg.x, peg.y, PEG_RADIUS, 0, Math.PI * 2)
-    ctx.fill()
-  }
-  ctx.shadowBlur = 0
-
-  // Draw ball
-  if (ball) {
-    // Ball visibility based on phase
-    let ballVisible = true
-    let ballY = ball.y
-
-    if (dropPhase === 'in_tube') {
-      // Ball visible in tube opening
-      ballY = TUBE_HEIGHT - 4
-      // Wobble animation
-      ball.x = canvasWidth / 2 + Math.sin(frameCount * 0.15) * 2
-    }
-
-    if (ballVisible) {
-      // Ball glow
-      ctx.shadowColor = 'rgba(236, 72, 153, 0.8)'
-      ctx.shadowBlur = 15
-
-      // Ball gradient for 3D effect
-      const ballGrad = ctx.createRadialGradient(
-        ball.x - 2, ballY - 2, 0,
-        ball.x, ballY, BALL_RADIUS
-      )
-      ballGrad.addColorStop(0, '#f472b6')
-      ballGrad.addColorStop(0.5, '#ec4899')
-      ballGrad.addColorStop(1, '#be185d')
-
-      ctx.fillStyle = ballGrad
-      ctx.beginPath()
-      ctx.arc(ball.x, ballY, BALL_RADIUS, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.shadowBlur = 0
-
-      // Highlight
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
-      ctx.beginPath()
-      ctx.arc(ball.x - 2, ballY - 2, BALL_RADIUS * 0.35, 0, Math.PI * 2)
-      ctx.fill()
-    }
-  }
-
-  // Draw slot zones
   const mults = currentMultipliers.value
   const slotWidth = canvasWidth / mults.length
-  const slotY = canvasHeight - 28
+  const landedSlot = Math.floor(ball.x / slotWidth)
+  const finalSlot = Math.max(0, Math.min(mults.length - 1, landedSlot))
 
-  mults.forEach((mult, i) => {
-    const x = i * slotWidth
+  lastMultiplier.value = mults[finalSlot]
+  lastWin.value = selectedBet.value * mults[finalSlot] - selectedBet.value
+  balance.value += selectedBet.value * mults[finalSlot]
 
-    // Color based on multiplier
-    let color = 'rgba(99,102,241,0.3)'
-    if (mult >= 10) color = 'rgba(34,197,94,0.4)'
-    else if (mult >= 2) color = 'rgba(34,211,238,0.3)'
-    else if (mult < 1) color = 'rgba(239,68,68,0.3)'
-
-    ctx.fillStyle = color
-    ctx.fillRect(x + 1, slotY, slotWidth - 2, 26)
-
-    ctx.fillStyle = '#fff'
-    ctx.font = 'bold 9px sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillText(`${mult}x`, x + slotWidth / 2, slotY + 16)
+  history.value.unshift({
+    multiplier: mults[finalSlot],
+    win: lastWin.value,
+    bet: selectedBet.value
   })
+
+  // Final burst of particles at landing
+  const slotCenterX = (finalSlot + 0.5) * slotWidth
+  const color = mults[finalSlot] >= 2 ? '#22c55e' : mults[finalSlot] >= 1 ? '#3b82f6' : '#ef4444'
+  spawnParticles(slotCenterX, canvasHeight - 30, color, 12)
+
+  showResult.value = true
+  ball = null
+  isPlaying.value = false
+
+  // Keep drawing for particle effects
+  const fadeOut = () => {
+    const canvas = gameCanvas.value
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    updateParticles()
+    draw(ctx)
+    if (particles.length > 0) {
+      animationId = requestAnimationFrame(fadeOut)
+    }
+  }
+  fadeOut()
+
+  setTimeout(() => {
+    showResult.value = false
+    if (autoPlay.value && autoPlayCount.value > 0) {
+      autoPlayCount.value--
+      if (autoPlayCount.value > 0 && balance.value >= selectedBet.value) {
+        playGame()
+      }
+    }
+  }, 1500)
 }
 
-watch([riskLevel, rowCount], () => {
+const draw = (ctx: CanvasRenderingContext2D) => {
+  const w = canvasWidth
+  const h = canvasHeight
+
+  // Clear with dark background
+  ctx.fillStyle = '#0a0e1a'
+  ctx.fillRect(0, 0, w, h)
+
+  // Subtle radial gradient overlay
+  const bgGrad = ctx.createRadialGradient(w / 2, h * 0.3, 0, w / 2, h * 0.3, w * 0.8)
+  bgGrad.addColorStop(0, 'rgba(59, 130, 246, 0.04)')
+  bgGrad.addColorStop(1, 'rgba(0, 0, 0, 0)')
+  ctx.fillStyle = bgGrad
+  ctx.fillRect(0, 0, w, h)
+
+  // === DRAW PEGS ===
+  const rows = rowCount.value
+  for (const peg of pegs) {
+    const pegRow = Math.round((peg.y - startY) / pegSpacingY)
+    const t = Math.min(1, pegRow / (rows - 1))
+
+    // Color gradient from blue → cyan down the rows
+    const r = Math.round(59 + (14 - 59) * t)
+    const g = Math.round(130 + (211 - 130) * t)
+    const b = Math.round(246 + (238 - 246) * t)
+    const baseColor = `rgb(${r},${g},${b})`
+
+    // Glow effect when hit
+    if (peg.glowIntensity > 0.01) {
+      ctx.save()
+      ctx.shadowColor = baseColor
+      ctx.shadowBlur = 12 * peg.glowIntensity
+      ctx.fillStyle = `rgba(${r},${g},${b},${0.3 * peg.glowIntensity})`
+      ctx.beginPath()
+      ctx.arc(peg.x, peg.y, peg.radius * 3, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+    }
+
+    // Peg body
+    ctx.save()
+    ctx.shadowColor = `rgba(${r},${g},${b},0.4)`
+    ctx.shadowBlur = 4
+
+    const pegGrad = ctx.createRadialGradient(
+      peg.x - peg.radius * 0.3, peg.y - peg.radius * 0.3, 0,
+      peg.x, peg.y, peg.radius
+    )
+    const bright = peg.glowIntensity > 0.1 ? 1.5 : 1
+    pegGrad.addColorStop(0, `rgba(${Math.min(255, r * bright + 80)},${Math.min(255, g * bright + 80)},${Math.min(255, b * bright + 80)},1)`)
+    pegGrad.addColorStop(1, baseColor)
+
+    ctx.fillStyle = pegGrad
+    ctx.beginPath()
+    ctx.arc(peg.x, peg.y, peg.radius + peg.glowIntensity * 1.5, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+  }
+
+  // === DRAW PARTICLES ===
+  for (const p of particles) {
+    const alpha = 1 - p.life / p.maxLife
+    ctx.fillStyle = p.color.replace('rgb', 'rgba').replace(')', `,${alpha * 0.8})`)
+    ctx.beginPath()
+    ctx.arc(p.x, p.y, p.size * (1 - p.life / p.maxLife * 0.5), 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // === DRAW BALL ===
+  if (ball) {
+    // Trail
+    for (let i = 0; i < ball.trail.length; i++) {
+      const t = ball.trail[i]
+      const alpha = (1 - i / ball.trail.length) * 0.4
+      const size = BALL_RADIUS * (0.3 + 0.7 * (1 - i / ball.trail.length))
+      ctx.fillStyle = `rgba(236, 72, 153, ${alpha})`
+      ctx.beginPath()
+      ctx.arc(t.x, t.y, size, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // Ball glow
+    ctx.save()
+    ctx.shadowColor = 'rgba(236, 72, 153, 0.7)'
+    ctx.shadowBlur = 18
+
+    // Ball body with 3D gradient
+    const ballGrad = ctx.createRadialGradient(
+      ball.x - BALL_RADIUS * 0.3, ball.y - BALL_RADIUS * 0.3, 0,
+      ball.x, ball.y, BALL_RADIUS
+    )
+    ballGrad.addColorStop(0, '#f9a8d4')
+    ballGrad.addColorStop(0.4, '#ec4899')
+    ballGrad.addColorStop(1, '#be185d')
+
+    ctx.fillStyle = ballGrad
+    ctx.beginPath()
+    ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+
+    // Specular highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)'
+    ctx.beginPath()
+    ctx.arc(ball.x - BALL_RADIUS * 0.25, ball.y - BALL_RADIUS * 0.3, BALL_RADIUS * 0.35, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // === DRAW BOTTOM SLOTS ===
+  const mults = currentMultipliers.value
+  const slotWidth = w / mults.length
+  const slotY = h - 36
+  const slotH = 34
+
+  mults.forEach((mult: number, i: number) => {
+    const x = i * slotWidth + 1
+    const sw = slotWidth - 2
+
+    // Color based on multiplier value
+    let bgColor: string
+    let textColor: string
+    if (mult >= 10) {
+      bgColor = 'rgba(34, 197, 94, 0.35)'
+      textColor = '#4ade80'
+    } else if (mult >= 2) {
+      bgColor = 'rgba(34, 211, 238, 0.25)'
+      textColor = '#22d3ee'
+    } else if (mult >= 1) {
+      bgColor = 'rgba(99, 102, 241, 0.2)'
+      textColor = '#a5b4fc'
+    } else {
+      bgColor = 'rgba(239, 68, 68, 0.25)'
+      textColor = '#f87171'
+    }
+
+    // Slot background with rounded top
+    ctx.fillStyle = bgColor
+    ctx.beginPath()
+    const r = 4
+    ctx.moveTo(x + r, slotY)
+    ctx.lineTo(x + sw - r, slotY)
+    ctx.arcTo(x + sw, slotY, x + sw, slotY + r, r)
+    ctx.lineTo(x + sw, slotY + slotH)
+    ctx.lineTo(x, slotY + slotH)
+    ctx.lineTo(x, slotY + r)
+    ctx.arcTo(x, slotY, x + r, slotY, r)
+    ctx.fill()
+
+    // Multiplier text
+    ctx.fillStyle = textColor
+    ctx.font = `bold ${mults.length > 13 ? 8 : 10}px -apple-system, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(`${mult}x`, x + sw / 2, slotY + slotH / 2)
+  })
+
+  // Separator lines between slots
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'
+  ctx.lineWidth = 1
+  for (let i = 1; i < mults.length; i++) {
+    const x = i * slotWidth
+    ctx.beginPath()
+    ctx.moveTo(x, slotY)
+    ctx.lineTo(x, slotY + slotH)
+    ctx.stroke()
+  }
+}
+
+const resizeCanvas = () => {
+  const canvas = gameCanvas.value
+  const container = gameContainer.value
+  if (!canvas || !container) return
+
+  const containerWidth = container.clientWidth
+  const dpr = window.devicePixelRatio || 1
+
+  canvasWidth = Math.min(containerWidth, 500)
+  canvasHeight = Math.round(canvasWidth * 1.3)
+
+  canvas.width = canvasWidth * dpr
+  canvas.height = canvasHeight * dpr
+  canvas.style.width = canvasWidth + 'px'
+  canvas.style.height = canvasHeight + 'px'
+
+  const ctx = canvas.getContext('2d')
+  if (ctx) {
+    ctx.scale(dpr, dpr)
+  }
+
+  computePegs()
+  if (!ball) {
+    const ctx2 = canvas.getContext('2d')
+    if (ctx2) draw(ctx2)
+  }
+}
+
+const onRowCountChange = () => {
   computePegs()
   if (gameCanvas.value) {
+    const ctx = gameCanvas.value.getContext('2d')
+    if (ctx) draw(ctx)
+  }
+}
+
+watch(riskLevel, () => {
+  if (gameCanvas.value && !ball) {
     const ctx = gameCanvas.value.getContext('2d')
     if (ctx) draw(ctx)
   }
 })
 
-onMounted(() => {
-  computePegs()
-  if (gameCanvas.value) {
-    const ctx = gameCanvas.value.getContext('2d')
-    if (ctx) draw(ctx)
-  }
+onMounted(async () => {
+  await nextTick()
+  resizeCanvas()
+  window.addEventListener('resize', resizeCanvas)
 })
 
 onUnmounted(() => {
   if (animationId) cancelAnimationFrame(animationId)
+  window.removeEventListener('resize', resizeCanvas)
 })
 </script>
 
@@ -726,7 +858,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   padding: 0 16px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   position: relative;
   z-index: 10;
 }
@@ -760,19 +892,18 @@ onUnmounted(() => {
 
 /* Game Container */
 .game-container {
-  margin: 0 16px;
+  margin: 0 auto;
+  max-width: 500px;
   border-radius: 16px;
   overflow: hidden;
   position: relative;
   z-index: 10;
-  background: #0a1628;
+  background: #0a0e1a;
 }
 
 .game-canvas {
   display: block;
   width: 100%;
-  max-width: 340px;
-  margin: 0 auto;
 }
 
 /* Result Overlay */
@@ -784,9 +915,10 @@ onUnmounted(() => {
   text-align: center;
   padding: 20px 40px;
   border-radius: 16px;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(8px);
   animation: popIn 0.3s ease;
+  z-index: 20;
 }
 
 @keyframes popIn {
@@ -813,48 +945,9 @@ onUnmounted(() => {
   color: #4ade80;
 }
 
-/* Multipliers Row */
-.multipliers-row {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-  padding: 12px 16px;
-  position: relative;
-  z-index: 10;
-  overflow-x: auto;
-}
-
-.mult-slot {
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.mult-slot.high {
-  background: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
-}
-
-.mult-slot.medium {
-  background: rgba(34, 211, 238, 0.2);
-  color: #22d3ee;
-}
-
-.mult-slot.low {
-  background: rgba(99, 102, 241, 0.2);
-  color: #a5b4fc;
-}
-
-.mult-slot.lose {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
-}
-
 /* Bet Section */
 .bet-section {
-  padding: 0 16px;
+  padding: 12px 16px 0;
   position: relative;
   z-index: 10;
 }
@@ -1033,31 +1126,4 @@ onUnmounted(() => {
 .history-item.win .history-amount {
   color: #4ade80;
 }
-
-/* Bottom Nav */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #000;
-  border-top: 1px solid #1c1c1e;
-  display: flex;
-  padding: 8px 0 24px;
-  z-index: 100;
-}
-
-.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  color: #6b7280;
-  text-decoration: none;
-  font-size: 10px;
-}
-
-.nav-item.active { color: #fff; }
-.nav-item svg { width: 22px; height: 22px; }
 </style>

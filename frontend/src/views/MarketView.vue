@@ -516,7 +516,7 @@ const removeFilterTag = (tag: FilterTag) => {
   } else if (tag.group === 'maxPrice') {
     filters.maxPrice = null
   } else {
-    const arr = filters[tag.group] as string[]
+    const arr = filters[tag.group as keyof typeof filters] as string[]
     const idx = arr.indexOf(tag.value)
     if (idx > -1) arr.splice(idx, 1)
   }
