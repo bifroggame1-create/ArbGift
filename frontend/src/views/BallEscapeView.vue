@@ -25,13 +25,13 @@
         :height="canvasHeight"
       ></canvas>
 
-      <!-- Multiplier overlay -->
+      <!-- Multiplier overlay (only during play/result) -->
       <div class="multiplier-overlay" :class="gameState">
         <div class="multiplier-value" :style="{ color: multiplierColor }">
           {{ multiplier.toFixed(2) }}x
         </div>
-        <div v-if="gameState === 'won'" class="result-text won">ESCAPED! 🎉</div>
-        <div v-if="gameState === 'lost'" class="result-text lost">CAUGHT! 💀</div>
+        <div v-if="gameState === 'won'" class="result-text won">ESCAPED!</div>
+        <div v-if="gameState === 'lost'" class="result-text lost">CAUGHT!</div>
       </div>
     </div>
 
@@ -77,8 +77,8 @@ import { escapePlay } from '../api/client'
 
 // Canvas
 const gameCanvas = ref<HTMLCanvasElement | null>(null)
-const canvasWidth = 320
-const canvasHeight = 420 // Taller for floor area
+const canvasWidth = 340
+const canvasHeight = 460 // Taller for floor area + preview
 
 // Game state
 const balance = ref(10.0)
@@ -118,12 +118,17 @@ let impactFlash = 0 // 0..1 decays each frame
 let impactAngle = 0
 
 // Sphere position (centered horizontally, upper area)
-const SPHERE_CENTER_X = 160
-const SPHERE_CENTER_Y = 140
+const SPHERE_CENTER_X = 170
+const SPHERE_CENTER_Y = 150
 
 // Floor area
-const FLOOR_Y = 340 // Where the floor starts
-const FLOOR_HEIGHT = 60
+const FLOOR_Y = 360 // Where the floor starts
+const FLOOR_HEIGHT = 80
+
+// Preview idle animation
+let idleAnimId: number | null = null
+let previewBallAngle = 0
+let previewBallSpeed = 0.02
 
 // Game phases
 let startTime = 0
@@ -147,6 +152,8 @@ function selectBet(amount: number) {
 
 async function startGame() {
   if (gameState.value === 'playing' || balance.value < selectedBet.value) return
+
+  stopIdleAnimation()
 
   balance.value -= selectedBet.value
   gameState.value = 'playing'
@@ -393,11 +400,12 @@ function endGame(escaped: boolean) {
 
   draw()
 
-  // Reset after delay
+  // Reset after delay, restart idle animation
   setTimeout(() => {
     gameState.value = 'idle'
     multiplier.value = 1.0
-    draw()
+    landedSide = null
+    startIdleAnimation()
   }, 2500)
 }
 
@@ -420,130 +428,146 @@ function draw() {
   ctx.fillStyle = '#0a0c14'
   ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
-  // === FLOOR (Green/Red halves) ===
-  // Green left half (WIN)
-  const floorGradientGreen = ctx.createLinearGradient(0, FLOOR_Y, 0, FLOOR_Y + FLOOR_HEIGHT)
-  floorGradientGreen.addColorStop(0, 'rgba(34, 197, 94, 0.4)')
-  floorGradientGreen.addColorStop(1, 'rgba(34, 197, 94, 0.2)')
-  ctx.fillStyle = floorGradientGreen
-  ctx.fillRect(0, FLOOR_Y, canvasWidth / 2, FLOOR_HEIGHT)
+  // === FLOOR with upward glow (MyBalls style) ===
+  const floorMidY = FLOOR_Y + FLOOR_HEIGHT / 2
 
-  // Red right half (LOSE)
-  const floorGradientRed = ctx.createLinearGradient(0, FLOOR_Y, 0, FLOOR_Y + FLOOR_HEIGHT)
-  floorGradientRed.addColorStop(0, 'rgba(239, 68, 68, 0.4)')
-  floorGradientRed.addColorStop(1, 'rgba(239, 68, 68, 0.2)')
-  ctx.fillStyle = floorGradientRed
-  ctx.fillRect(canvasWidth / 2, FLOOR_Y, canvasWidth / 2, FLOOR_HEIGHT)
+  // Green side — upward glow
+  const greenGlow = ctx.createLinearGradient(0, FLOOR_Y - 60, 0, FLOOR_Y + FLOOR_HEIGHT)
+  greenGlow.addColorStop(0, 'rgba(34, 197, 94, 0)')
+  greenGlow.addColorStop(0.3, 'rgba(34, 197, 94, 0.08)')
+  greenGlow.addColorStop(0.6, 'rgba(34, 197, 94, 0.25)')
+  greenGlow.addColorStop(1, 'rgba(34, 197, 94, 0.5)')
+  ctx.fillStyle = greenGlow
+  ctx.fillRect(0, FLOOR_Y - 60, canvasWidth / 2, FLOOR_HEIGHT + 60)
 
-  // Floor divider line
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
+  // Red side — upward glow
+  const redGlow = ctx.createLinearGradient(0, FLOOR_Y - 60, 0, FLOOR_Y + FLOOR_HEIGHT)
+  redGlow.addColorStop(0, 'rgba(239, 68, 68, 0)')
+  redGlow.addColorStop(0.3, 'rgba(239, 68, 68, 0.08)')
+  redGlow.addColorStop(0.6, 'rgba(239, 68, 68, 0.25)')
+  redGlow.addColorStop(1, 'rgba(239, 68, 68, 0.5)')
+  ctx.fillStyle = redGlow
+  ctx.fillRect(canvasWidth / 2, FLOOR_Y - 60, canvasWidth / 2, FLOOR_HEIGHT + 60)
+
+  // Solid floor base
+  ctx.fillStyle = 'rgba(34, 197, 94, 0.6)'
+  ctx.fillRect(0, FLOOR_Y + 10, canvasWidth / 2, FLOOR_HEIGHT - 10)
+  ctx.fillStyle = 'rgba(239, 68, 68, 0.6)'
+  ctx.fillRect(canvasWidth / 2, FLOOR_Y + 10, canvasWidth / 2, FLOOR_HEIGHT - 10)
+
+  // Floor divider — glowing white line
+  ctx.save()
+  ctx.shadowColor = 'rgba(255, 255, 255, 0.5)'
+  ctx.shadowBlur = 8
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
   ctx.lineWidth = 2
   ctx.beginPath()
-  ctx.moveTo(canvasWidth / 2, FLOOR_Y)
+  ctx.moveTo(canvasWidth / 2, FLOOR_Y - 30)
   ctx.lineTo(canvasWidth / 2, FLOOR_Y + FLOOR_HEIGHT)
   ctx.stroke()
+  ctx.restore()
 
-  // Floor top edge
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(0, FLOOR_Y)
-  ctx.lineTo(canvasWidth, FLOOR_Y)
-  ctx.stroke()
-
-  // Floor labels
-  ctx.font = 'bold 14px -apple-system, sans-serif'
+  // Floor emojis
+  ctx.font = '28px -apple-system, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillStyle = landedSide === 'green' ? '#4ade80' : 'rgba(74, 222, 128, 0.6)'
-  ctx.fillText('WIN', canvasWidth / 4, FLOOR_Y + FLOOR_HEIGHT / 2)
-  ctx.fillStyle = landedSide === 'red' ? '#ef4444' : 'rgba(239, 68, 68, 0.6)'
-  ctx.fillText('LOSE', canvasWidth * 3 / 4, FLOOR_Y + FLOOR_HEIGHT / 2)
 
-  // === SPHERE ===
+  // Green side emojis (win)
+  const greenCx = canvasWidth / 4
+  const greenActive = landedSide === 'green'
+  ctx.globalAlpha = greenActive ? 1.0 : 0.7
+  ctx.fillText('👑', greenCx - 18, floorMidY + 8)
+  ctx.fillText('💎', greenCx + 18, floorMidY + 8)
+  ctx.globalAlpha = 1.0
+
+  // Red side emojis (lose)
+  const redCx = canvasWidth * 3 / 4
+  const redActive = landedSide === 'red'
+  ctx.globalAlpha = redActive ? 1.0 : 0.7
+  ctx.fillText('💀', redCx - 18, floorMidY + 8)
+  ctx.fillText('☠️', redCx + 18, floorMidY + 8)
+  ctx.globalAlpha = 1.0
+
+  // === SPHERE (gold/yellow thick ring like MyBalls) ===
   const currentHoleAngle = holeAngle + sphereRotation
 
-  // Outer glow
-  const gradient = ctx.createRadialGradient(cx, cy, SPHERE_RADIUS - 20, cx, cy, SPHERE_RADIUS + 10)
-  gradient.addColorStop(0, 'rgba(139, 92, 246, 0.0)')
-  gradient.addColorStop(0.7, 'rgba(139, 92, 246, 0.15)')
-  gradient.addColorStop(1, 'rgba(139, 92, 246, 0.0)')
+  // Outer glow — golden
+  const gradient = ctx.createRadialGradient(cx, cy, SPHERE_RADIUS - 20, cx, cy, SPHERE_RADIUS + 15)
+  gradient.addColorStop(0, 'rgba(251, 191, 36, 0.0)')
+  gradient.addColorStop(0.6, 'rgba(251, 191, 36, 0.12)')
+  gradient.addColorStop(1, 'rgba(251, 191, 36, 0.0)')
   ctx.fillStyle = gradient
   ctx.beginPath()
-  ctx.arc(cx, cy, SPHERE_RADIUS + 10, 0, Math.PI * 2)
+  ctx.arc(cx, cy, SPHERE_RADIUS + 15, 0, Math.PI * 2)
   ctx.fill()
 
-  // Sphere ring with hole
-  ctx.strokeStyle = 'rgba(139, 92, 246, 0.6)'
-  ctx.lineWidth = 8
-  ctx.lineCap = 'round'
-
+  // Sphere ring — thick golden/yellow, just a gap for the hole (NO extra indicator)
   const holeStart = currentHoleAngle - HOLE_SIZE / 2
   const holeEnd = currentHoleAngle + HOLE_SIZE / 2
+
+  // Main ring with gradient stroke
+  ctx.save()
+  ctx.lineWidth = 10
+  ctx.lineCap = 'round'
+
+  // Create gold gradient for the ring
+  const ringGrad = ctx.createLinearGradient(cx - SPHERE_RADIUS, cy - SPHERE_RADIUS, cx + SPHERE_RADIUS, cy + SPHERE_RADIUS)
+  ringGrad.addColorStop(0, '#fbbf24')
+  ringGrad.addColorStop(0.3, '#fde68a')
+  ringGrad.addColorStop(0.5, '#fbbf24')
+  ringGrad.addColorStop(0.7, '#f59e0b')
+  ringGrad.addColorStop(1, '#fbbf24')
+  ctx.strokeStyle = ringGrad
+
+  // Glow behind the ring
+  ctx.shadowColor = 'rgba(251, 191, 36, 0.5)'
+  ctx.shadowBlur = 12
 
   ctx.beginPath()
   ctx.arc(cx, cy, SPHERE_RADIUS, holeEnd, holeStart + Math.PI * 2)
   ctx.stroke()
+  ctx.restore()
 
   // === IMPACT FLASH on wall ===
   if (impactFlash > 0.05 && gameState.value === 'playing' && !isFalling) {
     const flashX = cx + Math.cos(impactAngle) * SPHERE_RADIUS
     const flashY = cy + Math.sin(impactAngle) * SPHERE_RADIUS
     const flashGlow = ctx.createRadialGradient(flashX, flashY, 0, flashX, flashY, 30 * impactFlash)
-    flashGlow.addColorStop(0, `rgba(34, 211, 238, ${impactFlash * 0.8})`)
-    flashGlow.addColorStop(0.5, `rgba(139, 92, 246, ${impactFlash * 0.4})`)
-    flashGlow.addColorStop(1, 'rgba(34, 211, 238, 0)')
+    flashGlow.addColorStop(0, `rgba(251, 191, 36, ${impactFlash * 0.8})`)
+    flashGlow.addColorStop(0.5, `rgba(251, 191, 36, ${impactFlash * 0.4})`)
+    flashGlow.addColorStop(1, 'rgba(251, 191, 36, 0)')
     ctx.fillStyle = flashGlow
     ctx.beginPath()
     ctx.arc(flashX, flashY, 30 * impactFlash, 0, Math.PI * 2)
     ctx.fill()
   }
 
-  // Hole glow effect
-  const holeX = cx + Math.cos(currentHoleAngle) * SPHERE_RADIUS
-  const holeY = cy + Math.sin(currentHoleAngle) * SPHERE_RADIUS
-  const holeGlow = ctx.createRadialGradient(holeX, holeY, 0, holeX, holeY, 35)
-  const pulseAlpha = 0.3 + Math.sin(Date.now() / 200) * 0.15
-  holeGlow.addColorStop(0, `rgba(251, 191, 36, ${pulseAlpha})`)
-  holeGlow.addColorStop(1, 'rgba(251, 191, 36, 0)')
-  ctx.fillStyle = holeGlow
-  ctx.beginPath()
-  ctx.arc(holeX, holeY, 35, 0, Math.PI * 2)
-  ctx.fill()
-
-  // Hole indicator arc
-  ctx.strokeStyle = '#fbbf24'
-  ctx.lineWidth = 4
-  ctx.beginPath()
-  ctx.arc(cx, cy, SPHERE_RADIUS + 6, holeStart, holeEnd)
-  ctx.stroke()
-
-  // Rotation arrows
+  // Rotation arrows (subtle gold)
   if (gameState.value === 'playing' && !isFalling) {
     const arrowCount = 4
     for (let i = 0; i < arrowCount; i++) {
       const arrowAngle = sphereRotation + (i * Math.PI * 2) / arrowCount
-      const arrowX = cx + Math.cos(arrowAngle) * (SPHERE_RADIUS - 15)
-      const arrowY = cy + Math.sin(arrowAngle) * (SPHERE_RADIUS - 15)
+      const arrowX = cx + Math.cos(arrowAngle) * (SPHERE_RADIUS - 18)
+      const arrowY = cy + Math.sin(arrowAngle) * (SPHERE_RADIUS - 18)
 
       ctx.save()
       ctx.translate(arrowX, arrowY)
       ctx.rotate(arrowAngle + Math.PI / 2)
-      ctx.fillStyle = `rgba(139, 92, 246, ${0.3 + sphereAngularVelocity * 5})`
+      ctx.fillStyle = `rgba(251, 191, 36, ${0.15 + sphereAngularVelocity * 3})`
       ctx.beginPath()
-      ctx.moveTo(0, -6)
-      ctx.lineTo(4, 2)
-      ctx.lineTo(-4, 2)
+      ctx.moveTo(0, -5)
+      ctx.lineTo(3.5, 2)
+      ctx.lineTo(-3.5, 2)
       ctx.closePath()
       ctx.fill()
       ctx.restore()
     }
   }
 
-  // Inner sphere effect
+  // Inner sphere dark fill
   const innerGradient = ctx.createRadialGradient(cx - 30, cy - 30, 0, cx, cy, SPHERE_RADIUS)
-  innerGradient.addColorStop(0, 'rgba(139, 92, 246, 0.1)')
-  innerGradient.addColorStop(0.5, 'rgba(139, 92, 246, 0.03)')
+  innerGradient.addColorStop(0, 'rgba(251, 191, 36, 0.06)')
+  innerGradient.addColorStop(0.5, 'rgba(251, 191, 36, 0.02)')
   innerGradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
   ctx.fillStyle = innerGradient
   ctx.beginPath()
@@ -553,7 +577,7 @@ function draw() {
   // === BALL TRAIL (brighter when fast) ===
   if (ballTrail.length > 1 && gameState.value === 'playing') {
     const ballSpeed = Math.sqrt(ballVX * ballVX + ballVY * ballVY)
-    const trailIntensity = Math.min(ballSpeed / 8, 1) // brighter trail when fast
+    const trailIntensity = Math.min(ballSpeed / 8, 1)
 
     for (let i = 1; i < ballTrail.length; i++) {
       const alpha = (1 - i / TRAIL_LENGTH) * (0.3 + trailIntensity * 0.5)
@@ -615,23 +639,61 @@ function draw() {
   ctx.arc(ballScreenX - 3, ballScreenY - 3, BALL_RADIUS * 0.3, 0, Math.PI * 2)
   ctx.fill()
 
-  // === IDLE STATE TEXT ===
+  // === IDLE/PREVIEW STATE ===
   if (gameState.value === 'idle') {
+    // "This is Preview" text below the sphere
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+    ctx.font = 'bold 18px -apple-system, sans-serif'
+    ctx.fillText('This is Preview', cx, cy + SPHERE_RADIUS + 30)
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'
     ctx.font = '13px -apple-system, sans-serif'
-    ctx.fillText('Шарик вылетает через дырку', cx, cy - 10)
-    ctx.fillText('Падает на зелёное = WIN', cx, cy + 10)
+    ctx.fillText('Tap button below to play', cx, cy + SPHERE_RADIUS + 52)
+  }
+}
+
+function startIdleAnimation() {
+  // In idle, ball gently floats inside the sphere
+  previewBallAngle = Math.random() * Math.PI * 2
+  previewBallSpeed = 0.015
+  sphereRotation = 0
+  sphereAngularVelocity = 0.008 // slow idle rotation
+  holeAngle = Math.PI * 0.7 // hole visible
+
+  const idleLoop = () => {
+    // Gentle orbit
+    previewBallAngle += previewBallSpeed
+    const orbitRadius = SPHERE_RADIUS * 0.4
+    ballX = Math.cos(previewBallAngle) * orbitRadius
+    ballY = Math.sin(previewBallAngle) * orbitRadius * 0.6 + 15 // slight downward offset
+    ballVX = 0
+    ballVY = 0
+
+    // Slow sphere rotation
+    sphereRotation += sphereAngularVelocity
+
+    draw()
+    idleAnimId = requestAnimationFrame(idleLoop)
+  }
+  idleLoop()
+}
+
+function stopIdleAnimation() {
+  if (idleAnimId) {
+    cancelAnimationFrame(idleAnimId)
+    idleAnimId = null
   }
 }
 
 onMounted(() => {
-  draw()
+  startIdleAnimation()
 })
 
 onUnmounted(() => {
   if (animationId) cancelAnimationFrame(animationId)
+  stopIdleAnimation()
 })
 </script>
 
@@ -692,7 +754,7 @@ onUnmounted(() => {
 
 .multiplier-overlay {
   position: absolute;
-  top: 50%;
+  top: 38%;
   left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
@@ -708,23 +770,27 @@ onUnmounted(() => {
 }
 
 .multiplier-value {
-  font-size: 48px;
-  font-weight: 700;
-  text-shadow: 0 0 20px currentColor;
+  font-size: 42px;
+  font-weight: 800;
+  text-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
 }
 
 .result-text {
-  font-size: 18px;
-  font-weight: 600;
-  margin-top: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 4px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
 .result-text.won {
   color: #4ade80;
+  text-shadow: 0 0 15px rgba(74, 222, 128, 0.6);
 }
 
 .result-text.lost {
   color: #ef4444;
+  text-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
 }
 
 .hash-row {
