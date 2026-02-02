@@ -193,7 +193,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useTelegram } from '../composables/useTelegram'
+import { useTonConnect } from '../composables/useTonConnect'
+import { stakingGetStats } from '../api/client'
 
 interface Activity {
   id: number
@@ -204,41 +207,42 @@ interface Activity {
   amount: number
 }
 
-// User data
-const username = ref('player123')
-const userId = ref('123456789')
+const { user, initWebApp } = useTelegram()
+const tonConnect = useTonConnect()
+
+// User data from Telegram
+const username = computed(() => user.value?.username || user.value?.first_name || 'Player')
+const userId = computed(() => String(user.value?.id || ''))
 const userInitial = computed(() => username.value.charAt(0).toUpperCase())
-const isVip = ref(true)
+const isVip = ref(false)
 
 const avatarGradient = 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
 
 // Balance
-const tonBalance = ref(4.16)
-const starsBalance = ref(250)
+const tonBalance = ref(0)
+const starsBalance = ref(0)
 
 // Stats
 const stats = ref({
-  totalGifts: 12,
-  gamesPlayed: 87,
-  wins: 34,
-  totalWon: 24.5
+  totalGifts: 0,
+  gamesPlayed: 0,
+  wins: 0,
+  totalWon: 0
 })
 
 // Referrals
 const referrals = ref({
-  count: 5,
-  earned: 2.5
+  count: 0,
+  earned: 0
 })
 
-const referralLink = ref('t.me/giftbot?start=ref123456')
+const referralLink = computed(() => {
+  const id = user.value?.id || ''
+  return `t.me/giftbot?start=ref${id}`
+})
 
 // Activity
-const recentActivity = ref<Activity[]>([
-  { id: 1, type: 'win', icon: '🏆', title: 'Победа в PvP', time: '5 мин назад', amount: 1.5 },
-  { id: 2, type: 'loss', icon: '🎰', title: 'Lucky рулетка', time: '15 мин назад', amount: -0.5 },
-  { id: 3, type: 'deposit', icon: '💎', title: 'Пополнение', time: '1 час назад', amount: 5 },
-  { id: 4, type: 'win', icon: '📈', title: 'Trading Crash', time: '2 часа назад', amount: 2.3 },
-])
+const recentActivity = ref<Activity[]>([])
 
 // Stars background
 const getStarStyle = (_i: number) => ({
@@ -253,6 +257,21 @@ const getStarStyle = (_i: number) => ({
 const copyReferralLink = () => {
   navigator.clipboard.writeText(referralLink.value)
 }
+
+onMounted(async () => {
+  initWebApp()
+  await tonConnect.init('giftmarket_bot')
+
+  // Load staking stats if user is available
+  if (user.value?.id) {
+    try {
+      const stakingStats = await stakingGetStats(user.value.id)
+      stats.value.totalWon = parseFloat(stakingStats.total_rewards_earned_ton || '0')
+    } catch (e) {
+      // Stats not available yet
+    }
+  }
+})
 </script>
 
 <style scoped>

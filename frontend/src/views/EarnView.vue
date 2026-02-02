@@ -169,20 +169,56 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useTelegram } from '../composables/useTelegram'
+import { stakingGetStats, stakingGetUserStakes } from '../api/client'
 
-const totalEarned = ref(0.1234)
-const dailyRate = ref(1.25)
+const { user, initWebApp } = useTelegram()
+
+const totalEarned = ref(0)
+const dailyRate = ref(0)
 
 const referrals = ref({
-  count: 5,
-  earned: 2.45,
+  count: 0,
+  earned: 0,
 })
 
 const dailyTasks = ref([
-  { id: 1, icon: '🎮', title: 'Play 3 games', reward: '0.01 TON', completed: true },
+  { id: 1, icon: '🎮', title: 'Play 3 games', reward: '0.01 TON', completed: false },
   { id: 2, icon: '💎', title: 'Stake 10 TON', reward: '0.05 TON', completed: false },
   { id: 3, icon: '👥', title: 'Invite 1 friend', reward: '0.1 TON', completed: false },
   { id: 4, icon: '🎁', title: 'Buy 1 gift', reward: '0.02 TON', completed: false },
 ])
+
+onMounted(async () => {
+  initWebApp()
+  if (!user.value?.id) return
+
+  try {
+    const [statsData, stakes] = await Promise.all([
+      stakingGetStats(user.value.id),
+      stakingGetUserStakes(user.value.id, 'active'),
+    ])
+
+    totalEarned.value = parseFloat(statsData.total_rewards_earned_ton || '0')
+
+    // Calculate daily rate from active stakes
+    if (stakes.length > 0) {
+      const totalDailyReward = stakes.reduce((sum: number, s: any) => {
+        const reward = parseFloat(s.estimated_reward_ton || '0')
+        const days = s.period_days || 30
+        return sum + reward / days
+      }, 0)
+      dailyRate.value = parseFloat(totalDailyReward.toFixed(4))
+    }
+
+    // Check if stake task is completed
+    if (stakes.length > 0) {
+      const stakeTask = dailyTasks.value.find(t => t.id === 2)
+      if (stakeTask) stakeTask.completed = true
+    }
+  } catch (e) {
+    // Staking data not available
+  }
+})
 </script>

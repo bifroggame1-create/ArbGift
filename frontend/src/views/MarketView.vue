@@ -218,13 +218,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import GiftCard from '../components/GiftCard.vue'
 import { useTelegram } from '../composables/useTelegram'
-import axios from 'axios'
+import { getGifts, searchGifts, getStats } from '../api/client'
 
 const router = useRouter()
 const { hapticImpact } = useTelegram()
-
-// API - используем portal-market.com API
-const PORTALS_API = 'https://portal-market.com/api'
 
 // Tabs
 const tabs = [
@@ -311,45 +308,28 @@ const fetchGifts = async () => {
   loading.value = true
   try {
     const offset = (currentPage.value - 1) * limit
-    const response = await axios.get(`${PORTALS_API}/nfts/search`, {
-      params: {
-        offset,
+    const query = searchQuery.value?.trim()
+
+    let data
+    if (query) {
+      data = await searchGifts(query, { limit, collection_id: undefined })
+    } else {
+      data = await getGifts({
+        is_on_sale: true,
+        sort: sortBy.value,
         limit,
-        sort_by: sortBy.value,
-        search: searchQuery.value || undefined,
-        exclude_bundled: true,
-        status: 'listed',
-      }
-    })
-
-    gifts.value = response.data.nfts || []
-
-    // Calculate total pages
-    if (response.data.total) {
-      totalPages.value = Math.ceil(response.data.total / limit)
-    }
-  } catch (error) {
-    console.error('Fetch error:', error)
-    // Fallback to Major.tg if portals fails
-    try {
-      const response = await axios.get('https://major.tg/api/v1/nft/list/', {
-        params: {
-          order_by: 'price_asc',
-          limit: 30,
-          offset: 0,
-        }
+        offset,
       })
-      gifts.value = (response.data.items || []).map((item: any) => ({
-        id: item.address,
-        name: item.name,
-        tg_id: item.slug,
-        image_url: item.image,
-        min_price_ton: item.min_bid,
-        price: item.min_bid,
-      }))
-    } catch (e) {
-      console.error('Fallback error:', e)
     }
+
+    gifts.value = data.items || data || []
+
+    if (data.total) {
+      totalPages.value = Math.ceil(data.total / limit)
+    }
+  } catch (err) {
+    console.error('Fetch gifts error:', err)
+    gifts.value = []
   } finally {
     loading.value = false
   }
@@ -357,12 +337,15 @@ const fetchGifts = async () => {
 
 const fetchMarketStats = async () => {
   try {
-    const response = await axios.get(`${PORTALS_API}/market/volume`)
-    if (response.data) {
-      volume24h.value = formatVolume(response.data.volume_24h || 0)
+    const data = await getStats()
+    if (data.volume_24h) {
+      volume24h.value = formatVolume(data.volume_24h)
+    }
+    if (data.ton_price) {
+      tonPrice.value = data.ton_price.toFixed(2)
     }
   } catch (e) {
-    // Use default
+    // Use defaults
   }
 }
 
