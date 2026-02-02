@@ -45,14 +45,35 @@
     <div v-if="activeTab === 'gifts'" class="gifts-section">
       <div class="section-header">
         <h2>💎 TON Гифты</h2>
-        <button class="filter-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
-          </svg>
-        </button>
+        <div class="header-actions">
+          <button class="refresh-btn" @click="refreshGifts" :disabled="loading">
+            <svg :class="{ rotating: loading }" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6M1 20v-6h6"/>
+              <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+          </button>
+          <button class="filter-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div class="gifts-grid">
+      <!-- Loading State -->
+      <div v-if="loading" class="loading-state">
+        <div class="loading-spinner"></div>
+        <span>Загрузка гифтов...</span>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="error-state">
+        <span class="error-icon">⚠️</span>
+        <span>{{ error }}</span>
+        <button class="btn-retry" @click="refreshGifts">Повторить</button>
+      </div>
+
+      <div v-else class="gifts-grid">
         <div
           v-for="gift in tonGifts"
           :key="gift.id"
@@ -74,6 +95,9 @@
             </div>
           </div>
           <div class="gift-rarity" :class="gift.rarity">{{ gift.rarity }}</div>
+          <div v-if="gift.listingsCount > 1" class="listings-badge">
+            {{ gift.listingsCount }} предложений
+          </div>
         </div>
       </div>
     </div>
@@ -178,7 +202,7 @@
       </div>
     </div>
 
-    <!-- Purchase Modal -->
+    <!-- Purchase Modal with Marketplace Aggregation -->
     <Teleport to="body">
       <div v-if="showPurchaseModal" class="modal-overlay" @click.self="showPurchaseModal = false">
         <div class="purchase-modal">
@@ -198,25 +222,60 @@
             </div>
           </div>
 
-          <div class="modal-price">
-            <span class="price-label">Цена:</span>
-            <span class="price-value">
-              <span class="price-icon">💎</span>
-              {{ selectedItem?.price }} TON
-            </span>
+          <!-- Marketplace Listings -->
+          <div class="listings-section">
+            <div class="listings-header">
+              <span class="listings-title">Предложения на маркетах</span>
+              <span class="listings-count">{{ selectedListings.length }} листингов</span>
+            </div>
+
+            <div v-if="loadingListings" class="listings-loading">
+              <div class="mini-spinner"></div>
+              <span>Загрузка предложений...</span>
+            </div>
+
+            <div v-else-if="selectedListings.length === 0" class="no-listings">
+              <span>Нет активных листингов</span>
+            </div>
+
+            <div v-else class="listings-list">
+              <div
+                v-for="(listing, index) in selectedListings"
+                :key="listing.id"
+                :class="['listing-item', { best: index === 0 }]"
+                @click="buyFromMarket(listing)"
+              >
+                <div class="listing-market">
+                  <span
+                    class="market-badge"
+                    :style="{ background: marketBadges[listing.market_slug]?.color || '#6b7280' }"
+                  >
+                    {{ marketBadges[listing.market_slug]?.name || listing.market_name }}
+                  </span>
+                  <span v-if="index === 0" class="best-price-badge">Лучшая цена</span>
+                </div>
+                <div class="listing-price">
+                  <span class="price-ton">{{ listing.price_ton }} TON</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
           </div>
 
           <button
+            v-if="selectedListings.length > 0"
             class="btn-confirm-purchase"
-            :disabled="balance < (selectedItem?.price || 0)"
             @click="confirmPurchase"
           >
-            <span v-if="balance >= (selectedItem?.price || 0)">Купить за {{ selectedItem?.price }} TON</span>
-            <span v-else>Недостаточно средств</span>
+            Купить за {{ selectedListings[0]?.price_ton }} TON на {{ marketBadges[selectedListings[0]?.market_slug]?.name || selectedListings[0]?.market_name }}
           </button>
 
           <button class="btn-cancel" @click="showPurchaseModal = false">
-            Отмена
+            Закрыть
           </button>
         </div>
       </div>
@@ -225,10 +284,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useTonConnect } from '../composables/useTonConnect'
+import { getGifts, getGiftListings, type Gift as APIGift, type Listing } from '../api/client'
 
 interface Gift {
   id: number
+  address: string
   name: string
   image: string
   price: number
@@ -236,6 +299,8 @@ interface Gift {
   discount?: number
   rarity: 'common' | 'rare' | 'epic' | 'legendary'
   bgGradient: string
+  listingsCount: number
+  bestMarket?: string
 }
 
 interface Lootpack {
@@ -256,11 +321,18 @@ interface Extra {
   price: number
 }
 
+const router = useRouter()
+const { init, isConnected, address } = useTonConnect()
+
 // State
-const balance = ref(4.16)
+const balance = ref(0)
 const activeTab = ref('gifts')
 const showPurchaseModal = ref(false)
 const selectedItem = ref<Gift | null>(null)
+const selectedListings = ref<Listing[]>([])
+const loading = ref(false)
+const loadingListings = ref(false)
+const error = ref<string | null>(null)
 
 const tabs = [
   { id: 'gifts', label: 'Гифты', icon: '🎁' },
@@ -269,14 +341,72 @@ const tabs = [
   { id: 'extras', label: 'Ништяки', icon: '✨' },
 ]
 
-const tonGifts = ref<Gift[]>([
-  { id: 1, name: 'Eternal Rose', image: '/gifts/rose.webp', price: 0.27, rarity: 'rare', bgGradient: 'linear-gradient(135deg, #1a1a2e, #16213e)' },
-  { id: 2, name: 'Diamond Ring', image: '/gifts/ring.webp', price: 1.02, originalPrice: 1.5, discount: 32, rarity: 'epic', bgGradient: 'linear-gradient(135deg, #0f3460, #16213e)' },
-  { id: 3, name: 'Golden Key', image: '/gifts/key.webp', price: 0.06, rarity: 'common', bgGradient: 'linear-gradient(135deg, #1a1a2e, #0f0f1a)' },
-  { id: 4, name: 'Lucky Charm', image: '/gifts/charm.webp', price: 0.45, rarity: 'rare', bgGradient: 'linear-gradient(135deg, #16213e, #1a1a2e)' },
-  { id: 5, name: 'Voodoo Doll', image: '/gifts/doll.webp', price: 0.45, rarity: 'epic', bgGradient: 'linear-gradient(135deg, #1e1e3f, #2d1b4e)' },
-  { id: 6, name: 'Love Potion', image: '/gifts/potion.webp', price: 0.18, rarity: 'common', bgGradient: 'linear-gradient(135deg, #2d1b4e, #1a1a2e)' },
-])
+const tonGifts = ref<Gift[]>([])
+
+// Market badges mapping
+const marketBadges: Record<string, { name: string; color: string }> = {
+  'getgems': { name: 'GetGems', color: '#00a2ff' },
+  'tonnel': { name: 'Tonnel', color: '#8b5cf6' },
+  'mrkt': { name: 'MRKT', color: '#22c55e' },
+  'fragment': { name: 'Fragment', color: '#f59e0b' },
+}
+
+// Determine rarity from price
+const getRarityFromPrice = (price: number): 'common' | 'rare' | 'epic' | 'legendary' => {
+  if (price >= 10) return 'legendary'
+  if (price >= 3) return 'epic'
+  if (price >= 0.5) return 'rare'
+  return 'common'
+}
+
+// Fetch gifts from API
+const fetchGifts = async () => {
+  loading.value = true
+  error.value = null
+
+  try {
+    const data = await getGifts({ is_on_sale: true, sort: 'price_asc', limit: 50 })
+
+    tonGifts.value = (data.items || data).map((gift: APIGift) => {
+      const price = gift.min_price_ton ? parseFloat(gift.min_price_ton) : (gift.price || 0)
+      return {
+        id: gift.id,
+        address: gift.address,
+        name: gift.name,
+        image: gift.image_url || '/gifts/default.webp',
+        price,
+        rarity: (gift.rarity as any) || getRarityFromPrice(price),
+        bgGradient: `linear-gradient(135deg, ${gift.backdrop || '#1a1a2e'}, #16213e)`,
+        listingsCount: gift.listings_count || 0,
+        bestMarket: undefined,
+      }
+    })
+  } catch (e: any) {
+    error.value = e.message || 'Не удалось загрузить гифты'
+    console.error('Gifts fetch error:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Fetch listings when gift is selected
+const fetchListings = async (giftId: number) => {
+  loadingListings.value = true
+  try {
+    const listings = await getGiftListings(giftId)
+    selectedListings.value = listings || []
+  } catch (e) {
+    console.error('Listings fetch error:', e)
+    selectedListings.value = []
+  } finally {
+    loadingListings.value = false
+  }
+}
+
+onMounted(async () => {
+  await init()
+  fetchGifts()
+})
 
 const lootpacks = ref<Lootpack[]>([
   { id: 1, name: 'Стартовый', icon: '📦', contains: 3, price: 0.5, maxMultiplier: 5, gradient: 'linear-gradient(135deg, #1e3a8a, #3b82f6)' },
@@ -299,21 +429,37 @@ const getStarStyle = (_i: number) => ({
   animationDuration: `${Math.random() * 2 + 2}s`
 })
 
-const selectGift = (gift: Gift) => {
+const selectGift = async (gift: Gift) => {
   selectedItem.value = gift
+  selectedListings.value = []
   showPurchaseModal.value = true
+  await fetchListings(gift.id)
 }
 
 const selectLootpack = (_pack: Lootpack) => {
   // Handle lootpack selection
 }
 
-const confirmPurchase = () => {
-  if (!selectedItem.value || balance.value < selectedItem.value.price) return
+const buyFromMarket = (listing: Listing) => {
+  // Open marketplace URL in new tab
+  window.open(listing.listing_url, '_blank')
+}
 
-  balance.value -= selectedItem.value.price
+const confirmPurchase = () => {
+  if (!selectedItem.value) return
+
+  // If we have listings, open the cheapest one
+  if (selectedListings.value.length > 0) {
+    const cheapest = selectedListings.value.reduce((a, b) =>
+      parseFloat(a.price_ton) < parseFloat(b.price_ton) ? a : b
+    )
+    buyFromMarket(cheapest)
+  }
   showPurchaseModal.value = false
-  // Add to inventory logic
+}
+
+const refreshGifts = () => {
+  fetchGifts()
 }
 </script>
 
@@ -485,7 +631,12 @@ const confirmPurchase = () => {
   margin: 0;
 }
 
-.filter-btn {
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.refresh-btn, .filter-btn {
   width: 36px;
   height: 36px;
   background: #1c1c1e;
@@ -495,6 +646,55 @@ const confirmPurchase = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+}
+
+.refresh-btn svg.rotating {
+  animation: spin 1s linear infinite;
+}
+
+/* Loading/Error States */
+.loading-state, .error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 20px;
+  position: relative;
+  z-index: 10;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #1c1c1e;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-state span, .error-state span {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.error-icon {
+  font-size: 32px !important;
+}
+
+.btn-retry {
+  margin-top: 8px;
+  padding: 10px 20px;
+  background: #3b82f6;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 /* Gifts Grid */
@@ -599,6 +799,18 @@ const confirmPurchase = () => {
 .gift-rarity.rare { background: #3b82f6; }
 .gift-rarity.epic { background: #8b5cf6; }
 .gift-rarity.legendary { background: #f59e0b; color: #000; }
+
+.listings-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 600;
+}
 
 /* Lootpacks */
 .lootpacks-grid {
@@ -952,6 +1164,122 @@ const confirmPurchase = () => {
   border: 1px solid #3a3a3c;
   border-radius: 14px;
   font-size: 14px;
+  color: #6b7280;
+}
+
+/* Listings Section */
+.listings-section {
+  margin-bottom: 16px;
+}
+
+.listings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.listings-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.listings-count {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.listings-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.mini-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #3a3a3c;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.no-listings {
+  text-align: center;
+  padding: 20px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.listings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.listing-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #27272a;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.listing-item:hover {
+  background: #3a3a3c;
+}
+
+.listing-item.best {
+  border: 1px solid #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.listing-market {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.market-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.best-price-badge {
+  font-size: 10px;
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.listing-price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.price-ton {
+  font-size: 14px;
+  font-weight: 700;
+  color: #4ade80;
+}
+
+.listing-price svg {
   color: #6b7280;
 }
 

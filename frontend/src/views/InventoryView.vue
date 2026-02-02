@@ -9,12 +9,19 @@
     <header class="inv-header">
       <div class="header-title">
         <h1>Инвентарь</h1>
-        <span class="items-count">{{ items.length }} предметов</span>
+        <span class="items-count">
+          {{ isConnected ? `${items.length} NFT` : 'Не подключено' }}
+        </span>
       </div>
-      <div class="header-balance">
-        <span class="balance-icon">💎</span>
-        <span class="balance-value">{{ balance.toFixed(2) }}</span>
-        <button class="balance-add" @click="$router.push('/topup')">+</button>
+      <div class="header-right">
+        <div v-if="isConnected" class="wallet-badge" @click="refreshInventory">
+          <span class="wallet-icon">👛</span>
+          <span class="wallet-address">{{ shortAddress }}</span>
+        </div>
+        <div class="header-balance">
+          <span class="balance-icon">💎</span>
+          <span class="balance-value">{{ balance.toFixed(2) }}</span>
+        </div>
       </div>
     </header>
 
@@ -78,6 +85,33 @@
       </div>
     </div>
 
+    <!-- Loading State -->
+    <div v-else-if="loading" class="empty-state">
+      <div class="loading-spinner"></div>
+      <h3>Загрузка инвентаря...</h3>
+      <p>Получаем NFT из блокчейна</p>
+    </div>
+
+    <!-- Not Connected State -->
+    <div v-else-if="!isConnected" class="empty-state">
+      <div class="empty-icon">🔗</div>
+      <h3>Кошелёк не подключён</h3>
+      <p>Подключите TON кошелёк чтобы увидеть свои гифты</p>
+      <button class="btn-connect" @click="connectWallet">
+        Подключить кошелёк
+      </button>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="empty-state">
+      <div class="empty-icon">⚠️</div>
+      <h3>Ошибка загрузки</h3>
+      <p>{{ error }}</p>
+      <button class="btn-shop" @click="refreshInventory">
+        Попробовать снова
+      </button>
+    </div>
+
     <!-- Empty State -->
     <div v-else class="empty-state">
       <div class="empty-icon">📦</div>
@@ -110,40 +144,100 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useTonConnect } from '../composables/useTonConnect'
+import { pvpGetInventory, type InventoryNFT } from '../api/client'
 
 interface InventoryItem {
-  id: number
+  id: string  // NFT address
   name: string
   image: string
   price: number
   rarity: 'common' | 'rare' | 'epic' | 'legendary'
   bgColor: string
-  type: 'gift' | 'lootbox' | 'upgrade'
+  type: 'gift'
+  collectionName: string
 }
 
+const router = useRouter()
+const { init, connect, isConnected, address, shortAddress } = useTonConnect()
+
 // State
-const balance = ref(4.16)
+const balance = ref(0)
 const activeTab = ref('all')
 const searchQuery = ref('')
 const sortAsc = ref(false)
-const selectedItems = ref<number[]>([])
+const selectedItems = ref<string[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
 
 const tabs = [
   { id: 'all', label: 'Все', icon: '📦' },
   { id: 'gift', label: 'Гифты', icon: '🎁' },
-  { id: 'lootbox', label: 'Лутбоксы', icon: '📦' },
-  { id: 'upgrade', label: 'Апгрейды', icon: '⬆️' },
 ]
 
-const items = ref<InventoryItem[]>([
-  { id: 1, name: 'Eternal Rose', image: '/gifts/rose.webp', price: 0.27, rarity: 'rare', bgColor: '#1a1a2e', type: 'gift' },
-  { id: 2, name: 'Diamond Ring', image: '/gifts/ring.webp', price: 1.02, rarity: 'epic', bgColor: '#0f3460', type: 'gift' },
-  { id: 3, name: 'Lucky Charm', image: '/gifts/charm.webp', price: 0.45, rarity: 'rare', bgColor: '#16213e', type: 'gift' },
-  { id: 4, name: 'Golden Key', image: '/gifts/key.webp', price: 0.06, rarity: 'common', bgColor: '#1a1a2e', type: 'gift' },
-  { id: 5, name: 'Mystery Box', image: '/gifts/box.webp', price: 0.5, rarity: 'rare', bgColor: '#1a1a2e', type: 'lootbox' },
-  { id: 6, name: 'Cupid Arrow', image: '/gifts/cupid.webp', price: 0.24, rarity: 'common', bgColor: '#1a1a2e', type: 'gift' },
-])
+const items = ref<InventoryItem[]>([])
+
+// Determine rarity from price
+const getRarityFromPrice = (price: number): 'common' | 'rare' | 'epic' | 'legendary' => {
+  if (price >= 10) return 'legendary'
+  if (price >= 3) return 'epic'
+  if (price >= 0.5) return 'rare'
+  return 'common'
+}
+
+// Fetch inventory from API
+const fetchInventory = async () => {
+  if (!address.value) return
+
+  loading.value = true
+  error.value = null
+
+  try {
+    const nfts = await pvpGetInventory(address.value)
+
+    items.value = nfts.map((nft: InventoryNFT) => {
+      const price = nft.price_ton ? parseFloat(nft.price_ton) : 0
+      return {
+        id: nft.address,
+        name: nft.name,
+        image: nft.image_url || '/gifts/default.webp',
+        price,
+        rarity: getRarityFromPrice(price),
+        bgColor: '#1a1a2e',
+        type: 'gift' as const,
+        collectionName: nft.collection_name,
+      }
+    })
+
+    // Calculate total portfolio value
+    balance.value = items.value.reduce((sum, item) => sum + item.price, 0)
+  } catch (e: any) {
+    error.value = e.message || 'Не удалось загрузить инвентарь'
+    console.error('Inventory fetch error:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Watch for wallet connection
+watch(isConnected, (connected) => {
+  if (connected) {
+    fetchInventory()
+  } else {
+    items.value = []
+    balance.value = 0
+  }
+})
+
+// Initialize TON Connect
+onMounted(async () => {
+  await init()
+  if (isConnected.value) {
+    fetchInventory()
+  }
+})
 
 const getTabCount = (tabId: string) => {
   if (tabId === 'all') return items.value.length
@@ -191,7 +285,7 @@ const toggleSort = () => {
   sortAsc.value = !sortAsc.value
 }
 
-const toggleSelect = (id: number) => {
+const toggleSelect = (id: string) => {
   const index = selectedItems.value.indexOf(id)
   if (index === -1) {
     selectedItems.value.push(id)
@@ -201,9 +295,8 @@ const toggleSelect = (id: number) => {
 }
 
 const sellSelected = () => {
-  balance.value += selectedValue.value
-  items.value = items.value.filter(i => !selectedItems.value.includes(i.id))
-  selectedItems.value = []
+  // TODO: Implement relayer-based selling via marketplace APIs
+  alert('Функция продажи через релеер в разработке')
 }
 
 const giftSelected = () => {
@@ -212,6 +305,20 @@ const giftSelected = () => {
 
 const usePvP = () => {
   // Navigate to PvP with selected items
+  const selectedAddresses = selectedItems.value.join(',')
+  router.push(`/pvp?gifts=${selectedAddresses}`)
+}
+
+const connectWallet = async () => {
+  try {
+    await connect()
+  } catch (e) {
+    console.error('Failed to connect wallet:', e)
+  }
+}
+
+const refreshInventory = () => {
+  fetchInventory()
 }
 </script>
 
@@ -277,18 +384,32 @@ const usePvP = () => {
   border-radius: 12px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wallet-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #0088cc20 0%, #0098ea20 100%);
+  border: 1px solid #0088cc40;
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.wallet-icon { font-size: 12px; }
+.wallet-address {
+  font-size: 11px;
+  font-weight: 500;
+  color: #0098ea;
+}
+
 .balance-icon { font-size: 14px; }
 .balance-value { font-size: 14px; font-weight: 600; }
-
-.balance-add {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid #4b5563;
-  background: transparent;
-  color: #fff;
-  font-size: 14px;
-}
 
 /* Tabs */
 .inv-tabs {
@@ -513,6 +634,34 @@ const usePvP = () => {
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
+}
+
+.btn-connect {
+  background: linear-gradient(135deg, #0088cc 0%, #0098ea 100%);
+  color: #fff;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid #1c1c1e;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Action Bar */
