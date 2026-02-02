@@ -31,7 +31,7 @@
           {{ multiplier.toFixed(2) }}x
         </div>
         <div v-if="gameState === 'won'" class="result-text won">ESCAPED!</div>
-        <div v-if="gameState === 'lost'" class="result-text lost">CAUGHT!</div>
+        <div v-if="gameState === 'lost'" class="result-text lost">DEAD</div>
       </div>
     </div>
 
@@ -130,6 +130,20 @@ let idleAnimId: number | null = null
 let previewBallAngle = 0
 let previewBallSpeed = 0.02
 
+// Ring color — changes per game (like MyBalls: pink preview, random per round)
+const RING_COLORS = [
+  { main: '#fbbf24', glow: 'rgba(251, 191, 36, ', light: '#fde68a' }, // yellow/gold
+  { main: '#22d3ee', glow: 'rgba(34, 211, 238, ', light: '#67e8f9' },  // cyan
+  { main: '#a855f7', glow: 'rgba(168, 85, 247, ', light: '#c084fc' },  // purple
+  { main: '#4ade80', glow: 'rgba(74, 222, 128, ', light: '#86efac' },  // green
+  { main: '#f97316', glow: 'rgba(249, 115, 22, ', light: '#fdba74' },  // orange
+]
+const PREVIEW_RING = { main: '#ec4899', glow: 'rgba(236, 72, 153, ', light: '#f9a8d4' } // pink
+let currentRingColor = PREVIEW_RING
+
+// Constant sphere rotation speed (like MyBalls — no acceleration)
+const SPHERE_SPEED = 0.028
+
 // Game phases
 let startTime = 0
 let gameDuration = 5000
@@ -155,6 +169,9 @@ async function startGame() {
 
   stopIdleAnimation()
 
+  // Pick random ring color for this round (like MyBalls)
+  currentRingColor = RING_COLORS[Math.floor(Math.random() * RING_COLORS.length)]
+
   balance.value -= selectedBet.value
   gameState.value = 'playing'
   multiplier.value = 1.0
@@ -171,7 +188,7 @@ async function startGame() {
   ballVX = Math.cos(launchAngle) * launchSpeed
   ballVY = Math.sin(launchAngle) * launchSpeed + 2 // downward bias
   sphereRotation = 0
-  sphereAngularVelocity = 0.025
+  sphereAngularVelocity = SPHERE_SPEED
   holeAngle = Math.random() * Math.PI * 2
   ballTrail = []
   impactFlash = 0
@@ -209,9 +226,9 @@ function gameLoop() {
   // Update multiplier
   multiplier.value = 1 + (targetMultiplier - 1) * progress
 
-  // Sphere rotation accelerates over time — more frantic as game progresses
-  sphereAngularVelocity = 0.025 + progress * 0.04
-  sphereRotation += sphereAngularVelocity
+  // Constant sphere rotation (like MyBalls — no acceleration)
+  sphereAngularVelocity = SPHERE_SPEED
+  sphereRotation += SPHERE_SPEED
   const currentHoleAngle = holeAngle + sphereRotation
 
   if (isFalling) {
@@ -488,39 +505,38 @@ function draw() {
   ctx.fillText('☠️', redCx + 18, floorMidY + 8)
   ctx.globalAlpha = 1.0
 
-  // === SPHERE (gold/yellow thick ring like MyBalls) ===
+  // === SPHERE (dynamic ring color like MyBalls) ===
   const currentHoleAngle = holeAngle + sphereRotation
+  const rc = currentRingColor // shorthand
 
-  // Outer glow — golden
+  // Outer glow — ring color
   const gradient = ctx.createRadialGradient(cx, cy, SPHERE_RADIUS - 20, cx, cy, SPHERE_RADIUS + 15)
-  gradient.addColorStop(0, 'rgba(251, 191, 36, 0.0)')
-  gradient.addColorStop(0.6, 'rgba(251, 191, 36, 0.12)')
-  gradient.addColorStop(1, 'rgba(251, 191, 36, 0.0)')
+  gradient.addColorStop(0, rc.glow + '0.0)')
+  gradient.addColorStop(0.6, rc.glow + '0.12)')
+  gradient.addColorStop(1, rc.glow + '0.0)')
   ctx.fillStyle = gradient
   ctx.beginPath()
   ctx.arc(cx, cy, SPHERE_RADIUS + 15, 0, Math.PI * 2)
   ctx.fill()
 
-  // Sphere ring — thick golden/yellow, just a gap for the hole (NO extra indicator)
+  // Sphere ring — thick, just a gap for the hole
   const holeStart = currentHoleAngle - HOLE_SIZE / 2
   const holeEnd = currentHoleAngle + HOLE_SIZE / 2
 
-  // Main ring with gradient stroke
   ctx.save()
   ctx.lineWidth = 10
   ctx.lineCap = 'round'
 
-  // Create gold gradient for the ring
+  // Ring gradient using current color
   const ringGrad = ctx.createLinearGradient(cx - SPHERE_RADIUS, cy - SPHERE_RADIUS, cx + SPHERE_RADIUS, cy + SPHERE_RADIUS)
-  ringGrad.addColorStop(0, '#fbbf24')
-  ringGrad.addColorStop(0.3, '#fde68a')
-  ringGrad.addColorStop(0.5, '#fbbf24')
-  ringGrad.addColorStop(0.7, '#f59e0b')
-  ringGrad.addColorStop(1, '#fbbf24')
+  ringGrad.addColorStop(0, rc.main)
+  ringGrad.addColorStop(0.3, rc.light)
+  ringGrad.addColorStop(0.5, rc.main)
+  ringGrad.addColorStop(0.8, rc.main)
+  ringGrad.addColorStop(1, rc.light)
   ctx.strokeStyle = ringGrad
 
-  // Glow behind the ring
-  ctx.shadowColor = 'rgba(251, 191, 36, 0.5)'
+  ctx.shadowColor = rc.glow + '0.5)'
   ctx.shadowBlur = 12
 
   ctx.beginPath()
@@ -533,41 +549,19 @@ function draw() {
     const flashX = cx + Math.cos(impactAngle) * SPHERE_RADIUS
     const flashY = cy + Math.sin(impactAngle) * SPHERE_RADIUS
     const flashGlow = ctx.createRadialGradient(flashX, flashY, 0, flashX, flashY, 30 * impactFlash)
-    flashGlow.addColorStop(0, `rgba(251, 191, 36, ${impactFlash * 0.8})`)
-    flashGlow.addColorStop(0.5, `rgba(251, 191, 36, ${impactFlash * 0.4})`)
-    flashGlow.addColorStop(1, 'rgba(251, 191, 36, 0)')
+    flashGlow.addColorStop(0, rc.glow + `${impactFlash * 0.8})`)
+    flashGlow.addColorStop(0.5, rc.glow + `${impactFlash * 0.4})`)
+    flashGlow.addColorStop(1, rc.glow + '0)')
     ctx.fillStyle = flashGlow
     ctx.beginPath()
     ctx.arc(flashX, flashY, 30 * impactFlash, 0, Math.PI * 2)
     ctx.fill()
   }
 
-  // Rotation arrows (subtle gold)
-  if (gameState.value === 'playing' && !isFalling) {
-    const arrowCount = 4
-    for (let i = 0; i < arrowCount; i++) {
-      const arrowAngle = sphereRotation + (i * Math.PI * 2) / arrowCount
-      const arrowX = cx + Math.cos(arrowAngle) * (SPHERE_RADIUS - 18)
-      const arrowY = cy + Math.sin(arrowAngle) * (SPHERE_RADIUS - 18)
-
-      ctx.save()
-      ctx.translate(arrowX, arrowY)
-      ctx.rotate(arrowAngle + Math.PI / 2)
-      ctx.fillStyle = `rgba(251, 191, 36, ${0.15 + sphereAngularVelocity * 3})`
-      ctx.beginPath()
-      ctx.moveTo(0, -5)
-      ctx.lineTo(3.5, 2)
-      ctx.lineTo(-3.5, 2)
-      ctx.closePath()
-      ctx.fill()
-      ctx.restore()
-    }
-  }
-
-  // Inner sphere dark fill
+  // Inner sphere subtle fill
   const innerGradient = ctx.createRadialGradient(cx - 30, cy - 30, 0, cx, cy, SPHERE_RADIUS)
-  innerGradient.addColorStop(0, 'rgba(251, 191, 36, 0.06)')
-  innerGradient.addColorStop(0.5, 'rgba(251, 191, 36, 0.02)')
+  innerGradient.addColorStop(0, rc.glow + '0.05)')
+  innerGradient.addColorStop(0.5, rc.glow + '0.02)')
   innerGradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
   ctx.fillStyle = innerGradient
   ctx.beginPath()
@@ -656,10 +650,11 @@ function draw() {
 
 function startIdleAnimation() {
   // In idle, ball gently floats inside the sphere
+  currentRingColor = PREVIEW_RING // pink ring for preview
   previewBallAngle = Math.random() * Math.PI * 2
   previewBallSpeed = 0.015
   sphereRotation = 0
-  sphereAngularVelocity = 0.008 // slow idle rotation
+  sphereAngularVelocity = SPHERE_SPEED // same constant speed
   holeAngle = Math.PI * 0.7 // hole visible
 
   const idleLoop = () => {
@@ -671,8 +666,8 @@ function startIdleAnimation() {
     ballVX = 0
     ballVY = 0
 
-    // Slow sphere rotation
-    sphereRotation += sphereAngularVelocity
+    // Constant sphere rotation
+    sphereRotation += SPHERE_SPEED
 
     draw()
     idleAnimId = requestAnimationFrame(idleLoop)
