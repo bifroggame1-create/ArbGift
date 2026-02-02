@@ -101,15 +101,21 @@ let ballVY = 0
 const SPHERE_RADIUS = 120
 const BALL_RADIUS = 12
 const HOLE_SIZE = 0.45 // radians
-const GRAVITY = 0.12
-const BOUNCE = 0.65 // inelastic collisions
-const FRICTION = 0.992
-const CENTRIFUGAL_FACTOR = 0.008 // centrifugal force strength
-const CORIOLIS_FACTOR = 0.02 // Coriolis deflection
+const GRAVITY = 0.35 // strong gravity so ball hits walls hard
+const BOUNCE = 0.82 // very elastic — springy bounces
+const SPRING_FORCE = 1.8 // extra spring push away from wall
+const FRICTION = 0.995 // less drag = ball keeps moving
+const CENTRIFUGAL_FACTOR = 0.025 // strong centrifugal throws ball outward
+const CORIOLIS_FACTOR = 0.06 // strong deflection from rotation
+const MAX_SPEED = 14
 
 // Trail effect
-const TRAIL_LENGTH = 12
+const TRAIL_LENGTH = 16
 let ballTrail: { x: number; y: number }[] = []
+
+// Impact flash
+let impactFlash = 0 // 0..1 decays each frame
+let impactAngle = 0
 
 // Sphere position (centered horizontally, upper area)
 const SPHERE_CENTER_X = 160
@@ -147,17 +153,21 @@ async function startGame() {
   multiplier.value = 1.0
   gameId.value = Math.floor(Math.random() * 900000) + 100000
 
-  // Reset ball slightly off-center for initial motion
-  const startAngle = Math.random() * Math.PI * 2
-  const startDist = 20 + Math.random() * 30
+  // Reset ball near top with strong initial velocity for dynamic start
+  const startAngle = -Math.PI / 2 + (Math.random() - 0.5) * 1.2 // near top
+  const startDist = 30 + Math.random() * 40
   ballX = Math.cos(startAngle) * startDist
   ballY = Math.sin(startAngle) * startDist
-  ballVX = (Math.random() - 0.5) * 2
-  ballVY = (Math.random() - 0.5) * 2 + 1 // slight downward bias
+  // Strong initial velocity — ball immediately starts bouncing
+  const launchAngle = Math.random() * Math.PI * 2
+  const launchSpeed = 4 + Math.random() * 3
+  ballVX = Math.cos(launchAngle) * launchSpeed
+  ballVY = Math.sin(launchAngle) * launchSpeed + 2 // downward bias
   sphereRotation = 0
-  sphereAngularVelocity = 0.02
+  sphereAngularVelocity = 0.025
   holeAngle = Math.random() * Math.PI * 2
   ballTrail = []
+  impactFlash = 0
   isFalling = false
   landedSide = null
 
@@ -192,8 +202,8 @@ function gameLoop() {
   // Update multiplier
   multiplier.value = 1 + (targetMultiplier - 1) * progress
 
-  // Keep sphere rotating
-  sphereAngularVelocity = 0.02 + progress * 0.025
+  // Sphere rotation accelerates over time — more frantic as game progresses
+  sphereAngularVelocity = 0.025 + progress * 0.04
   sphereRotation += sphereAngularVelocity
   const currentHoleAngle = holeAngle + sphereRotation
 
@@ -243,28 +253,32 @@ function gameLoop() {
   // === INSIDE SPHERE PHASE ===
   const dist = Math.sqrt(ballX * ballX + ballY * ballY)
 
-  // === CENTRIFUGAL FORCE ===
-  if (dist > 0.1) {
-    const centrifugalMagnitude = CENTRIFUGAL_FACTOR * sphereAngularVelocity * sphereAngularVelocity * dist
-    const outwardX = (ballX / dist) * centrifugalMagnitude
-    const outwardY = (ballY / dist) * centrifugalMagnitude
-    ballVX += outwardX
-    ballVY += outwardY
+  // === CENTRIFUGAL FORCE (rotating frame pushes ball outward) ===
+  if (dist > 1) {
+    const omega2 = sphereAngularVelocity * sphereAngularVelocity
+    const centrifugalMag = CENTRIFUGAL_FACTOR * omega2 * dist
+    ballVX += (ballX / dist) * centrifugalMag
+    ballVY += (ballY / dist) * centrifugalMag
   }
 
-  // === CORIOLIS EFFECT ===
-  const coriolisStrength = CORIOLIS_FACTOR * sphereAngularVelocity
-  const coriolisX = -ballVY * coriolisStrength
-  const coriolisY = ballVX * coriolisStrength
-  ballVX += coriolisX
-  ballVY += coriolisY
+  // === CORIOLIS EFFECT (deflects ball sideways in rotating frame) ===
+  const cStr = CORIOLIS_FACTOR * sphereAngularVelocity
+  ballVX += -ballVY * cStr
+  ballVY += ballVX * cStr
 
   // === GRAVITY ===
   ballVY += GRAVITY
 
-  // === FRICTION ===
+  // === FRICTION (very light — ball stays energetic) ===
   ballVX *= FRICTION
   ballVY *= FRICTION
+
+  // === SPEED LIMIT ===
+  const speed = Math.sqrt(ballVX * ballVX + ballVY * ballVY)
+  if (speed > MAX_SPEED) {
+    ballVX = (ballVX / speed) * MAX_SPEED
+    ballVY = (ballVY / speed) * MAX_SPEED
+  }
 
   // Update position
   ballX += ballVX
@@ -276,10 +290,14 @@ function gameLoop() {
     ballTrail.pop()
   }
 
-  // === WALL COLLISION ===
-  const maxDist = SPHERE_RADIUS - BALL_RADIUS
+  // === Decay impact flash ===
+  impactFlash *= 0.88
 
-  if (dist > maxDist) {
+  // === WALL COLLISION (springy bounce) ===
+  const maxDist = SPHERE_RADIUS - BALL_RADIUS
+  const newDist = Math.sqrt(ballX * ballX + ballY * ballY)
+
+  if (newDist > maxDist) {
     const angle = Math.atan2(ballY, ballX)
 
     // Check if near hole
@@ -287,45 +305,60 @@ function gameLoop() {
     const nearHole = angleDiff < HOLE_SIZE / 2
 
     // Ball escapes through hole
-    if (nearHole && dist > maxDist - 5) {
-      // Escape! Start falling phase
+    if (nearHole && newDist > maxDist - 5) {
       isFalling = true
-      ballTrail = [] // Clear trail for fresh absolute tracking
+      ballTrail = []
 
-      // Give ball some outward velocity
-      ballVX = Math.cos(angle) * 3
-      ballVY = Math.sin(angle) * 3 + 2 // slight downward boost
+      // Give ball outward velocity through the hole
+      ballVX = Math.cos(angle) * 4
+      ballVY = Math.sin(angle) * 4 + 2
 
       draw()
       animationId = requestAnimationFrame(gameLoop)
       return
     }
 
-    // Inelastic bounce off sphere wall
+    // === SPRING BOUNCE off sphere wall ===
+    // Push ball back inside
     ballX = Math.cos(angle) * maxDist
     ballY = Math.sin(angle) * maxDist
 
-    // Reflect velocity with energy loss
+    // Normal vector (pointing inward)
     const nx = Math.cos(angle)
     const ny = Math.sin(angle)
-    const dot = ballVX * nx + ballVY * ny
 
-    // Only bounce if moving outward
-    if (dot > 0) {
-      ballVX = (ballVX - 2 * dot * nx) * BOUNCE
-      ballVY = (ballVY - 2 * dot * ny) * BOUNCE
+    // Radial velocity (outward component)
+    const vDotN = ballVX * nx + ballVY * ny
 
-      // Wall imparts some rotational velocity
+    if (vDotN > 0) {
+      // Reflect velocity
+      ballVX -= 2 * vDotN * nx
+      ballVY -= 2 * vDotN * ny
+
+      // Apply bounce coefficient (elastic)
+      ballVX *= BOUNCE
+      ballVY *= BOUNCE
+
+      // === SPRING PUSH: extra kick away from wall ===
+      const springKick = SPRING_FORCE + Math.abs(vDotN) * 0.3
+      ballVX -= nx * springKick
+      ballVY -= ny * springKick
+
+      // === WALL FRICTION: rotating wall imparts tangential velocity ===
       const tangentX = -ny
       const tangentY = nx
-      const wallSpeed = sphereAngularVelocity * dist * 0.3
-      ballVX += tangentX * wallSpeed
-      ballVY += tangentY * wallSpeed
+      const wallTangentSpeed = sphereAngularVelocity * SPHERE_RADIUS * 0.5
+      ballVX += tangentX * wallTangentSpeed
+      ballVY += tangentY * wallTangentSpeed
 
-      // Add chaos at high speeds
-      const chaosLevel = sphereAngularVelocity * 8
-      ballVX += (Math.random() - 0.5) * chaosLevel
-      ballVY += (Math.random() - 0.5) * chaosLevel
+      // === RANDOMIZED DEFLECTION for unpredictability ===
+      const deflection = (Math.random() - 0.5) * 2.5
+      ballVX += tangentX * deflection
+      ballVY += tangentY * deflection
+
+      // Trigger impact flash
+      impactFlash = 1.0
+      impactAngle = angle
     }
   }
 
@@ -452,6 +485,20 @@ function draw() {
   ctx.arc(cx, cy, SPHERE_RADIUS, holeEnd, holeStart + Math.PI * 2)
   ctx.stroke()
 
+  // === IMPACT FLASH on wall ===
+  if (impactFlash > 0.05 && gameState.value === 'playing' && !isFalling) {
+    const flashX = cx + Math.cos(impactAngle) * SPHERE_RADIUS
+    const flashY = cy + Math.sin(impactAngle) * SPHERE_RADIUS
+    const flashGlow = ctx.createRadialGradient(flashX, flashY, 0, flashX, flashY, 30 * impactFlash)
+    flashGlow.addColorStop(0, `rgba(34, 211, 238, ${impactFlash * 0.8})`)
+    flashGlow.addColorStop(0.5, `rgba(139, 92, 246, ${impactFlash * 0.4})`)
+    flashGlow.addColorStop(1, 'rgba(34, 211, 238, 0)')
+    ctx.fillStyle = flashGlow
+    ctx.beginPath()
+    ctx.arc(flashX, flashY, 30 * impactFlash, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
   // Hole glow effect
   const holeX = cx + Math.cos(currentHoleAngle) * SPHERE_RADIUS
   const holeY = cy + Math.sin(currentHoleAngle) * SPHERE_RADIUS
@@ -503,15 +550,17 @@ function draw() {
   ctx.arc(cx, cy, SPHERE_RADIUS - 10, 0, Math.PI * 2)
   ctx.fill()
 
-  // === BALL TRAIL ===
+  // === BALL TRAIL (brighter when fast) ===
   if (ballTrail.length > 1 && gameState.value === 'playing') {
+    const ballSpeed = Math.sqrt(ballVX * ballVX + ballVY * ballVY)
+    const trailIntensity = Math.min(ballSpeed / 8, 1) // brighter trail when fast
+
     for (let i = 1; i < ballTrail.length; i++) {
-      const alpha = 1 - i / TRAIL_LENGTH
+      const alpha = (1 - i / TRAIL_LENGTH) * (0.3 + trailIntensity * 0.5)
       const radius = BALL_RADIUS * (1 - i / TRAIL_LENGTH * 0.7)
 
-      ctx.fillStyle = `rgba(34, 211, 238, ${alpha * 0.4})`
+      ctx.fillStyle = `rgba(34, 211, 238, ${alpha})`
       ctx.beginPath()
-      // Trail stored as absolute during falling, relative during inside sphere
       const trailX = isFalling ? ballTrail[i].x : cx + ballTrail[i].x
       const trailY = isFalling ? ballTrail[i].y : cy + ballTrail[i].y
       ctx.arc(trailX, trailY, radius, 0, Math.PI * 2)
@@ -529,11 +578,13 @@ function draw() {
     ballScreenY = cy + ballY
   }
 
-  // Ball shadow/glow
-  ctx.shadowColor = gameState.value === 'won' ? 'rgba(74, 222, 128, 0.6)' :
-                    gameState.value === 'lost' ? 'rgba(239, 68, 68, 0.6)' :
-                    'rgba(34, 211, 238, 0.6)'
-  ctx.shadowBlur = 15
+  // Ball shadow/glow (stronger when bouncing fast)
+  const currentSpeed = Math.sqrt(ballVX * ballVX + ballVY * ballVY)
+  const glowStrength = Math.min(0.4 + currentSpeed / 10, 1.0)
+  ctx.shadowColor = gameState.value === 'won' ? `rgba(74, 222, 128, ${glowStrength})` :
+                    gameState.value === 'lost' ? `rgba(239, 68, 68, ${glowStrength})` :
+                    `rgba(34, 211, 238, ${glowStrength})`
+  ctx.shadowBlur = 10 + currentSpeed * 2
 
   // Ball gradient
   const ballGradient = ctx.createRadialGradient(
