@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.core.database import init_db, close_db
 from app.api.v1.gifts import router as gifts_router
+from app.api.v1.stars import router as stars_router
 
 # Optional dependencies: search (Meilisearch) and websocket (Redis)
 try:
@@ -139,6 +140,12 @@ app.include_router(
     gifts_router,
     prefix="/api/v1",
     tags=["Gifts"],
+)
+
+app.include_router(
+    stars_router,
+    prefix="/api/v1",
+    tags=["Stars"],
 )
 
 if search_router:

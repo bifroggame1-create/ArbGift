@@ -105,6 +105,7 @@ declare global {
     sendData(data: string): void
     requestWriteAccess(callback?: (granted: boolean) => void): void
     requestContact(callback?: (granted: boolean) => void): void
+    openInvoice(url: string, callback?: (status: string) => void): void
   }
 }
 

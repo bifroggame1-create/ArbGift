@@ -395,7 +395,7 @@ import { getGifts, searchGifts, getStats } from '../api/client'
 
 const router = useRouter()
 const { hapticImpact } = useTelegram()
-const { preloadPrices, enrichGiftsWithPrices, isLoading: aggregatorLoading } = useMarketAggregator()
+const { preloadPrices, enrichGiftsWithPrices } = useMarketAggregator()
 
 // Tabs
 const tabs = [

@@ -66,12 +66,14 @@ export function useTonConnect() {
       const { TonConnectUI } = await import('@tonconnect/ui')
       const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`
 
-      tonConnectUI = new TonConnectUI({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const options: any = {
         manifestUrl,
         uiPreferences: {
           theme: 'DARK'
         }
-      })
+      }
+      tonConnectUI = new TonConnectUI(options)
 
       // Set TMA return URL if in Telegram Mini App
       if (window.Telegram?.WebApp) {

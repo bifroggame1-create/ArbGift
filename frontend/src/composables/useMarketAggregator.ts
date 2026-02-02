@@ -3,7 +3,7 @@
  *
  * Vue composable for accessing aggregated market prices
  */
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import {
   marketAggregator,
   type MarketPrice,
@@ -181,7 +181,7 @@ export function useMarketAggregator() {
     return {
       min: aggregated.minPrice,
       median: aggregated.medianPrice,
-      sources: aggregated.prices.map(p => p.source)
+      sources: aggregated.prices.map((p: MarketPrice) => p.source)
     }
   }
 
