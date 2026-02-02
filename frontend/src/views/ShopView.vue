@@ -284,8 +284,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
 import { useTonConnect } from '../composables/useTonConnect'
 import { getGifts, getGiftListings, type Gift as APIGift, type Listing } from '../api/client'
 
@@ -321,8 +320,7 @@ interface Extra {
   price: number
 }
 
-const router = useRouter()
-const { init, isConnected, address } = useTonConnect()
+const { init } = useTonConnect()
 
 // State
 const balance = ref(0)
