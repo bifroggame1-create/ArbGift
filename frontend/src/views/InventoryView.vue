@@ -19,7 +19,10 @@
           <span class="wallet-address">{{ shortAddress }}</span>
         </div>
         <div class="header-balance">
-          <span class="balance-icon">💎</span>
+          <svg class="balance-icon-svg" width="14" height="14" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+          </svg>
           <span class="balance-value">{{ balance.toFixed(2) }}</span>
         </div>
       </div>
@@ -77,7 +80,10 @@
         <div class="item-info">
           <span class="item-name">{{ item.name }}</span>
           <span class="item-price">
-            <span class="price-icon">💎</span>
+            <svg class="price-icon-svg" width="10" height="10" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
             {{ item.price }} TON
           </span>
         </div>
@@ -408,7 +414,7 @@ const refreshInventory = () => {
   color: #0098ea;
 }
 
-.balance-icon { font-size: 14px; }
+.balance-icon-svg { flex-shrink: 0; margin-right: 6px; }
 .balance-value { font-size: 14px; font-weight: 600; }
 
 /* Tabs */
@@ -584,7 +590,7 @@ const refreshInventory = () => {
   font-weight: 600;
 }
 
-.price-icon { font-size: 10px; }
+.price-icon-svg { flex-shrink: 0; margin-right: 4px; }
 
 .item-rarity {
   position: absolute;

@@ -16,6 +16,22 @@
       </button>
     </header>
 
+    <!-- Stars Purchase Banner -->
+    <router-link to="/stars" class="stars-banner">
+      <div class="banner-icon">
+        <img src="/icons/stars.png" alt="Stars" width="40" height="40" />
+      </div>
+      <div class="banner-content">
+        <h3>Покупка Stars</h3>
+        <p>Telegram Stars с мгновенной доставкой</p>
+      </div>
+      <div class="banner-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </div>
+    </router-link>
+
     <!-- User Card -->
     <div class="user-card">
       <div class="user-avatar" :style="{ background: avatarGradient }">
@@ -26,7 +42,8 @@
         <span class="user-id">ID: {{ userId }}</span>
       </div>
       <div class="user-badge vip" v-if="isVip">
-        <span>⭐ VIP</span>
+        <img src="/icons/stars.png" alt="Stars" width="12" height="12" class="vip-star-icon" />
+        <span>VIP</span>
       </div>
     </div>
 
@@ -206,7 +223,13 @@
       <div v-if="showDepositModal" class="modal-overlay" @click.self="closeDepositModal">
         <div class="modal-content">
           <div class="modal-header">
-            <h3>💎 Пополнить TON</h3>
+            <h3 class="modal-title-with-icon">
+              <svg width="18" height="18" viewBox="0 0 56 56" fill="none">
+                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+              </svg>
+              Пополнить TON
+            </h3>
             <button class="modal-close" @click="closeDepositModal">×</button>
           </div>
           <div class="modal-body">
@@ -238,7 +261,10 @@
       <div v-if="showStarsModal" class="modal-overlay" @click.self="closeStarsModal">
         <div class="modal-content">
           <div class="modal-header">
-            <h3>⭐ Купить Stars</h3>
+            <h3 class="modal-title-with-icon">
+              <img src="/icons/stars.png" alt="Stars" width="18" height="18" class="modal-title-icon" />
+              Купить Stars
+            </h3>
             <button class="modal-close" @click="closeStarsModal">×</button>
           </div>
           <div class="modal-body">
@@ -251,7 +277,10 @@
                 :class="{ selected: selectedStarsPackage === pkg.amount }"
                 @click="selectedStarsPackage = pkg.amount"
               >
-                <span class="pkg-stars">⭐ {{ pkg.amount }}</span>
+                <span class="pkg-stars">
+                  <img src="/icons/stars.png" alt="Stars" width="14" height="14" class="pkg-star-icon" />
+                  {{ pkg.amount }}
+                </span>
                 <span class="pkg-price">≈ {{ pkg.priceRub }} ₽</span>
               </button>
             </div>
@@ -494,6 +523,52 @@ onMounted(async () => {
   justify-content: center;
 }
 
+/* Stars Banner */
+.stars-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 16px 16px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  z-index: 10;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.stars-banner:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.banner-icon img {
+  object-fit: contain;
+}
+
+.banner-content {
+  flex: 1;
+}
+
+.banner-content h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 2px;
+  color: #fff;
+}
+
+.banner-content p {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.banner-arrow {
+  color: rgba(255, 255, 255, 0.5);
+}
+
 /* User Card */
 .user-card {
   display: flex;
@@ -540,6 +615,14 @@ onMounted(async () => {
 .user-badge.vip {
   background: linear-gradient(135deg, #f59e0b, #fbbf24);
   color: #000;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vip-star-icon {
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 /* Balance Card */
@@ -683,6 +766,17 @@ onMounted(async () => {
   margin: 0;
 }
 
+.modal-title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-title-icon {
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
 .modal-close {
   width: 32px;
   height: 32px;
@@ -809,6 +903,14 @@ onMounted(async () => {
 .pkg-stars {
   font-size: 16px;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pkg-star-icon {
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .pkg-price {

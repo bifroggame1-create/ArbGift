@@ -235,6 +235,60 @@
       </div>
     </div>
 
+    <!-- Upgrades Section -->
+    <div class="games-section">
+      <h2 class="section-title">
+        <span class="title-icon">⬆️</span>
+        Апгрейды
+      </h2>
+      <div class="upgrade-info-card">
+        <div class="upgrade-icon">🎰</div>
+        <div class="upgrade-text">
+          <h3>Апгрейд гифтов</h3>
+          <p>Объедините 2 гифта и получите шанс на более ценный!</p>
+        </div>
+        <router-link to="/upgrade" class="btn-upgrade">
+          Попробовать
+        </router-link>
+      </div>
+      <div class="upgrades-list">
+        <div class="upgrade-item">
+          <div class="upgrade-from">
+            <span class="from-icon">🎁</span>
+            <span>2x Common</span>
+          </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+          <div class="upgrade-to">
+            <svg class="to-icon-svg" width="18" height="18" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
+            <span>1x Rare</span>
+          </div>
+          <span class="upgrade-chance">45%</span>
+        </div>
+        <div class="upgrade-item">
+          <div class="upgrade-from">
+            <svg class="from-icon-svg" width="18" height="18" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
+            <span>2x Rare</span>
+          </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+          <div class="upgrade-to">
+            <span class="to-icon">👑</span>
+            <span>1x Epic</span>
+          </div>
+          <span class="upgrade-chance">30%</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Provably Fair -->
     <div class="fair-block">
       <div class="fair-icon">🔐</div>
@@ -990,6 +1044,87 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Upgrades */
+.upgrade-info-card {
+  background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.upgrade-icon {
+  font-size: 40px;
+}
+
+.upgrade-text {
+  flex: 1;
+}
+
+.upgrade-text h3 {
+  font-size: 16px;
+  margin: 0 0 4px;
+}
+
+.upgrade-text p {
+  font-size: 12px;
+  opacity: 0.8;
+  margin: 0;
+}
+
+.btn-upgrade {
+  background: #fff;
+  color: #1e3a8a;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.upgrades-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upgrade-item {
+  background: #1c1c1e;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upgrade-from, .upgrade-to {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.from-icon, .to-icon {
+  font-size: 18px;
+}
+
+.from-icon-svg, .to-icon-svg {
+  flex-shrink: 0;
+}
+
+.upgrade-chance {
+  margin-left: auto;
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 </style>

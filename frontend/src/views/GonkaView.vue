@@ -56,8 +56,12 @@
           :style="{ background: cell.bgColor, boxShadow: highlightedCell === idx ? `0 0 16px ${cell.circleColor}66` : 'none' }"
         >
           <!-- Prize badge top-right -->
-          <div class="absolute top-1.5 right-1.5 text-xs font-bold" :style="{ color: cell.circleColor }">
-            +{{ cell.prize }} 💎
+          <div class="absolute top-1.5 right-1.5 text-xs font-bold flex items-center gap-0.5" :style="{ color: cell.circleColor }">
+            +{{ cell.prize }}
+            <svg width="10" height="10" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
           </div>
 
           <!-- Circle with multiplier -->
@@ -100,7 +104,7 @@
               <span class="text-white text-xs font-bold">▼</span>
             </div>
           </div>
-          <span class="text-white/35 text-xs">Swap ☆</span>
+          <span class="text-white/35 text-xs flex items-center gap-0.5">Swap <img src="/icons/stars.png" alt="Stars" width="10" height="10" class="object-contain" /></span>
         </button>
         <button @click="playGame" :disabled="isPlaying || balance < selectedBet"
           class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"

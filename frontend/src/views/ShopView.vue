@@ -12,7 +12,10 @@
         <span class="shop-subtitle">Гифты и лутбоксы</span>
       </div>
       <div class="header-balance">
-        <span class="balance-icon">💎</span>
+        <svg class="balance-icon-svg" width="14" height="14" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+        </svg>
         <span class="balance-value">{{ balance.toFixed(2) }}</span>
         <button class="balance-add" @click="$router.push('/topup')">+</button>
       </div>
@@ -44,7 +47,13 @@
     <!-- Gifts Grid -->
     <div v-if="activeTab === 'gifts'" class="gifts-section">
       <div class="section-header">
-        <h2>💎 TON Гифты</h2>
+        <h2 class="section-title-with-icon">
+          <svg width="16" height="16" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+          </svg>
+          TON Гифты
+        </h2>
         <div class="header-actions">
           <button class="refresh-btn" @click="refreshGifts" :disabled="loading">
             <svg :class="{ rotating: loading }" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -88,7 +97,10 @@
             <span class="gift-name">{{ gift.name }}</span>
             <div class="gift-price-row">
               <span class="gift-price">
-                <span class="price-icon">💎</span>
+                <svg class="price-icon-svg" width="10" height="10" viewBox="0 0 56 56" fill="none">
+                  <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+                  <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+                </svg>
                 {{ gift.price }} TON
               </span>
               <span v-if="gift.originalPrice" class="original-price">{{ gift.originalPrice }}</span>
@@ -133,74 +145,6 @@
       </div>
     </div>
 
-    <!-- Upgrades Section -->
-    <div v-if="activeTab === 'upgrades'" class="upgrades-section">
-      <div class="section-header">
-        <h2>⬆️ Апгрейды</h2>
-      </div>
-
-      <div class="upgrade-info-card">
-        <div class="upgrade-icon">🎰</div>
-        <div class="upgrade-text">
-          <h3>Апгрейд гифтов</h3>
-          <p>Объедините 2 гифта и получите шанс на более ценный!</p>
-        </div>
-        <button class="btn-upgrade" @click="$router.push('/upgrade')">
-          Попробовать
-        </button>
-      </div>
-
-      <div class="upgrades-list">
-        <div class="upgrade-item">
-          <div class="upgrade-from">
-            <span class="from-icon">🎁</span>
-            <span>2x Common</span>
-          </div>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-          <div class="upgrade-to">
-            <span class="to-icon">💎</span>
-            <span>1x Rare</span>
-          </div>
-          <span class="upgrade-chance">45%</span>
-        </div>
-        <div class="upgrade-item">
-          <div class="upgrade-from">
-            <span class="from-icon">💎</span>
-            <span>2x Rare</span>
-          </div>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-          <div class="upgrade-to">
-            <span class="to-icon">👑</span>
-            <span>1x Epic</span>
-          </div>
-          <span class="upgrade-chance">30%</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Extras Section -->
-    <div v-if="activeTab === 'extras'" class="extras-section">
-      <div class="section-header">
-        <h2>✨ Ништяки</h2>
-      </div>
-
-      <div class="extras-grid">
-        <div class="extra-card" v-for="extra in extras" :key="extra.id">
-          <div class="extra-icon">{{ extra.icon }}</div>
-          <div class="extra-info">
-            <span class="extra-name">{{ extra.name }}</span>
-            <span class="extra-desc">{{ extra.description }}</span>
-          </div>
-          <button class="btn-buy-extra">
-            {{ extra.price }} TON
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Purchase Modal with Marketplace Aggregation -->
     <Teleport to="body">
@@ -312,14 +256,6 @@ interface Lootpack {
   gradient: string
 }
 
-interface Extra {
-  id: number
-  name: string
-  icon: string
-  description: string
-  price: number
-}
-
 const { init } = useTonConnect()
 
 // State
@@ -335,8 +271,6 @@ const error = ref<string | null>(null)
 const tabs = [
   { id: 'gifts', label: 'Гифты', icon: '🎁' },
   { id: 'lootpacks', label: 'Лутпаки', icon: '📦' },
-  { id: 'upgrades', label: 'Апгрейды', icon: '⬆️' },
-  { id: 'extras', label: 'Ништяки', icon: '✨' },
 ]
 
 const tonGifts = ref<Gift[]>([])
@@ -410,12 +344,6 @@ const lootpacks = ref<Lootpack[]>([
   { id: 1, name: 'Стартовый', icon: '📦', contains: 3, price: 0.5, maxMultiplier: 5, gradient: 'linear-gradient(135deg, #1e3a8a, #3b82f6)' },
   { id: 2, name: 'Про', icon: '💎', contains: 5, price: 2, maxMultiplier: 10, gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)' },
   { id: 3, name: 'Элитный', icon: '👑', contains: 10, price: 5, maxMultiplier: 50, gradient: 'linear-gradient(135deg, #d97706, #f59e0b)' },
-])
-
-const extras = ref<Extra[]>([
-  { id: 1, name: 'VIP Статус', icon: '⭐', description: '7 дней VIP привилегий', price: 1 },
-  { id: 2, name: 'Бонус удачи', icon: '🍀', description: '+10% к шансу выигрыша', price: 0.5 },
-  { id: 3, name: 'Кэшбэк', icon: '💰', description: '5% возврат с проигрышей', price: 2 },
 ])
 
 const getStarStyle = (_i: number) => ({
@@ -523,7 +451,7 @@ const refreshGifts = () => {
   border-radius: 12px;
 }
 
-.balance-icon { font-size: 14px; }
+.balance-icon-svg { flex-shrink: 0; margin-right: 6px; }
 .balance-value { font-size: 14px; font-weight: 600; }
 
 .balance-add {
@@ -627,6 +555,12 @@ const refreshGifts = () => {
 .section-header h2 {
   font-size: 16px;
   margin: 0;
+}
+
+.section-title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .header-actions {
@@ -774,7 +708,7 @@ const refreshGifts = () => {
   font-weight: 600;
 }
 
-.price-icon { font-size: 10px; }
+.price-icon-svg { flex-shrink: 0; margin-right: 4px; }
 
 .original-price {
   font-size: 11px;
@@ -957,8 +891,8 @@ const refreshGifts = () => {
   font-size: 13px;
 }
 
-.from-icon, .to-icon {
-  font-size: 18px;
+.from-icon-svg, .to-icon-svg {
+  flex-shrink: 0;
 }
 
 .upgrade-chance {
