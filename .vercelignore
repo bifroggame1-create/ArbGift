@@ -1,5 +1,5 @@
 requirements.txt
-services/
+/services/
 backend/
 *.py
 __pycache__/
