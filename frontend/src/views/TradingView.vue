@@ -126,7 +126,13 @@
             </div>
             <span class="trader-name">@{{ trader.name }}</span>
           </div>
-          <div class="trader-bet">{{ trader.bet.toFixed(2) }} TON</div>
+          <div class="trader-bet">
+            <svg class="trader-ton-icon" width="12" height="12" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
+            {{ trader.bet.toFixed(2) }} TON
+          </div>
           <div class="trader-status">
             <template v-if="trader.exited">
               <span class="status-exited">Вышел</span>
@@ -172,7 +178,7 @@
             <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
           </svg>
           <span>Сменить</span>
-          <span class="swap-star">&#9733;</span>
+          <img src="/icons/stars.png" alt="Stars" class="swap-star-icon" width="14" height="14" />
         </button>
 
         <!-- Buy / Sell Button -->
@@ -183,7 +189,13 @@
           </svg>
           <span class="btn-text">
             <span class="btn-label">Купить</span>
-            <span class="btn-amount">{{ selectedBet.toFixed(1) }} TON</span>
+            <span class="btn-amount">
+              <svg class="btn-ton-icon" width="12" height="12" viewBox="0 0 56 56" fill="none">
+                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+              </svg>
+              {{ selectedBet.toFixed(1) }} TON
+            </span>
           </span>
         </button>
         <button v-else class="sell-btn" :disabled="!canSell" @click="cashOut">
@@ -1080,8 +1092,24 @@ onUnmounted(() => {
 }
 
 .trader-bet {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.5);
+}
+
+.trader-ton-icon {
+  flex-shrink: 0;
+}
+
+.btn-ton-icon {
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.swap-star-icon {
+  object-fit: contain;
 }
 
 .trader-status {

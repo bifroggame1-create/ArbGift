@@ -43,7 +43,13 @@
           <div class="stat-label">ПРЕД. ИГРА</div>
         </div>
         <div class="stat-right">
-          <div class="stat-amount">+{{ prevGame.amount }} TON</div>
+          <div class="stat-amount">
+            <svg class="stat-ton-icon" width="12" height="12" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
+            +{{ prevGame.amount }} TON
+          </div>
           <div class="stat-chance">ШАНС {{ prevGame.chance }}%</div>
         </div>
       </div>
@@ -57,7 +63,13 @@
           <div class="stat-label">ТОП ИГРА</div>
         </div>
         <div class="stat-right">
-          <div class="stat-amount">+{{ topGame.amount }} TON</div>
+          <div class="stat-amount">
+            <svg class="stat-ton-icon" width="12" height="12" viewBox="0 0 56 56" fill="none">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
+            +{{ topGame.amount }} TON
+          </div>
           <div class="stat-chance">ШАНС {{ topGame.chance }}%</div>
         </div>
       </div>
@@ -72,7 +84,13 @@
       </button>
       <div class="pool-total">
         <span class="pool-label">ВСЕГО</span>
-        <span class="pool-value">{{ totalPool }} TON</span>
+        <span class="pool-value">
+          <svg class="pool-ton-icon" width="14" height="14" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+          </svg>
+          {{ totalPool }} TON
+        </span>
       </div>
       <button class="pool-icon-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -171,7 +189,13 @@
           </div>
           <div class="player-stats">
             <span class="player-chance">{{ player.chance }}%</span>
-            <span class="player-bet">{{ player.bet }} TON</span>
+            <span class="player-bet">
+              <svg class="player-ton-icon" width="10" height="10" viewBox="0 0 56 56" fill="none">
+                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+              </svg>
+              {{ player.bet }} TON
+            </span>
           </div>
           <div class="player-badge" :style="{ background: player.color }">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -190,8 +214,15 @@
     <div class="filter-bar">
       <div class="filter-btns">
         <button class="filter-btn red"><span>🎲</span></button>
-        <button class="filter-btn blue"><span>💎</span></button>
-        <button class="filter-btn yellow"><span>⭐</span></button>
+        <button class="filter-btn blue">
+          <svg width="14" height="14" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+          </svg>
+        </button>
+        <button class="filter-btn yellow">
+          <img src="/icons/stars.png" alt="Stars" width="14" height="14" />
+        </button>
       </div>
       <div class="balance-pill">
         <svg class="balance-icon-svg" width="16" height="16" viewBox="0 0 56 56" fill="none">
@@ -210,6 +241,10 @@
       </button>
       <button class="btn-pool">
         <span>👑</span>
+        <svg class="btn-ton-icon" width="14" height="14" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+        </svg>
         <span>{{ totalPool }} TON</span>
       </button>
     </div>
@@ -236,10 +271,15 @@
 
           <div class="modal-tabs">
             <button :class="['tab', { active: giftTab === 'ton' }]" @click="giftTab = 'ton'">
-              <span>💎</span> TON Гифты
+              <svg class="tab-icon" width="14" height="14" viewBox="0 0 56 56" fill="none">
+                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+              </svg>
+              TON Гифты
             </button>
             <button :class="['tab', { active: giftTab === 'stars' }]" @click="giftTab = 'stars'">
-              <span>⭐</span> Stars Гифты
+              <img src="/icons/stars.png" alt="Stars" class="tab-icon-img" width="14" height="14" />
+              Stars Гифты
             </button>
           </div>
 
@@ -263,7 +303,7 @@
                 <img :src="gift.image" :alt="gift.name" class="gift-img" />
                 <span class="gift-name">{{ gift.name }}</span>
                 <span class="gift-price">
-                  {{ giftTab === 'ton' ? '💎' : '⭐' }} {{ gift.price }} {{ giftTab === 'ton' ? 'TON' : 'Stars' }}
+                  <svg v-if="giftTab === 'ton'" class="price-icon" width="10" height="10" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="28" fill="#0098EA"/><path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/></svg><img v-else src="/icons/stars.png" alt="Stars" class="price-icon-img" width="10" height="10" /> {{ gift.price }} {{ giftTab === 'ton' ? 'TON' : 'Stars' }}
                 </span>
               </div>
             </div>
@@ -282,7 +322,7 @@
                 <img :src="gift.image" :alt="gift.name" class="gift-img" />
                 <span class="gift-name">{{ gift.name }}</span>
                 <span class="gift-price">
-                  {{ giftTab === 'ton' ? '💎' : '⭐' }} {{ gift.price }} {{ giftTab === 'ton' ? 'TON' : 'Stars' }}
+                  <svg v-if="giftTab === 'ton'" class="price-icon" width="10" height="10" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="28" fill="#0098EA"/><path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/></svg><img v-else src="/icons/stars.png" alt="Stars" class="price-icon-img" width="10" height="10" /> {{ gift.price }} {{ giftTab === 'ton' ? 'TON' : 'Stars' }}
                 </span>
               </div>
             </div>
@@ -313,15 +353,31 @@
               <span class="winner-label">Победитель</span>
             </div>
             <div class="winner-prize">
-              <span class="prize-amount">Выиграл {{ winAmount }} TON</span>
+              <span class="prize-amount">
+                Выиграл
+                <svg class="prize-ton-icon" width="14" height="14" viewBox="0 0 56 56" fill="none">
+                  <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+                  <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+                </svg>
+                {{ winAmount }} TON
+              </span>
               <span class="prize-chance">{{ winner?.chance }}%</span>
             </div>
           </div>
           <div class="winner-gift">
             <div class="gift-won">
-              <span class="gift-icon">💎</span>
+              <svg class="gift-icon-svg" width="24" height="24" viewBox="0 0 56 56" fill="none">
+                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+              </svg>
             </div>
-            <span class="gift-value">💎 {{ winAmount }} TON</span>
+            <span class="gift-value">
+              <svg class="gift-ton-icon" width="14" height="14" viewBox="0 0 56 56" fill="none">
+                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+              </svg>
+              {{ winAmount }} TON
+            </span>
           </div>
           <button class="btn-done" @click="showWinnerModal = false">Готово</button>
         </div>
@@ -884,6 +940,25 @@ onMounted(async () => {
 .balance-icon { font-size: 16px; }
 .balance-icon-svg { flex-shrink: 0; }
 .balance-value { font-size: 14px; font-weight: 600; }
+
+/* TON/Stars Icons */
+.stat-ton-icon { flex-shrink: 0; margin-right: 4px; }
+.pool-ton-icon { flex-shrink: 0; margin-right: 4px; }
+.player-ton-icon { flex-shrink: 0; margin-right: 2px; }
+.btn-ton-icon { flex-shrink: 0; margin-right: 4px; }
+.tab-icon { flex-shrink: 0; margin-right: 4px; }
+.tab-icon-img { flex-shrink: 0; margin-right: 4px; object-fit: contain; }
+.price-icon { flex-shrink: 0; margin-right: 2px; }
+.price-icon-img { flex-shrink: 0; margin-right: 2px; object-fit: contain; }
+.prize-ton-icon { flex-shrink: 0; margin: 0 4px; }
+.gift-icon-svg { flex-shrink: 0; }
+.gift-ton-icon { flex-shrink: 0; margin-right: 4px; }
+
+.stat-amount { display: flex; align-items: center; }
+.pool-value { display: flex; align-items: center; }
+.player-bet { display: flex; align-items: center; }
+.prize-amount { display: flex; align-items: center; }
+.gift-value { display: flex; align-items: center; }
 
 .balance-add {
   width: 24px;
