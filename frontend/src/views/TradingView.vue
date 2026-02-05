@@ -390,9 +390,10 @@ const initChart = () => {
     timeScale: {
       visible: false,
       borderVisible: false,
-      rightOffset: 5,
-      barSpacing: 8,
-      fixLeftEdge: true,
+      rightOffset: 12,
+      barSpacing: 24,
+      minBarSpacing: 16,
+      fixLeftEdge: false,
       fixRightEdge: false,
     },
     handleScroll: false,
@@ -418,7 +419,7 @@ const initChart = () => {
 
 // Update chart with new candle data
 const updateChart = () => {
-  if (!candleSeries || !currentCandle.value) return
+  if (!candleSeries || !currentCandle.value || !chart) return
 
   const candleData = {
     time: currentCandle.value.time as any,
@@ -429,6 +430,9 @@ const updateChart = () => {
   }
 
   candleSeries.update(candleData)
+
+  // Make chart fit all candles and spread them across the width
+  chart.timeScale().fitContent()
 
   // Update price line position
   updatePriceLinePosition()
@@ -494,7 +498,7 @@ const startGame = () => {
   currentMultiplier.value = 1.0
   tickCount = 0
   momentum = 0
-  candleIndex = Date.now()
+  candleIndex = 0  // Start from 0 for clean sequential indexing
 
   // Clear old data
   candles.value = []
@@ -512,7 +516,7 @@ const startGame = () => {
   }
 
   // Add initial candle
-  if (candleSeries) {
+  if (candleSeries && chart) {
     candleSeries.update({
       time: candleIndex as any,
       open: 1.0,
@@ -520,6 +524,7 @@ const startGame = () => {
       low: 1.0,
       close: 1.0,
     })
+    chart.timeScale().fitContent()
   }
 
   // Simulate other traders joining
