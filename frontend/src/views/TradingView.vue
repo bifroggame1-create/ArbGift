@@ -409,15 +409,10 @@ const initChart = () => {
     priceScaleId: 'left',
   })
 
-  // Set fixed price scale 0-5 like MyBalls
-  candleSeries.priceScale().applyOptions({
-    autoScale: false,
-    scaleMargins: { top: 0.02, bottom: 0.02 },
-  })
-
-  // Fix visible range to 0-5
+  // Set price scale with proper margins for visibility
   chart.priceScale('left').applyOptions({
-    autoScale: false,
+    autoScale: true,
+    scaleMargins: { top: 0.1, bottom: 0.1 },
   })
 }
 
