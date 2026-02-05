@@ -94,57 +94,67 @@
       </div>
     </div>
 
-    <!-- Traders Panel -->
+    <!-- Traders Panel - MyBalls style -->
     <div class="traders-panel">
+      <!-- Gradient border effect -->
+      <div class="panel-border"></div>
+
       <div class="traders-header">
         <div class="traders-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          <span>Traders</span>
+          <span class="title-text">Трейдеры</span>
           <span class="traders-count">({{ traders.length }})</span>
         </div>
-        <div class="game-info">
-          <span class="game-number">Game #{{ gameNumber }}</span>
-          <button class="hash-btn">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-            </svg>
-            Hash: {{ gameHash }}
-          </button>
+      </div>
+
+      <div class="traders-list" v-if="traders.length > 0">
+        <div v-for="trader in traders" :key="trader.id"
+             class="trader-card"
+             :class="{ exited: trader.exited, playing: !trader.exited && gameState === 'active' }">
+          <div class="trader-left">
+            <!-- Level badge -->
+            <div class="level-badge">
+              <span class="level-num">{{ trader.level || Math.floor(Math.random() * 50) + 1 }}</span>
+            </div>
+            <!-- Avatar -->
+            <div class="trader-avatar" :style="{ background: trader.color }">
+              <span class="avatar-letter">{{ trader.name.charAt(0).toUpperCase() }}</span>
+            </div>
+            <!-- Name + Status -->
+            <div class="trader-name-block">
+              <span class="trader-name">@{{ trader.name }}</span>
+              <span v-if="trader.exited" class="status-badge exited">Вышел</span>
+              <span v-else-if="gameState === 'active'" class="status-badge playing">В игре</span>
+            </div>
+          </div>
+
+          <div class="trader-right">
+            <!-- Profit/Loss display -->
+            <div class="profit-display" :class="{ positive: trader.profit >= 0, negative: trader.profit < 0 }">
+              <span class="profit-value">{{ trader.profit >= 0 ? '+' : '' }}{{ trader.profit.toFixed(2) }}</span>
+              <svg class="ton-mini" width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M12.7238 1.00488H3.27565C1.53846 1.00488 0.437395 2.87874 1.31137 4.39358L7.14243 14.5002C7.52294 15.1601 8.47652 15.1601 8.85703 14.5002L14.6893 4.39358C15.5621 2.88116 14.461 1.00488 12.725 1.00488H12.7238ZM7.13769 11.4694L5.86778 9.01168L2.80363 3.53153C2.60149 3.18078 2.85116 2.7313 3.27446 2.7313H7.1365V11.4705L7.13769 11.4694ZM13.1935 3.53035L10.1305 9.01287L8.86059 11.4694V2.73011H12.7226C13.1459 2.73011 13.3956 3.17959 13.1935 3.53035Z"/>
+              </svg>
+            </div>
+            <!-- Bet amount -->
+            <div class="bet-display">
+              <span class="bet-value">{{ trader.bet.toFixed(0) }}</span>
+              <svg class="ton-mini" width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M12.7238 1.00488H3.27565C1.53846 1.00488 0.437395 2.87874 1.31137 4.39358L7.14243 14.5002C7.52294 15.1601 8.47652 15.1601 8.85703 14.5002L14.6893 4.39358C15.5621 2.88116 14.461 1.00488 12.725 1.00488H12.7238ZM7.13769 11.4694L5.86778 9.01168L2.80363 3.53153C2.60149 3.18078 2.85116 2.7313 3.27446 2.7313H7.1365V11.4705L7.13769 11.4694ZM13.1935 3.53035L10.1305 9.01287L8.86059 11.4694V2.73011H12.7226C13.1459 2.73011 13.3956 3.17959 13.1935 3.53035Z"/>
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="traders-list" v-if="traders.length > 0">
-        <div v-for="trader in traders" :key="trader.id" class="trader-row" :class="{ exited: trader.exited }">
-          <div class="trader-info">
-            <div class="trader-avatar" :style="{ background: trader.color }">
-              {{ trader.name.charAt(0).toUpperCase() }}
-            </div>
-            <span class="trader-name">@{{ trader.name }}</span>
-          </div>
-          <div class="trader-bet">
-            <svg class="trader-ton-icon" width="12" height="12" viewBox="0 0 56 56" fill="none">
-              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-            </svg>
-            {{ trader.bet.toFixed(2) }} TON
-          </div>
-          <div class="trader-status">
-            <template v-if="trader.exited">
-              <span class="status-exited">Вышел</span>
-              <span class="trader-profit" :class="{ positive: trader.profit > 0 }">
-                {{ trader.profit >= 0 ? '+' : '' }}{{ trader.profit.toFixed(2) }}
-              </span>
-            </template>
-            <template v-else-if="gameState === 'active'">
-              <span class="status-active">{{ currentMultiplier.toFixed(2) }}x</span>
-            </template>
-          </div>
-        </div>
+
+      <!-- Game info footer -->
+      <div class="panel-footer">
+        <span class="game-number">Игра #{{ gameNumber }}</span>
+        <button class="hash-btn">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+            <path d="M4.75016 9.48047H3.16683C1.33766 9.48047 0.520996 8.6638 0.520996 6.83464V5.2513C0.520996 3.42214 1.33766 2.60547 3.16683 2.60547H4.41683C4.58766 2.60547 4.72933 2.74714 4.72933 2.91797C4.72933 3.0888 4.58766 3.23047 4.41683 3.23047H3.16683C1.67516 3.23047 1.146 3.75964 1.146 5.2513V6.83464C1.146 8.3263 1.67516 8.85547 3.16683 8.85547H4.75016C6.24183 8.85547 6.771 8.3263 6.771 6.83464V5.58464C6.771 5.4138 6.91266 5.27214 7.0835 5.27214C7.25433 5.27214 7.396 5.4138 7.396 5.58464V6.83464C7.396 8.6638 6.57933 9.48047 4.75016 9.48047Z"/>
+          </svg>
+          <span>Hash: {{ gameHash }}</span>
+        </button>
       </div>
     </div>
 
@@ -235,6 +245,7 @@ interface Trader {
   color: string
   exited: boolean
   profit: number
+  level?: number
 }
 
 interface RecentGame {
@@ -1045,32 +1056,41 @@ onUnmounted(() => {
   color: #FB2C36;
 }
 
-/* Traders Panel */
+/* Traders Panel - MyBalls style */
 .traders-panel {
-  background: #181818;
-  border-radius: 20px;
-  overflow: hidden;
-  margin-bottom: 12px;
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(15px);
+  border-radius: 32px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.panel-border {
+  position: absolute;
+  inset: 0;
+  border-radius: 32px;
+  border: 1px solid;
+  border-image: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%) 1;
+  pointer-events: none;
 }
 
 .traders-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid #262729;
+  margin-bottom: 12px;
 }
 
 .traders-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
+  gap: 4px;
+  font-size: 16px;
+  font-weight: 700;
 }
 
-.traders-title svg {
-  color: rgba(255, 255, 255, 0.5);
+.title-text {
+  color: #fff;
 }
 
 .traders-count {
@@ -1078,15 +1098,173 @@ onUnmounted(() => {
   font-weight: 400;
 }
 
-.game-info {
+.traders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* Trader Card - MyBalls style */
+.trader-card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border-radius: 22px;
+  background: rgba(52, 205, 239, 0.15);
+  transition: background 0.2s;
+}
+
+.trader-card.exited {
+  background: rgba(52, 205, 239, 0.15);
+}
+
+.trader-card.playing {
+  background: rgba(255, 165, 0, 0.15);
+}
+
+.trader-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+/* Level Badge */
+.level-badge {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.level-badge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  border-radius: 6px;
+  transform: rotate(45deg);
+}
+
+.level-num {
+  position: relative;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Avatar */
+.trader-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatar-letter {
+  font-size: 14px;
+  font-weight: 700;
+  color: #000;
+}
+
+/* Name block */
+.trader-name-block {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.trader-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-badge {
+  padding: 2px 6px;
+  border-radius: 90px;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-badge.exited {
+  background: rgba(52, 205, 239, 0.25);
+  color: #34CDEF;
+}
+
+.status-badge.playing {
+  background: rgba(255, 165, 0, 0.25);
+  color: #FFA500;
+}
+
+/* Right side - profit & bet */
+.trader-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.profit-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+}
+
+.profit-display.positive {
+  color: #00CD3A;
+}
+
+.profit-display.negative {
+  color: #FB2C36;
+}
+
+.profit-display .profit-value {
+  transition: transform 0.2s;
+}
+
+.bet-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #fff;
+  font-family: ui-monospace, monospace;
+}
+
+.ton-mini {
+  flex-shrink: 0;
+}
+
+/* Panel Footer */
+.panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .game-number {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
 }
 
 .hash-btn {
@@ -1095,62 +1273,17 @@ onUnmounted(() => {
   gap: 4px;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+  opacity: 0.5;
   font-size: 11px;
   cursor: pointer;
 }
 
-.traders-list {
-  max-height: 120px;
-  overflow-y: auto;
+.hash-btn:hover {
+  opacity: 0.8;
 }
 
-.trader-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid #262729;
-}
-
-.trader-row.exited {
-  background: rgba(9, 215, 109, 0.05);
-}
-
-.trader-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.trader-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: #000;
-}
-
-.trader-name {
-  font-size: 13px;
-}
-
-.trader-bet {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.trader-ton-icon {
-  flex-shrink: 0;
-}
-
+/* Legacy styles */
 .btn-ton-icon {
   flex-shrink: 0;
   margin-right: 2px;
@@ -1158,33 +1291,6 @@ onUnmounted(() => {
 
 .swap-star-icon {
   object-fit: contain;
-}
-
-.trader-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.status-exited {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.status-active {
-  font-size: 13px;
-  font-weight: 600;
-  color: #0098EA;
-}
-
-.trader-profit {
-  font-size: 13px;
-  font-weight: 600;
-  color: #FB2C36;
-}
-
-.trader-profit.positive {
-  color: #09D76D;
 }
 
 /* Bet Controls */
