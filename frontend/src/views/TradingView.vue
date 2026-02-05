@@ -711,7 +711,7 @@ onUnmounted(() => {
   right: 0;
   height: 180px;
   background: linear-gradient(135deg, #0d1a2d 0%, #0a1525 50%, #061020 100%);
-  background-image: url('/images/trading-plate.png');
+  background-image: url('/images/app-trading-bg-1.webp');
   background-size: cover;
   background-position: center;
   z-index: 0;

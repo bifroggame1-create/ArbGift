@@ -939,7 +939,7 @@ onUnmounted(() => {
   right: 0;
   height: 200px;
   background: linear-gradient(135deg, #1a4a7c 0%, #0d2847 50%, #061428 100%);
-  background-image: url('/images/plinko-plate.png');
+  background-image: url('/images/plinko-card-bg-1.webp');
   background-size: cover;
   background-position: center;
   z-index: 0;
