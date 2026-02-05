@@ -79,17 +79,17 @@
       </div>
     </div>
 
-    <!-- Recent Games Strip -->
+    <!-- Recent Games Strip - MyBalls style -->
     <div class="recent-games">
       <span class="recent-label">Последние игры</span>
       <div class="recent-list">
         <div v-for="(game, idx) in recentGames" :key="idx" class="recent-item">
-          <div class="mini-chart">
-            <svg viewBox="0 0 40 24" preserveAspectRatio="none">
-              <path :d="game.path" fill="none" :stroke="game.maxMult >= 2 ? '#09D76D' : '#FF394E'" stroke-width="1.5"/>
+          <div class="mini-chart" :class="getMiniChartClass(game.maxMult)">
+            <svg viewBox="0 0 50 60" preserveAspectRatio="none">
+              <path :d="game.path" fill="none" :stroke="game.maxMult >= 2 ? '#09D76D' : game.maxMult >= 1.3 ? '#85FFB2' : '#FB2C36'" stroke-width="2"/>
             </svg>
           </div>
-          <span class="recent-mult" :class="{ high: game.maxMult >= 2 }">{{ game.maxMult.toFixed(2) }}x</span>
+          <span class="recent-mult" :class="{ high: game.maxMult >= 1.3, low: game.maxMult < 1.3 }">{{ game.maxMult.toFixed(2) }}x</span>
         </div>
       </div>
     </div>
@@ -329,16 +329,23 @@ const canSell = computed(() => {
 // Generate mini chart path for recent games
 function generateMiniPath(): string {
   const points: string[] = []
-  let y = 12 + Math.random() * 8
-  for (let x = 0; x <= 40; x += 4) {
-    y += (Math.random() - 0.45) * 5
-    y = Math.max(4, Math.min(20, y))
+  let y = 50 // Start near bottom
+  for (let x = 0; x <= 50; x += 5) {
+    y -= (Math.random() * 8) // Go up mostly
+    y = Math.max(5, Math.min(55, y))
     points.push(`${x},${y}`)
   }
   return `M ${points.join(' L ')}`
 }
 
-// Initialize TradingView Lightweight Chart
+// Get CSS class for mini chart border color
+function getMiniChartClass(mult: number): string {
+  if (mult >= 2) return 'green'
+  if (mult >= 1.3) return 'bright-green'
+  return 'red'
+}
+
+// Initialize TradingView Lightweight Chart (MyBalls style)
 const initChart = () => {
   if (!chartContainerRef.value) return
 
@@ -351,11 +358,11 @@ const initChart = () => {
       background: { type: ColorType.Solid, color: 'transparent' },
       textColor: 'rgba(255, 255, 255, 0.5)',
       fontFamily: "'SF Pro Text', -apple-system, sans-serif",
-      fontSize: 10,
+      fontSize: 11,
     },
     grid: {
       vertLines: { visible: false },
-      horzLines: { color: 'rgba(255, 255, 255, 0.05)', style: 1 },
+      horzLines: { color: 'rgba(255, 255, 255, 0.06)', style: 1 },
     },
     crosshair: {
       mode: 0, // Disabled
@@ -366,13 +373,16 @@ const initChart = () => {
     leftPriceScale: {
       visible: true,
       borderVisible: false,
-      scaleMargins: { top: 0.1, bottom: 0.1 },
+      scaleMargins: { top: 0.05, bottom: 0.05 },
+      entireTextOnly: true,
     },
     timeScale: {
       visible: false,
       borderVisible: false,
-      rightOffset: 12,
-      barSpacing: 6,
+      rightOffset: 5,
+      barSpacing: 8,
+      fixLeftEdge: true,
+      fixRightEdge: false,
     },
     handleScroll: false,
     handleScale: false,
@@ -388,10 +398,15 @@ const initChart = () => {
     priceScaleId: 'left',
   })
 
-  // Set initial price scale
+  // Set fixed price scale 0-5 like MyBalls
   candleSeries.priceScale().applyOptions({
-    autoScale: true,
-    scaleMargins: { top: 0.1, bottom: 0.1 },
+    autoScale: false,
+    scaleMargins: { top: 0.02, bottom: 0.02 },
+  })
+
+  // Fix visible range to 0-5
+  chart.priceScale('left').applyOptions({
+    autoScale: false,
   })
 }
 
@@ -825,7 +840,7 @@ onUnmounted(() => {
 .chart-wrapper {
   width: 100%;
   aspect-ratio: 1;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .chart-container {
@@ -836,6 +851,7 @@ onUnmounted(() => {
   border: 2px solid #191919;
   border-radius: 32px;
   overflow: hidden;
+  backdrop-filter: blur(14px);
 }
 
 /* Ping Indicator */
@@ -948,37 +964,65 @@ onUnmounted(() => {
   color: #0098EA;
 }
 
-/* Recent Games */
+/* Recent Games - MyBalls style */
 .recent-games {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .recent-label {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.5);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   display: block;
-}
-
-.recent-list {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.recent-item {
-  flex-shrink: 0;
-  width: 56px;
-  background: #181818;
-  border-radius: 12px;
-  padding: 6px;
   text-align: center;
 }
 
+.recent-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.recent-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
 .mini-chart {
-  height: 24px;
-  margin-bottom: 4px;
+  width: 100%;
+  height: 60px;
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  padding: 1px;
+}
+
+.mini-chart::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--chart-color, #09D76D) 0%, transparent 50%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.9;
+}
+
+.mini-chart.red {
+  --chart-color: #FB2C36;
+}
+
+.mini-chart.green {
+  --chart-color: #09D76D;
+}
+
+.mini-chart.bright-green {
+  --chart-color: #85FFB2;
 }
 
 .mini-chart svg {
@@ -987,14 +1031,18 @@ onUnmounted(() => {
 }
 
 .recent-mult {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  color: #FB2C36;
+  color: #fff;
   font-family: ui-monospace, monospace;
 }
 
 .recent-mult.high {
-  color: #09D76D;
+  color: #85FFB2;
+}
+
+.recent-mult.low {
+  color: #FB2C36;
 }
 
 /* Traders Panel */
