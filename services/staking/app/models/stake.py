@@ -60,13 +60,17 @@ class Stake(Base):
     gift_name: Mapped[str] = mapped_column(String(255), nullable=False)
     gift_image_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     gift_value_ton: Mapped[Decimal] = mapped_column(Numeric(18, 9), nullable=False)
+    gift_rarity: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # common, rare, epic, etc.
 
     # Параметры стейка
     period: Mapped[StakePeriod] = mapped_column(
         SQLEnum(StakePeriod),
         nullable=False,
     )
-    apy_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    apy_percent: Mapped[Decimal] = mapped_column(Numeric(6, 2), nullable=False)  # увеличил до 6 для 600%
+    rarity_multiplier: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("1.0"))
+    collection_set_bonus: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    auto_compound: Mapped[bool] = mapped_column(Boolean, default=False)  # auto-reinvest rewards
 
     # Расчет награды
     expected_reward_ton: Mapped[Decimal] = mapped_column(Numeric(18, 9), nullable=False)

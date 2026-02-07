@@ -39,6 +39,11 @@ const router = createRouter({
       component: () => import('../views/EarnView.vue'),
     },
     {
+      path: '/staking',
+      name: 'staking',
+      component: () => import('../views/StakingView.vue'),
+    },
+    {
       path: '/pvp',
       name: 'pvp',
       component: () => import('../views/PvPView.vue'),
