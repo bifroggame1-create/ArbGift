@@ -120,15 +120,9 @@ const initTelegramWebApp = () => {
     // Expand the app to full height
     tg.expand()
 
-    // Set header color to match theme
-    if (tg.themeParams.header_bg_color) {
-      tg.setHeaderColor(tg.themeParams.header_bg_color)
-    }
-
-    // Set background color
-    if (tg.themeParams.bg_color) {
-      tg.setBackgroundColor(tg.themeParams.bg_color)
-    }
+    // Set header and background to myballs dark theme
+    try { tg.setHeaderColor('#0C0C0C') } catch {}
+    try { tg.setBackgroundColor('#0C0C0C') } catch {}
 
     // Enable closing confirmation for better UX
     tg.enableClosingConfirmation()

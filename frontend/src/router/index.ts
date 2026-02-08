@@ -14,19 +14,13 @@ const router = createRouter({
       component: () => import('../views/MarketView.vue'),
     },
     {
+      path: '/market/gifts',
+      redirect: '/market',
+    },
+    {
       path: '/gift/:id',
       name: 'gift-detail',
       component: () => import('../views/GiftDetailView.vue'),
-    },
-    {
-      path: '/search',
-      name: 'search',
-      component: () => import('../views/SearchView.vue'),
-    },
-    {
-      path: '/favorites',
-      name: 'favorites',
-      component: () => import('../views/FavoritesView.vue'),
     },
     {
       path: '/profile',
@@ -39,6 +33,10 @@ const router = createRouter({
       component: () => import('../views/EarnView.vue'),
     },
     {
+      path: '/farming',
+      redirect: '/earn',
+    },
+    {
       path: '/staking',
       name: 'staking',
       component: () => import('../views/StakingView.vue'),
@@ -46,7 +44,18 @@ const router = createRouter({
     {
       path: '/pvp',
       name: 'pvp',
+      component: () => import('../views/PvPSelectorView.vue'),
+    },
+    {
+      path: '/pvp/ice',
+      name: 'pvp-ice',
       component: () => import('../views/PvPView.vue'),
+    },
+    {
+      path: '/pvp/race',
+      name: 'pvp-race',
+      component: () => import('../views/PvPView.vue'),
+      props: { mode: 'race' },
     },
     {
       path: '/solo',
@@ -59,20 +68,33 @@ const router = createRouter({
       component: () => import('../views/InventoryView.vue'),
     },
     {
-      path: '/shop',
-      name: 'shop',
-      component: () => import('../views/ShopView.vue'),
+      path: '/trading',
+      name: 'trading',
+      component: () => import('../views/TradingView.vue'),
     },
     {
-      path: '/lucky',
-      name: 'lucky',
-      component: () => import('../views/LuckyView.vue'),
+      path: '/plinko',
+      name: 'plinko',
+      component: () => import('../views/PlinkoView.vue'),
     },
-    // Gaming Hub
+    {
+      path: '/ball-escape',
+      name: 'ball-escape',
+      component: () => import('../views/BallEscapeView.vue'),
+    },
+    {
+      path: '/gonka',
+      name: 'gonka',
+      component: () => import('../views/GonkaView.vue'),
+    },
+    // Redirects
     {
       path: '/topup',
-      name: 'topup',
-      component: () => import('../views/TopUpView.vue'),
+      redirect: '/solo',
+    },
+    {
+      path: '/shop',
+      redirect: '/market',
     },
     // Game Routes
     {
@@ -100,26 +122,15 @@ const router = createRouter({
       name: 'stars',
       component: () => import('../views/StarsView.vue'),
     },
-    // Solo Games
-    {
-      path: '/trading',
-      name: 'trading',
-      component: () => import('../views/TradingView.vue'),
-    },
-    {
-      path: '/plinko',
-      name: 'plinko',
-      component: () => import('../views/PlinkoView.vue'),
-    },
-    {
-      path: '/ball-escape',
-      name: 'ball-escape',
-      component: () => import('../views/BallEscapeView.vue'),
-    },
     {
       path: '/rocket',
       name: 'rocket',
       component: () => import('../views/RocketView.vue'),
+    },
+    {
+      path: '/lucky',
+      name: 'lucky',
+      component: () => import('../views/LuckyView.vue'),
     },
     // Admin Panel
     {

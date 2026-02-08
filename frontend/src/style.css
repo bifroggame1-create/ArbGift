@@ -1,6 +1,10 @@
+@import './styles/myballs-theme.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ===== BASE ===== */
 
 * {
   margin: 0;
@@ -8,15 +12,151 @@
   box-sizing: border-box;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+html {
+  background-color: var(--mb-bg);
+  font-family: var(--mb-font);
+  height: var(--dvh, 100vh);
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Safe area for iOS */
+body {
+  background-color: var(--mb-bg);
+  color: var(--mb-text);
+  font-family: var(--mb-font);
+  font-size: 16px;
+  line-height: 24px;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== SCROLLBAR ===== */
+
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ===== SAFE AREA ===== */
+
 @supports (padding: max(0px)) {
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
   }
+}
+
+/* ===== ANIMATIONS ===== */
+
+/* Skeleton pulse — 6s linear infinite */
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton {
+  animation: skeleton-pulse 6s linear infinite;
+  backdrop-filter: blur(17.5px);
+  background: linear-gradient(90deg, rgba(115,115,115,0.2), rgba(31,31,31,0.2) 50%, rgba(115,115,115,0.2)) 200% 0 / 200% 100%;
+}
+
+/* Button spring press */
+.base-active-btn {
+  transform-origin: 50% center;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+.base-active-btn:active {
+  transform: scale(0.95);
+}
+
+/* Gift card enter animation */
+@keyframes gift-card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gift-card-appear {
+  animation: gift-card-in 0.16s ease-out forwards;
+}
+
+.gift-card-hidden {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* Gift selection scale */
+.gift-enter-active,
+.gift-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+.gift-enter-from,
+.gift-leave-to {
+  opacity: 0;
+  transform: scale(0.85);
+}
+
+/* Nav slide transition */
+.app-nav-slide-enter-active,
+.app-nav-slide-leave-active {
+  transition: transform 0.22s, opacity 0.22s;
+  will-change: transform, opacity;
+}
+.app-nav-slide-enter-from,
+.app-nav-slide-leave-to {
+  opacity: 0;
+  transform: translate3d(0, 100%, 0);
+}
+.app-nav-slide-enter-to,
+.app-nav-slide-leave-from {
+  opacity: 1;
+  transform: translateZ(0);
+}
+
+/* Pending sheen overlay */
+.pending-overlay {
+  background-image:
+    linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.5)),
+    repeating-linear-gradient(120deg,
+      rgba(255,255,255,0) 0%, rgba(255,255,255,0) 42%,
+      rgba(255,255,255,0.1) 48%, rgba(255,255,255,0.16),
+      rgba(255,255,255,0.1) 52%, rgba(255,255,255,0) 58%, rgba(255,255,255,0) 100%);
+  --pending-sheen-tile: 180px;
+  animation: pendingGradientShift 1.8s linear infinite;
+}
+@keyframes pendingGradientShift {
+  0% { background-position: 50% 50%, 0 0; }
+  100% { background-position: 50% 50%, var(--pending-sheen-tile) 0; }
+}
+
+/* Overlay for modals */
+.overlay {
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+}
+.overlay--shown {
+  opacity: 1;
+  transition: opacity 0.25s ease-out;
+}
+
+/* Spin animation */
+@keyframes spin {
+  100% { transform: rotate(1turn); }
+}
+
+/* Fade transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+.font-display {
+  font-family: var(--mb-font-display);
+}
+
+.font-mono {
+  font-family: var(--mb-font-mono);
 }

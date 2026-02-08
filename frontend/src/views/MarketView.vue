@@ -1,97 +1,82 @@
 <template>
   <!--
-    PIXEL-PERFECT копия маркета portals.tg
-    API: https://portal-market.com/api/nfts/search
-    CSS: --background: #141414, --primary: #1689ff
+    myballs.io Market Page Design
+    Background: #0C0C0C (inherited from --mb-bg)
+    Font: Chroma ST (font-display)
   -->
   <div class="market-view">
-    <!-- Navigation Tabs (как у portals) -->
-    <nav class="market-nav">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        class="nav-tab"
-        :class="{ active: activeTab === tab.id }"
-        @click="setTab(tab.id)"
-      >
-        {{ tab.label }}
-      </button>
+    <!-- Online indicator -->
+    <div class="online-indicator">
+      <span class="online-dot"></span>
+      <span class="online-text">22 online</span>
+    </div>
+
+    <!-- Header: Title + Balance -->
+    <div class="market-header">
+      <div class="market-header__spacer"></div>
+      <h1 class="market-title">Market</h1>
+      <div class="market-header__right">
+        <BalancePill :balance="0" @add="() => {}" />
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <nav class="market-tabs">
+      <div class="market-tabs__scroll">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          class="market-tabs__item"
+          :class="{ active: activeTab === tab.id }"
+          @click="setTab(tab.id)"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
     </nav>
 
-    <!-- Toolbar: Фильтры, Поиск, Сортировка -->
-    <div class="market-toolbar">
-      <button class="toolbar-btn filter-btn" :class="{ 'has-filters': activeFilterCount > 0 }" @click="showFilters = true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <!-- Sort icon button -->
+      <button class="filter-bar__sort-btn" @click="showSortMenu = !showSortMenu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M6 12h12M9 18h6"/>
         </svg>
-        <span>Фильтры</span>
-        <span v-if="activeFilterCount > 0" class="filter-badge">{{ activeFilterCount }}</span>
       </button>
 
-      <div class="search-box">
-        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/>
-          <path d="m21 21-4.35-4.35"/>
-        </svg>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Быстрый поиск"
-          class="search-input"
-          @input="debounceSearch"
-        />
-      </div>
-
-      <button class="toolbar-btn sort-btn" @click="showSortMenu = !showSortMenu">
-        <div class="sort-content">
-          <span class="sort-label">Сортировать по</span>
-          <span class="sort-value">{{ currentSortLabel }}</span>
-        </div>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <!-- Type dropdown -->
+      <button
+        class="filter-bar__dropdown"
+        :class="{ 'has-value': filters.names.length > 0 }"
+        @click="showFilters = true"
+      >
+        <span>{{ filters.names.length > 0 ? filters.names[0] : 'Type' }}</span>
+        <svg class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="m6 9 6 6 6-6"/>
         </svg>
       </button>
 
-      <button class="toolbar-btn activity-btn" @click="showActivity = true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+      <!-- Skin / Model dropdown -->
+      <button
+        class="filter-bar__dropdown"
+        :class="{ 'has-value': filters.models.length > 0 }"
+        @click="showFilters = true"
+      >
+        <span>{{ filters.models.length > 0 ? filters.models[0] : 'Skin' }}</span>
+        <svg class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="m6 9 6 6 6-6"/>
         </svg>
-        <span>Активность</span>
       </button>
 
-      <!-- View mode buttons -->
-      <div class="view-modes">
-        <button
-          class="view-btn"
-          :class="{ active: gridSize === 'small' }"
-          @click="gridSize = 'small'"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <rect x="3" y="3" width="7" height="7"/>
-            <rect x="14" y="3" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/>
-          </svg>
-        </button>
-        <button
-          class="view-btn"
-          :class="{ active: gridSize === 'large' }"
-          @click="gridSize = 'large'"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <rect x="3" y="3" width="8" height="8"/>
-            <rect x="13" y="3" width="8" height="8"/>
-            <rect x="3" y="13" width="8" height="8"/>
-            <rect x="13" y="13" width="8" height="8"/>
-          </svg>
-        </button>
-      </div>
-
-      <button class="toolbar-btn refresh-btn" @click="fetchGifts">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M23 4v6h-6"/>
-          <path d="M1 20v-6h6"/>
-          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      <!-- Backdrop dropdown -->
+      <button
+        class="filter-bar__dropdown"
+        :class="{ 'has-value': filters.backdrops.length > 0 }"
+        @click="showFilters = true"
+      >
+        <span>{{ filters.backdrops.length > 0 ? filters.backdrops[0] : 'Backdrop' }}</span>
+        <svg class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="m6 9 6 6 6-6"/>
         </svg>
       </button>
     </div>
@@ -104,37 +89,46 @@
         class="active-filter-chip"
         @click="removeFilterTag(tag)"
       >
-        <span class="af-label">{{ tag.label }}</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <span>{{ tag.label }}</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
           <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
         </svg>
       </button>
-      <button class="clear-all-btn" @click="resetFilters(); applyFilters()">Очистить всё</button>
+      <button class="clear-all-btn" @click="resetFilters(); applyFilters()">Clear</button>
     </div>
 
-    <!-- Sort Dropdown -->
-    <div v-if="showSortMenu" class="sort-dropdown" @click.self="showSortMenu = false">
-      <div class="sort-menu">
-        <button
-          v-for="opt in sortOptions"
-          :key="opt.value"
-          class="sort-option"
-          :class="{ active: sortBy === opt.value }"
-          @click="setSortBy(opt.value)"
-        >
-          {{ opt.label }}
-        </button>
-      </div>
-    </div>
-
-    <!-- Loading -->
-    <div v-if="loading" class="loading-container">
-      <div class="loading-spinner"></div>
-    </div>
+    <!-- Sort Dropdown Overlay -->
+    <Teleport to="body">
+      <Transition name="sort-fade">
+        <div v-if="showSortMenu" class="sort-overlay" @click.self="showSortMenu = false">
+          <div class="sort-menu">
+            <div class="sort-menu__header">Sort by</div>
+            <button
+              v-for="opt in sortOptions"
+              :key="opt.value"
+              class="sort-menu__option"
+              :class="{ active: sortBy === opt.value }"
+              @click="setSortBy(opt.value)"
+            >
+              <span>{{ opt.label }}</span>
+              <svg v-if="sortBy === opt.value" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Gift Grid -->
-    <div v-else class="gift-grid-container">
-      <div class="gift-grid" :class="gridSize">
+    <div class="gift-grid-wrapper">
+      <!-- Skeleton loading state -->
+      <div v-if="loading" class="gift-grid">
+        <SkeletonCard v-for="i in 12" :key="'skeleton-' + i" />
+      </div>
+
+      <!-- Loaded grid -->
+      <div v-else class="gift-grid">
         <GiftCard
           v-for="gift in gifts"
           :key="gift.id"
@@ -147,47 +141,54 @@
         />
       </div>
 
-      <!-- Pagination (как у portals) -->
-      <div class="pagination" v-if="totalPages > 0">
-        <div class="page-controls">
-          <button
-            class="page-btn"
-            :disabled="currentPage <= 1"
-            @click="prevPage"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="m15 18-6-6 6-6"/>
-            </svg>
-          </button>
-          <div class="page-info">
-            <span class="current-page">{{ currentPage }}</span>
-            <span class="page-divider">/</span>
-            <span class="total-pages">{{ totalPages }}</span>
-          </div>
-          <button
-            class="page-btn"
-            :disabled="currentPage >= totalPages"
-            @click="nextPage"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="m9 18 6-6-6-6"/>
-            </svg>
-          </button>
-        </div>
-        <input
-          type="range"
-          class="page-slider"
-          :min="1"
-          :max="totalPages"
-          v-model.number="currentPage"
-          @change="fetchGifts"
-        />
+      <!-- Pagination -->
+      <div v-if="!loading && totalPages > 1" class="pagination">
+        <button
+          class="pagination__btn"
+          :disabled="currentPage <= 1"
+          @click="prevPage"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m15 18-6-6 6-6"/>
+          </svg>
+        </button>
+
+        <span class="pagination__info">
+          <span class="pagination__current">{{ currentPage }}</span>
+          <span class="pagination__sep">/</span>
+          <span class="pagination__total">{{ totalPages }}</span>
+        </span>
+
+        <button
+          class="pagination__btn"
+          :disabled="currentPage >= totalPages"
+          @click="nextPage"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </button>
       </div>
 
-      <!-- Bulk Buy Button (как у portals) -->
+      <!-- Empty State -->
+      <div v-if="!loading && gifts.length === 0" class="empty-state">
+        <div class="empty-state__icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 8v13H3V8"/>
+            <path d="M1 3h22v5H1z"/>
+            <path d="M10 12h4"/>
+          </svg>
+        </div>
+        <p class="empty-state__text">No gifts available</p>
+        <p class="empty-state__hint">Try adjusting your filters</p>
+      </div>
+    </div>
+
+    <!-- Bulk Buy FAB -->
+    <Transition name="fab-pop">
       <button
         v-if="selectedGifts.length > 0"
-        class="bulk-buy-btn"
+        class="bulk-fab"
         @click="bulkBuy"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -197,34 +198,27 @@
         </svg>
         <span>{{ selectedGifts.length }}</span>
       </button>
+    </Transition>
 
-      <!-- Empty State -->
-      <div v-if="!loading && gifts.length === 0" class="empty-state">
-        <span class="empty-icon">🎁</span>
-        <p class="empty-text">Нет доступных гифтов</p>
-        <p class="empty-hint">Попробуйте изменить фильтры</p>
-      </div>
-    </div>
-
-    <!-- Filter Sidebar (Thermos-style) -->
+    <!-- Filter Sidebar -->
     <Teleport to="body">
       <Transition name="filter-overlay">
         <div v-if="showFilters" class="filter-overlay" @click.self="showFilters = false">
           <Transition name="filter-slide">
             <div v-if="showFilters" class="filter-sidebar">
-              <div class="filter-header">
-                <h3 class="filter-title">Фильтры</h3>
-                <button class="filter-close" @click="showFilters = false">
+              <div class="filter-sidebar__header">
+                <h3 class="filter-sidebar__title">Filters</h3>
+                <button class="filter-sidebar__close" @click="showFilters = false">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
                   </svg>
                 </button>
               </div>
 
-              <div class="filter-body">
-                <!-- Gift Name / Collection -->
+              <div class="filter-sidebar__body">
+                <!-- Gift Name / Type -->
                 <div class="filter-section">
-                  <div class="filter-section-title">Подарок</div>
+                  <div class="filter-section__title">Type</div>
                   <div class="filter-chips">
                     <button
                       v-for="name in availableNames"
@@ -238,9 +232,9 @@
                   </div>
                 </div>
 
-                <!-- Model -->
+                <!-- Model / Skin -->
                 <div class="filter-section" v-if="availableModels.length">
-                  <div class="filter-section-title">Модель</div>
+                  <div class="filter-section__title">Skin</div>
                   <div class="filter-chips">
                     <button
                       v-for="m in availableModels"
@@ -256,7 +250,7 @@
 
                 <!-- Backdrop -->
                 <div class="filter-section" v-if="availableBackdrops.length">
-                  <div class="filter-section-title">Фон</div>
+                  <div class="filter-section__title">Backdrop</div>
                   <div class="filter-chips">
                     <button
                       v-for="b in availableBackdrops"
@@ -272,7 +266,7 @@
 
                 <!-- Pattern -->
                 <div class="filter-section" v-if="availablePatterns.length">
-                  <div class="filter-section-title">Паттерн</div>
+                  <div class="filter-section__title">Pattern</div>
                   <div class="filter-chips">
                     <button
                       v-for="p in availablePatterns"
@@ -288,7 +282,7 @@
 
                 <!-- Symbol -->
                 <div class="filter-section" v-if="availableSymbols.length">
-                  <div class="filter-section-title">Символ</div>
+                  <div class="filter-section__title">Symbol</div>
                   <div class="filter-chips">
                     <button
                       v-for="s in availableSymbols"
@@ -304,7 +298,7 @@
 
                 <!-- Rarity -->
                 <div class="filter-section">
-                  <div class="filter-section-title">Редкость</div>
+                  <div class="filter-section__title">Rarity</div>
                   <div class="filter-chips">
                     <button
                       v-for="r in rarityOptions"
@@ -321,24 +315,24 @@
 
                 <!-- Price Range -->
                 <div class="filter-section">
-                  <div class="filter-section-title">Цена (TON)</div>
+                  <div class="filter-section__title">Price (TON)</div>
                   <div class="price-range">
                     <div class="price-input-wrap">
                       <input
                         v-model.number="filters.minPrice"
                         type="number"
-                        placeholder="Мин"
+                        placeholder="Min"
                         class="price-input"
                         min="0"
                         step="0.1"
                       />
                     </div>
-                    <span class="price-dash">—</span>
+                    <span class="price-dash">&mdash;</span>
                     <div class="price-input-wrap">
                       <input
                         v-model.number="filters.maxPrice"
                         type="number"
-                        placeholder="Макс"
+                        placeholder="Max"
                         class="price-input"
                         min="0"
                         step="0.1"
@@ -348,11 +342,11 @@
                 </div>
               </div>
 
-              <div class="filter-footer">
-                <button class="filter-reset" @click="resetFilters">Сбросить</button>
-                <button class="filter-apply" @click="applyFilters">
-                  Показать
-                  <span v-if="activeFilterCount > 0" class="filter-apply-count">{{ activeFilterCount }}</span>
+              <div class="filter-sidebar__footer">
+                <button class="filter-sidebar__reset" @click="resetFilters">Reset</button>
+                <button class="filter-sidebar__apply" @click="applyFilters">
+                  Apply
+                  <span v-if="activeFilterCount > 0" class="filter-sidebar__count">{{ activeFilterCount }}</span>
                 </button>
               </div>
             </div>
@@ -360,28 +354,6 @@
         </div>
       </Transition>
     </Teleport>
-
-    <!-- Footer (как у portals) -->
-    <footer class="market-footer">
-      <div class="footer-left">
-        <div class="ton-price">
-          <img src="https://ton.org/download/ton_symbol.svg" alt="TON" class="ton-logo" />
-          <span class="price-value">{{ tonPrice }}$</span>
-        </div>
-        <div class="volume-info">
-          <span class="volume-label">Общий объем 24H</span>
-          <span class="volume-value">{{ volume24h }}</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" class="volume-icon">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-          </svg>
-        </div>
-      </div>
-      <div class="footer-right">
-        <button class="footer-btn">Настройки</button>
-        <a href="https://t.me/portals_sup" target="_blank" class="footer-btn">Поддержка</a>
-        <a href="https://t.me/portals" target="_blank" class="footer-btn">Telegram</a>
-      </div>
-    </footer>
   </div>
 </template>
 
@@ -389,6 +361,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import GiftCard from '../components/GiftCard.vue'
+import SkeletonCard from '../components/SkeletonCard.vue'
+import BalancePill from '../components/BalancePill.vue'
 import { useTelegram } from '../composables/useTelegram'
 import { useMarketAggregator } from '../composables/useMarketAggregator'
 import { getGifts, searchGifts, getStats } from '../api/client'
@@ -399,9 +373,10 @@ const { preloadPrices, enrichGiftsWithPrices } = useMarketAggregator()
 
 // Tabs
 const tabs = [
-  { id: 'all', label: 'Все подарки' },
-  { id: 'collections', label: 'Коллекции' },
-  { id: 'bundles', label: 'Бандлы' },
+  { id: 'all', label: 'Gifts' },
+  { id: 'lootpacks', label: 'Lootpacks' },
+  { id: 'upgrades', label: 'Upgrades' },
+  { id: 'real', label: 'Real Items' },
 ]
 const activeTab = ref('all')
 
@@ -410,10 +385,8 @@ const loading = ref(true)
 const gifts = ref<any[]>([])
 const searchQuery = ref('')
 const sortBy = ref('listed_at desc')
-const gridSize = ref<'small' | 'large'>('large')
 const showSortMenu = ref(false)
 const showFilters = ref(false)
-const showActivity = ref(false)
 const bulkMode = ref(false)
 const selectedGifts = ref<number[]>([])
 
@@ -489,16 +462,16 @@ interface FilterTag {
 const activeFilterTags = computed<FilterTag[]>(() => {
   const tags: FilterTag[] = []
   filters.names.forEach(v => tags.push({ key: `name-${v}`, group: 'names', value: v, label: v }))
-  filters.models.forEach(v => tags.push({ key: `model-${v}`, group: 'models', value: v, label: `Модель: ${v}` }))
-  filters.backdrops.forEach(v => tags.push({ key: `backdrop-${v}`, group: 'backdrops', value: v, label: `Фон: ${v}` }))
-  filters.patterns.forEach(v => tags.push({ key: `pattern-${v}`, group: 'patterns', value: v, label: `Паттерн: ${v}` }))
-  filters.symbols.forEach(v => tags.push({ key: `symbol-${v}`, group: 'symbols', value: v, label: `Символ: ${v}` }))
+  filters.models.forEach(v => tags.push({ key: `model-${v}`, group: 'models', value: v, label: `Skin: ${v}` }))
+  filters.backdrops.forEach(v => tags.push({ key: `backdrop-${v}`, group: 'backdrops', value: v, label: `Backdrop: ${v}` }))
+  filters.patterns.forEach(v => tags.push({ key: `pattern-${v}`, group: 'patterns', value: v, label: `Pattern: ${v}` }))
+  filters.symbols.forEach(v => tags.push({ key: `symbol-${v}`, group: 'symbols', value: v, label: `Symbol: ${v}` }))
   filters.rarities.forEach(v => {
     const opt = rarityOptions.find(r => r.value === v)
     tags.push({ key: `rarity-${v}`, group: 'rarities', value: v, label: opt?.label || v })
   })
-  if (filters.minPrice !== null) tags.push({ key: 'minPrice', group: 'minPrice', value: String(filters.minPrice), label: `от ${filters.minPrice} TON` })
-  if (filters.maxPrice !== null) tags.push({ key: 'maxPrice', group: 'maxPrice', value: String(filters.maxPrice), label: `до ${filters.maxPrice} TON` })
+  if (filters.minPrice !== null) tags.push({ key: 'minPrice', group: 'minPrice', value: String(filters.minPrice), label: `from ${filters.minPrice} TON` })
+  if (filters.maxPrice !== null) tags.push({ key: 'maxPrice', group: 'maxPrice', value: String(filters.maxPrice), label: `to ${filters.maxPrice} TON` })
   return tags
 })
 
@@ -542,26 +515,22 @@ const applyFilters = () => {
   fetchGifts()
 }
 
-// Sort options (как у portals)
+// Sort options
 const sortOptions = [
-  { value: 'listed_at desc', label: 'Сначала новые' },
-  { value: 'listed_at asc', label: 'Сначала старые' },
-  { value: 'price asc', label: 'Дешевле' },
-  { value: 'price desc', label: 'Дороже' },
+  { value: 'listed_at desc', label: 'Newest first' },
+  { value: 'listed_at asc', label: 'Oldest first' },
+  { value: 'price asc', label: 'Price: Low to High' },
+  { value: 'price desc', label: 'Price: High to Low' },
 ]
-
-const currentSortLabel = computed(() => {
-  return sortOptions.find(o => o.value === sortBy.value)?.label || 'Сначала новые'
-})
 
 // Methods
 const setTab = (tab: string) => {
   hapticImpact('light')
   activeTab.value = tab
-  if (tab === 'collections') {
+  if (tab === 'lootpacks') {
     router.push('/collection-list')
-  } else if (tab === 'bundles') {
-    router.push('/bundles')
+  } else if (tab === 'upgrades') {
+    router.push('/upgrade')
   }
 }
 
@@ -570,14 +539,6 @@ const setSortBy = (value: string) => {
   sortBy.value = value
   showSortMenu.value = false
   fetchGifts()
-}
-
-let searchTimeout: ReturnType<typeof setTimeout>
-const debounceSearch = () => {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    fetchGifts()
-  }, 300)
 }
 
 const prevPage = () => {
@@ -739,346 +700,382 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/*
-  PORTALS.TG Design System
-  --background: #141414
-  --primary: #1689ff
-  --secondary: #282727
-  --radius: 16px
-*/
+/* ============================================
+   myballs.io Market Page
+   --mb-bg: #0C0C0C
+   --mb-primary: #34CDEF
+   --mb-card: rgba(255, 255, 255, 0.05)
+   --mb-text-secondary: rgba(255, 255, 255, 0.5)
+   --mb-radius-lg: 16px
+   --mb-radius-md: 12px
+   --mb-content-padding: 15px
+   ============================================ */
 
 .market-view {
   min-height: 100vh;
-  background: #141414;
+  background: var(--mb-bg, #0C0C0C);
   color: #fff;
-  font-family: "SFProText", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-  padding-bottom: 34px;
+  padding-bottom: 100px;
 }
 
-/* Navigation Tabs */
-.market-nav {
-  display: flex;
-  gap: 24px;
-  padding: 16px 16px 0;
-  border-bottom: 1px solid #282727;
-}
-
-.nav-tab {
-  background: none;
-  border: none;
-  color: #6d6d71;
-  font-size: 16px;
-  font-weight: 600;
-  padding: 12px 0;
-  cursor: pointer;
-  position: relative;
-  transition: color 0.2s;
-}
-
-.nav-tab.active {
-  color: #fff;
-}
-
-.nav-tab.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #1689ff;
-  border-radius: 2px 2px 0 0;
-}
-
-/* Toolbar */
-.market-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  flex-wrap: wrap;
-}
-
-.toolbar-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  background: #282727;
-  border: none;
-  border-radius: 12px;
-  color: #fff;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.toolbar-btn:hover {
-  background: #3a3a3a;
-}
-
-.filter-btn svg {
-  stroke: #1689ff;
-}
-
-.search-box {
-  flex: 1;
-  min-width: 150px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: #282727;
-  border-radius: 12px;
-}
-
-.search-icon {
-  stroke: #6d6d71;
-}
-
-.search-input {
-  flex: 1;
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 14px;
-  outline: none;
-}
-
-.search-input::placeholder {
-  color: #6d6d71;
-}
-
-.sort-btn {
-  min-width: 180px;
-}
-
-.sort-content {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-
-.sort-label {
-  font-size: 11px;
-  color: #6d6d71;
-}
-
-.sort-value {
-  font-size: 13px;
-  color: #fff;
-}
-
-.view-modes {
-  display: flex;
-  background: #282727;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.view-btn {
-  padding: 10px 12px;
-  background: none;
-  border: none;
-  color: #6d6d71;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.view-btn.active {
-  background: #3a3a3a;
-  color: #fff;
-}
-
-.refresh-btn {
-  padding: 10px;
-}
-
-/* Sort Dropdown */
-.sort-dropdown {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 100;
+/* --- Online indicator --- */
+.online-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  padding: 10px 0 4px;
+}
+
+.online-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.online-text {
+  font-size: 12px;
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  font-weight: 400;
+}
+
+/* --- Header --- */
+.market-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px var(--mb-content-padding, 15px) 12px;
+}
+
+.market-header__spacer {
+  width: 80px; /* Balance against right side for centering */
+}
+
+.market-title {
+  font-family: 'Chroma ST', var(--mb-font-display, system-ui), sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+.market-header__right {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 80px;
+}
+
+/* --- Tab bar --- */
+.market-tabs {
+  padding: 0 var(--mb-content-padding, 15px);
+}
+
+.market-tabs__scroll {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 1px;
+}
+
+.market-tabs__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.market-tabs__item {
+  position: relative;
+  background: none;
+  border: none;
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  font-size: 15px;
+  font-weight: 600;
+  padding: 10px 0 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.market-tabs__item.active {
+  color: #fff;
+}
+
+.market-tabs__item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px 1px 0 0;
+}
+
+/* --- Filter bar --- */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px var(--mb-content-padding, 15px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-bar__sort-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--mb-card, rgba(255, 255, 255, 0.05));
+  border: none;
+  border-radius: var(--mb-radius-md, 12px);
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.filter-bar__sort-btn:active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.filter-bar__dropdown {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--mb-card, rgba(255, 255, 255, 0.05));
+  border: none;
+  border-radius: var(--mb-radius-md, 12px);
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.filter-bar__dropdown.has-value {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.filter-bar__dropdown:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.filter-bar__chevron {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+/* --- Active filter chips --- */
+.active-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--mb-content-padding, 15px) 8px;
+  flex-wrap: wrap;
+}
+
+.active-filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: rgba(52, 205, 239, 0.12);
+  border: 1px solid rgba(52, 205, 239, 0.25);
+  border-radius: 8px;
+  color: var(--mb-primary, #34CDEF);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.active-filter-chip:active {
+  background: rgba(52, 205, 239, 0.2);
+}
+
+.active-filter-chip svg {
+  opacity: 0.6;
+}
+
+.clear-all-btn {
+  padding: 5px 10px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.clear-all-btn:active {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* --- Sort overlay --- */
+.sort-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .sort-menu {
-  background: #282727;
-  border-radius: 16px;
-  padding: 8px 0;
-  min-width: 200px;
+  background: #1A1A1A;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--mb-radius-lg, 16px);
+  min-width: 240px;
+  overflow: hidden;
 }
 
-.sort-option {
-  display: block;
+.sort-menu__header {
+  padding: 14px 16px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sort-menu__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
-  padding: 12px 20px;
+  padding: 12px 16px;
   background: none;
   border: none;
   color: #fff;
   font-size: 15px;
   text-align: left;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.sort-option:hover {
-  background: #3a3a3a;
+.sort-menu__option:active {
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.sort-option.active {
-  color: #1689ff;
+.sort-menu__option.active {
+  color: var(--mb-primary, #34CDEF);
 }
 
-/* Loading */
-.loading-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 0;
+.sort-menu__option.active svg {
+  stroke: var(--mb-primary, #34CDEF);
 }
 
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #282727;
-  border-top-color: #1689ff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+/* Sort transition */
+.sort-fade-enter-active,
+.sort-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.sort-fade-enter-from,
+.sort-fade-leave-to {
+  opacity: 0;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Gift Grid */
-.gift-grid-container {
-  padding: 0 16px 80px;
+/* --- Gift grid --- */
+.gift-grid-wrapper {
+  padding: 0 12px 20px;
 }
 
 .gift-grid {
   display: grid;
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
-.gift-grid.large {
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-}
-
-.gift-grid.small {
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-}
-
-/* Pagination */
+/* --- Pagination --- */
 .pagination {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  margin-top: 24px;
-  padding: 16px;
-  background: #191919;
-  border-radius: 16px;
-}
-
-.page-controls {
-  display: flex;
-  align-items: center;
+  justify-content: center;
   gap: 16px;
+  margin-top: 20px;
+  padding: 12px 0;
 }
 
-.page-btn {
+.pagination__btn {
   width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #282727;
+  background: var(--mb-card, rgba(255, 255, 255, 0.05));
   border: none;
-  border-radius: 10px;
+  border-radius: var(--mb-radius-md, 12px);
   color: #fff;
   cursor: pointer;
   transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.page-btn:disabled {
-  opacity: 0.4;
+.pagination__btn:disabled {
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
-.page-btn:not(:disabled):hover {
-  background: #3a3a3a;
+.pagination__btn:not(:disabled):active {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.page-info {
+.pagination__info {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 14px;
 }
 
-.current-page {
+.pagination__current {
   color: #fff;
   font-weight: 600;
 }
 
-.page-divider {
-  color: #6d6d71;
+.pagination__sep {
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
 }
 
-.total-pages {
-  color: #6d6d71;
+.pagination__total {
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
 }
 
-.page-slider {
-  width: 100%;
-  max-width: 300px;
-  -webkit-appearance: none;
-  height: 4px;
-  background: #282727;
-  border-radius: 2px;
-  outline: none;
-}
-
-.page-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  background: #1689ff;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-/* Bulk Buy Button */
-.bulk-buy-btn {
-  position: fixed;
-  bottom: 50px;
-  right: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 20px;
-  background: #1689ff;
-  border: none;
-  border-radius: 16px;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 20px rgba(22, 137, 255, 0.4);
-  transition: transform 0.2s;
-  z-index: 50;
-}
-
-.bulk-buy-btn:active {
-  transform: scale(0.95);
-}
-
-/* Empty State */
+/* --- Empty state --- */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -1087,241 +1084,134 @@ onMounted(() => {
   padding: 60px 20px;
 }
 
-.empty-icon {
-  font-size: 64px;
+.empty-state__icon {
+  color: rgba(255, 255, 255, 0.15);
   margin-bottom: 16px;
 }
 
-.empty-text {
-  font-size: 18px;
+.empty-state__text {
+  font-size: 17px;
   color: #fff;
-  margin-bottom: 8px;
+  font-weight: 600;
+  margin: 0 0 6px;
 }
 
-.empty-hint {
+.empty-state__hint {
   font-size: 14px;
-  color: #6d6d71;
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  margin: 0;
 }
 
-/* Footer */
-.market-footer {
+/* --- Bulk FAB --- */
+.bulk-fab {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 90px;
+  right: 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background: #191919;
-  border-top: 1px solid #282727;
-  height: 34px;
-  z-index: 40;
-}
-
-.footer-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.ton-price {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ton-logo {
-  width: 16px;
-  height: 16px;
-}
-
-.price-value {
-  font-size: 13px;
-  color: #fff;
-  font-weight: 500;
-}
-
-.volume-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.volume-label {
-  font-size: 12px;
-  color: #6d6d71;
-}
-
-.volume-value {
-  font-size: 13px;
-  color: #fff;
-  font-weight: 500;
-}
-
-.volume-icon {
-  fill: #1689ff;
-}
-
-.footer-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.footer-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
+  gap: 8px;
+  padding: 14px 20px;
+  background: var(--mb-primary, #34CDEF);
   border: none;
-  color: #6d6d71;
-  font-size: 12px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.footer-btn:hover {
-  color: #fff;
-}
-
-/* Filter Badge on toolbar button */
-.filter-btn.has-filters {
-  border: 1px solid #1689ff;
-}
-
-.filter-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  background: #1689ff;
-  border-radius: 9px;
-  font-size: 11px;
+  border-radius: var(--mb-radius-lg, 16px);
+  color: #000;
+  font-size: 16px;
   font-weight: 700;
-  color: #fff;
-  line-height: 1;
-}
-
-/* Active Filter Chips Bar */
-.active-filters {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 16px 8px;
-  flex-wrap: wrap;
-}
-
-.active-filter-chip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  background: rgba(22, 137, 255, 0.15);
-  border: 1px solid rgba(22, 137, 255, 0.3);
-  border-radius: 8px;
-  color: #1689ff;
-  font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  box-shadow: 0 4px 24px rgba(52, 205, 239, 0.35);
+  z-index: 50;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.active-filter-chip:hover {
-  background: rgba(22, 137, 255, 0.25);
+.bulk-fab:active {
+  transform: scale(0.95);
 }
 
-.active-filter-chip svg {
-  opacity: 0.7;
+.fab-pop-enter-active {
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.fab-pop-leave-active {
+  transition: all 0.15s ease-in;
+}
+.fab-pop-enter-from,
+.fab-pop-leave-to {
+  opacity: 0;
+  transform: scale(0.5);
 }
 
-.clear-all-btn {
-  padding: 6px 10px;
-  background: none;
-  border: 1px solid #3a3a3a;
-  border-radius: 8px;
-  color: #6d6d71;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.clear-all-btn:hover {
-  color: #fff;
-  border-color: #6d6d71;
-}
-
-/* Filter Overlay & Sidebar */
+/* --- Filter sidebar --- */
 .filter-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  z-index: 200;
+  z-index: 300;
   display: flex;
   justify-content: flex-end;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .filter-sidebar {
-  width: 340px;
-  max-width: 90vw;
+  width: 320px;
+  max-width: 85vw;
   height: 100%;
-  background: #1a1a1a;
+  background: #111111;
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
 }
 
-.filter-header {
+.filter-sidebar__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #282727;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.filter-title {
+.filter-sidebar__title {
   font-size: 18px;
   font-weight: 700;
   color: #fff;
   margin: 0;
 }
 
-.filter-close {
+.filter-sidebar__close {
   width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #282727;
+  background: var(--mb-card, rgba(255, 255, 255, 0.05));
   border: none;
   border-radius: 10px;
-  color: #6d6d71;
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
   cursor: pointer;
   transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.filter-close:hover {
-  background: #3a3a3a;
+.filter-sidebar__close:active {
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 
-.filter-body {
+.filter-sidebar__body {
   flex: 1;
   overflow-y: auto;
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  -webkit-overflow-scrolling: touch;
 }
 
-.filter-section-title {
-  font-size: 13px;
+.filter-section__title {
+  font-size: 12px;
   font-weight: 600;
-  color: #6d6d71;
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   margin-bottom: 10px;
 }
 
@@ -1333,24 +1223,24 @@ onMounted(() => {
 
 .filter-chip {
   padding: 7px 12px;
-  background: #282727;
+  background: var(--mb-card, rgba(255, 255, 255, 0.05));
   border: 1px solid transparent;
   border-radius: 10px;
-  color: #b0b0b0;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.filter-chip:hover {
-  background: #333;
-  color: #fff;
+.filter-chip:active {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .filter-chip.active {
-  background: rgba(22, 137, 255, 0.15);
-  border-color: #1689ff;
-  color: #1689ff;
+  background: rgba(52, 205, 239, 0.12);
+  border-color: rgba(52, 205, 239, 0.4);
+  color: var(--mb-primary, #34CDEF);
 }
 
 .rarity-chip.active {
@@ -1371,7 +1261,7 @@ onMounted(() => {
 .price-input {
   width: 100%;
   padding: 10px 12px;
-  background: #282727;
+  background: var(--mb-card, rgba(255, 255, 255, 0.05));
   border: 1px solid transparent;
   border-radius: 10px;
   color: #fff;
@@ -1387,78 +1277,80 @@ onMounted(() => {
 }
 
 .price-input:focus {
-  border-color: #1689ff;
+  border-color: var(--mb-primary, #34CDEF);
 }
 
 .price-input::placeholder {
-  color: #6d6d71;
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
 }
 
 .price-dash {
-  color: #6d6d71;
+  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
   font-size: 16px;
 }
 
 /* Filter Footer */
-.filter-footer {
+.filter-sidebar__footer {
   display: flex;
   gap: 10px;
   padding: 16px 20px;
-  border-top: 1px solid #282727;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.filter-reset {
+.filter-sidebar__reset {
   flex: 1;
   padding: 12px;
-  background: #282727;
+  background: var(--mb-card, rgba(255, 255, 255, 0.05));
   border: none;
-  border-radius: 12px;
+  border-radius: var(--mb-radius-md, 12px);
   color: #fff;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.filter-reset:hover {
-  background: #3a3a3a;
+.filter-sidebar__reset:active {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.filter-apply {
+.filter-sidebar__apply {
   flex: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 12px;
-  background: #1689ff;
+  background: var(--mb-primary, #34CDEF);
   border: none;
-  border-radius: 12px;
-  color: #fff;
+  border-radius: var(--mb-radius-md, 12px);
+  color: #000;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: opacity 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.filter-apply:hover {
-  background: #1478e0;
+.filter-sidebar__apply:active {
+  opacity: 0.85;
 }
 
-.filter-apply-count {
+.filter-sidebar__count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 10px;
   font-size: 12px;
   font-weight: 700;
 }
 
-/* Filter Transitions */
+/* Filter transitions */
 .filter-overlay-enter-active,
 .filter-overlay-leave-active {
   transition: opacity 0.25s ease;

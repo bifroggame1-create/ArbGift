@@ -1,254 +1,215 @@
 <template>
-  <div class="profile-view">
-    <!-- Animated stars background -->
-    <div class="stars-bg">
-      <div v-for="i in 20" :key="i" class="star" :style="getStarStyle(i)"></div>
+  <div class="mb-profile">
+    <!-- Cyan gradient header background -->
+    <div class="mb-gradient-header"></div>
+
+    <!-- Play Balance Section -->
+    <div class="mb-balance-section">
+      <span class="mb-balance-label">Play Balance</span>
+      <div class="mb-balance-row">
+        <span class="mb-balance-value">{{ tonBalance.toFixed(2) }}</span>
+        <svg class="mb-ton-icon" width="28" height="28" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+        </svg>
+      </div>
     </div>
 
-    <!-- Header -->
-    <header class="profile-header">
-      <div class="header-title">Профиль</div>
-      <button class="settings-btn">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
-        </svg>
+    <!-- Action Circles Row -->
+    <div class="mb-actions-row">
+      <button class="mb-action-item" @click="openStarsModal">
+        <div class="mb-action-circle">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FFCE4F" stroke="#FFCE4F" stroke-width="1"/>
+          </svg>
+        </div>
+        <span class="mb-action-label">Top Up Stars</span>
       </button>
-    </header>
-
-    <!-- Stars Purchase Banner -->
-    <router-link to="/stars" class="stars-banner">
-      <div class="banner-icon">
-        <img src="/icons/stars.png" alt="Stars" width="40" height="40" />
-      </div>
-      <div class="banner-content">
-        <h3>Покупка Stars</h3>
-        <p>Telegram Stars с мгновенной доставкой</p>
-      </div>
-      <div class="banner-arrow">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
-      </div>
-    </router-link>
-
-    <!-- User Card -->
-    <div class="user-card">
-      <div class="user-avatar" :style="{ background: avatarGradient }">
-        <span>{{ userInitial }}</span>
-      </div>
-      <div class="user-info">
-        <h2 class="user-name">@{{ username }}</h2>
-        <span class="user-id">ID: {{ userId }}</span>
-      </div>
-      <div class="user-badge vip" v-if="isVip">
-        <img src="/icons/stars.png" alt="Stars" width="12" height="12" class="vip-star-icon" />
-        <span>VIP</span>
-      </div>
-    </div>
-
-    <!-- Balance Card -->
-    <div class="balance-card">
-      <div class="balance-row">
-        <div class="balance-item">
-          <svg class="balance-icon-svg" width="24" height="24" viewBox="0 0 56 56" fill="none">
+      <button class="mb-action-item" @click="openDepositModal">
+        <div class="mb-action-circle">
+          <svg width="24" height="24" viewBox="0 0 56 56" fill="none">
             <circle cx="28" cy="28" r="28" fill="#0098EA"/>
             <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
           </svg>
-          <div class="balance-info">
-            <span class="balance-label">TON Баланс</span>
-            <span class="balance-value">{{ tonBalance.toFixed(2) }} TON</span>
-          </div>
         </div>
-        <div class="balance-divider"></div>
-        <div class="balance-item">
-          <img src="/icons/stars.png" alt="Stars" class="balance-icon-img" width="24" height="24" />
-          <div class="balance-info">
-            <span class="balance-label">Stars</span>
-            <span class="balance-value">{{ starsBalance }} Stars</span>
-          </div>
-        </div>
-      </div>
-      <div class="balance-actions">
-        <button class="btn-deposit" @click="openDepositModal">
-          <svg class="btn-icon-svg" width="14" height="14" viewBox="0 0 56 56" fill="none">
-            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+        <span class="mb-action-label">Top Up TON</span>
+      </button>
+      <button class="mb-action-item" @click="$router.push('/inventory')">
+        <div class="mb-action-circle">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="8" width="18" height="13" rx="2"/>
+            <path d="M16 8V6a4 4 0 0 0-8 0v2"/>
+            <path d="M12 14v2"/>
+            <circle cx="12" cy="14" r="1"/>
           </svg>
-          Пополнить TON
-        </button>
-        <button class="btn-stars" @click="openStarsModal">
-          <img src="/icons/stars.png" alt="Stars" class="btn-icon-img" width="14" height="14" />
-          Купить Stars
-        </button>
-        <button class="btn-withdraw">
-          <span>↓</span> Вывести
+        </div>
+        <span class="mb-action-label">Deposit Gifts</span>
+      </button>
+    </div>
+
+    <!-- User Section -->
+    <div class="mb-user-section">
+      <div class="mb-user-row">
+        <div class="mb-user-avatar" :style="{ background: avatarGradient }">
+          <span>{{ userInitial }}</span>
+        </div>
+        <div class="mb-user-info">
+          <span class="mb-username">@{{ username }}</span>
+        </div>
+        <button class="mb-settings-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
         </button>
       </div>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="stats-section">
-      <h3 class="section-title">📊 Статистика</h3>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <span class="stat-icon">🎁</span>
-          <span class="stat-value">{{ stats.totalGifts }}</span>
-          <span class="stat-label">Гифтов</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-icon">🎮</span>
-          <span class="stat-value">{{ stats.gamesPlayed }}</span>
-          <span class="stat-label">Игр</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-icon">🏆</span>
-          <span class="stat-value">{{ stats.wins }}</span>
-          <span class="stat-label">Побед</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-icon">💰</span>
-          <span class="stat-value">{{ stats.totalWon.toFixed(1) }}</span>
-          <span class="stat-label">TON выиграно</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Referral Section -->
-    <div class="referral-section">
-      <div class="referral-header">
-        <h3 class="section-title">👥 Реферальная программа</h3>
-        <span class="referral-bonus">+10%</span>
-      </div>
-      <div class="referral-card">
-        <div class="referral-stats">
-          <div class="ref-stat">
-            <span class="ref-value">{{ referrals.count }}</span>
-            <span class="ref-label">Приглашено</span>
-          </div>
-          <div class="ref-stat">
-            <span class="ref-value">{{ referrals.earned.toFixed(2) }} TON</span>
-            <span class="ref-label">Заработано</span>
-          </div>
-        </div>
-        <div class="referral-link">
-          <input
-            type="text"
-            :value="referralLink"
-            readonly
-            class="link-input"
-          />
-          <button class="copy-btn" @click="copyReferralLink">
-            📋
-          </button>
-        </div>
-        <button class="btn-share">
-          <span>📤</span> Пригласить друзей
-        </button>
-      </div>
-    </div>
-
-    <!-- Recent Activity -->
-    <div class="activity-section">
-      <h3 class="section-title">📜 Последняя активность</h3>
-      <div v-if="recentActivity.length > 0" class="activity-list">
-        <div
-          v-for="activity in recentActivity"
-          :key="activity.id"
-          class="activity-item"
-        >
-          <div class="activity-icon" :class="activity.type">
-            {{ activity.icon }}
-          </div>
-          <div class="activity-info">
-            <span class="activity-title">{{ activity.title }}</span>
-            <span class="activity-time">{{ activity.time }}</span>
-          </div>
-          <span class="activity-amount" :class="{ positive: activity.amount > 0 }">
-            {{ activity.amount > 0 ? '+' : '' }}{{ activity.amount }} TON
+    <!-- My Inventory Card -->
+    <div class="mb-card mb-inventory-card">
+      <div class="mb-inventory-header">
+        <span class="mb-inventory-title">My Inventory</span>
+        <div class="mb-inventory-meta">
+          <span class="mb-inventory-count">{{ stats.totalGifts }} Items</span>
+          <span class="mb-inventory-value">
+            {{ stats.totalWon.toFixed(1) }}
+            <svg width="12" height="12" viewBox="0 0 56 56" fill="none" style="vertical-align: middle; margin-left: 2px;">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
           </span>
         </div>
       </div>
-      <div v-else class="empty-activity">
-        <span>Нет активности</span>
+      <div class="mb-inventory-grid">
+        <div class="mb-inventory-placeholder" v-for="i in 3" :key="i">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="8" width="18" height="13" rx="2"/>
+            <path d="M16 8V6a4 4 0 0 0-8 0v2"/>
+          </svg>
+        </div>
+      </div>
+      <router-link to="/inventory" class="mb-inventory-link">
+        <span>All Items</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </router-link>
+      <div class="mb-inventory-empty">
+        <span class="mb-empty-text">You have no items yet.</span>
+        <router-link to="/inventory" class="mb-deposit-link">
+          Deposit Gift
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </router-link>
       </div>
     </div>
 
-    <!-- Menu Items -->
-    <div class="menu-section">
-      <button class="menu-item" @click="$router.push('/inventory')">
-        <span class="menu-icon">📦</span>
-        <span class="menu-label">Мой инвентарь</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18l6-6-6-6"/>
+    <!-- Referral Card -->
+    <div class="mb-card mb-referral-card">
+      <div class="mb-referral-content">
+        <div class="mb-referral-text-block">
+          <p class="mb-referral-description">
+            Invite referrals to earn
+            <span class="mb-referral-badge">10%</span>
+            of their game fees
+          </p>
+        </div>
+        <div class="mb-referral-illustration">
+          <svg width="72" height="72" viewBox="0 0 80 80" fill="none">
+            <circle cx="40" cy="32" r="16" fill="#22C55E" opacity="0.3"/>
+            <circle cx="40" cy="32" r="10" fill="#22C55E" opacity="0.6"/>
+            <circle cx="40" cy="28" r="8" fill="#22C55E"/>
+            <rect x="32" y="40" width="16" height="20" rx="4" fill="#22C55E" opacity="0.8"/>
+            <circle cx="60" cy="28" r="6" fill="#4ADE80" opacity="0.5"/>
+            <rect x="57" y="22" width="6" height="1.5" rx="0.75" fill="#fff" opacity="0.8"/>
+            <rect x="59.25" y="19.75" width="1.5" height="6" rx="0.75" fill="#fff" opacity="0.8"/>
+          </svg>
+        </div>
+      </div>
+      <div class="mb-referral-actions">
+        <button class="mb-btn-invite" @click="shareReferralLink">
+          Invite Friends
+        </button>
+        <button class="mb-btn-copy" @click="copyReferralLink">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Claim Section -->
+    <div class="mb-card mb-claim-card">
+      <div class="mb-claim-header">
+        <svg class="mb-claim-ton-icon" width="32" height="32" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
         </svg>
-      </button>
-      <button class="menu-item">
-        <span class="menu-icon">📜</span>
-        <span class="menu-label">История транзакций</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
-      </button>
-      <button class="menu-item">
-        <span class="menu-icon">🔔</span>
-        <span class="menu-label">Уведомления</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
-      </button>
-      <button class="menu-item">
-        <span class="menu-icon">🛡️</span>
-        <span class="menu-label">Безопасность</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
-      </button>
-      <button class="menu-item">
-        <span class="menu-icon">❓</span>
-        <span class="menu-label">Помощь</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
+        <div class="mb-claim-amounts">
+          <span class="mb-claim-value">{{ referrals.earned.toFixed(2) }} TON</span>
+          <span class="mb-claim-label">Claimable amount</span>
+        </div>
+      </div>
+      <div class="mb-claim-stats">
+        <div class="mb-claim-stat">
+          <span class="mb-claim-stat-value">{{ referrals.count }}</span>
+          <span class="mb-claim-stat-label">Invited users</span>
+        </div>
+        <div class="mb-claim-stat">
+          <span class="mb-claim-stat-value">{{ referrals.earned.toFixed(2) }}</span>
+          <span class="mb-claim-stat-label">Total claimed amount</span>
+        </div>
+      </div>
+      <button class="mb-btn-claim" :disabled="referrals.earned <= 0">
+        Claim
       </button>
     </div>
 
-    <!-- Version -->
-    <div class="version-info">
-      <span>Gift Aggregator v1.0.0</span>
-    </div>
+    <!-- Spacer for bottom nav -->
+    <div class="mb-bottom-spacer"></div>
 
     <!-- Deposit Modal -->
     <Teleport to="body">
-      <div v-if="showDepositModal" class="modal-overlay" @click.self="closeDepositModal">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3 class="modal-title-with-icon">
+      <div v-if="showDepositModal" class="mb-modal-overlay" @click.self="closeDepositModal">
+        <div class="mb-modal-content">
+          <div class="mb-modal-header">
+            <h3 class="mb-modal-title">
               <svg width="18" height="18" viewBox="0 0 56 56" fill="none">
                 <circle cx="28" cy="28" r="28" fill="#0098EA"/>
                 <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
               </svg>
-              Пополнить TON
+              Top Up TON
             </h3>
-            <button class="modal-close" @click="closeDepositModal">×</button>
+            <button class="mb-modal-close" @click="closeDepositModal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
           </div>
-          <div class="modal-body">
-            <div v-if="!tonConnect.isConnected.value" class="connect-wallet-section">
-              <p class="modal-text">Подключите кошелёк для просмотра адреса пополнения</p>
-              <button class="btn-connect-wallet" @click="connectWallet" :disabled="tonConnect.isConnecting.value">
-                {{ tonConnect.isConnecting.value ? 'Подключение...' : '🔗 Подключить кошелёк' }}
+          <div class="mb-modal-body">
+            <div v-if="!tonConnect.isConnected.value" class="mb-connect-section">
+              <p class="mb-modal-text">Connect wallet to see deposit address</p>
+              <button class="mb-btn-connect" @click="connectWallet" :disabled="tonConnect.isConnecting.value">
+                {{ tonConnect.isConnecting.value ? 'Connecting...' : 'Connect Wallet' }}
               </button>
             </div>
-            <div v-else class="deposit-info">
-              <p class="modal-text">Отправьте TON на адрес проекта:</p>
-              <div class="wallet-address-box">
-                <span class="wallet-address">{{ projectWalletAddress }}</span>
-                <button class="copy-btn-sm" @click="copyProjectAddress">📋</button>
+            <div v-else class="mb-deposit-info">
+              <p class="mb-modal-text">Send TON to the project address:</p>
+              <div class="mb-address-box">
+                <span class="mb-address">{{ projectWalletAddress }}</span>
+                <button class="mb-btn-copy-sm" @click="copyProjectAddress">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
               </div>
-              <p class="modal-hint">После отправки баланс обновится автоматически</p>
-              <div class="connected-wallet-info">
-                <span class="label">Ваш кошелёк:</span>
-                <span class="value">{{ tonConnect.shortAddress.value }}</span>
+              <p class="mb-modal-hint">Balance will update automatically after transfer</p>
+              <div class="mb-wallet-info">
+                <span class="mb-wallet-label">Your wallet:</span>
+                <span class="mb-wallet-value">{{ tonConnect.shortAddress.value }}</span>
               </div>
             </div>
           </div>
@@ -258,40 +219,48 @@
 
     <!-- Stars Modal -->
     <Teleport to="body">
-      <div v-if="showStarsModal" class="modal-overlay" @click.self="closeStarsModal">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3 class="modal-title-with-icon">
-              <img src="/icons/stars.png" alt="Stars" width="18" height="18" class="modal-title-icon" />
-              Купить Stars
+      <div v-if="showStarsModal" class="mb-modal-overlay" @click.self="closeStarsModal">
+        <div class="mb-modal-content">
+          <div class="mb-modal-header">
+            <h3 class="mb-modal-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FFCE4F"/>
+              </svg>
+              Buy Stars
             </h3>
-            <button class="modal-close" @click="closeStarsModal">×</button>
+            <button class="mb-modal-close" @click="closeStarsModal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
           </div>
-          <div class="modal-body">
-            <p class="modal-text">Выберите количество Stars</p>
-            <div class="stars-packages">
+          <div class="mb-modal-body">
+            <p class="mb-modal-text">Select Stars package</p>
+            <div class="mb-stars-grid">
               <button
                 v-for="pkg in starsPackages"
                 :key="pkg.amount"
-                class="stars-package"
+                class="mb-stars-pkg"
                 :class="{ selected: selectedStarsPackage === pkg.amount }"
                 @click="selectedStarsPackage = pkg.amount"
               >
-                <span class="pkg-stars">
-                  <img src="/icons/stars.png" alt="Stars" width="14" height="14" class="pkg-star-icon" />
+                <span class="mb-pkg-amount">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FFCE4F"/>
+                  </svg>
                   {{ pkg.amount }}
                 </span>
-                <span class="pkg-price">≈ {{ pkg.priceRub }} ₽</span>
+                <span class="mb-pkg-price">{{ pkg.priceRub }} RUB</span>
               </button>
             </div>
             <button
-              class="btn-buy-stars"
+              class="mb-btn-buy"
               @click="buyStars"
               :disabled="!selectedStarsPackage || isProcessingStars"
             >
-              {{ isProcessingStars ? 'Обработка...' : 'Купить Stars' }}
+              {{ isProcessingStars ? 'Processing...' : 'Buy Stars' }}
             </button>
-            <p class="modal-hint">Оплата через Telegram Stars</p>
+            <p class="mb-modal-hint">Payment via Telegram Stars</p>
           </div>
         </div>
       </div>
@@ -305,23 +274,13 @@ import { useTelegram } from '../composables/useTelegram'
 import { useTonConnect } from '../composables/useTonConnect'
 import { stakingGetStats } from '../api/client'
 
-interface Activity {
-  id: number
-  type: 'win' | 'loss' | 'deposit' | 'withdraw'
-  icon: string
-  title: string
-  time: string
-  amount: number
-}
 
 const { user, initWebApp } = useTelegram()
 const tonConnect = useTonConnect()
 
 // User data from Telegram
 const username = computed(() => user.value?.username || user.value?.first_name || 'Player')
-const userId = computed(() => String(user.value?.id || ''))
 const userInitial = computed(() => username.value.charAt(0).toUpperCase())
-const isVip = ref(false)
 
 const avatarGradient = 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
 
@@ -431,21 +390,18 @@ const buyStars = async () => {
   }
 }
 
-// Activity
-const recentActivity = ref<Activity[]>([])
-
-// Stars background
-const getStarStyle = (_i: number) => ({
-  left: `${Math.random() * 100}%`,
-  top: `${Math.random() * 100}%`,
-  width: `${Math.random() * 2 + 1}px`,
-  height: `${Math.random() * 2 + 1}px`,
-  animationDelay: `${Math.random() * 3}s`,
-  animationDuration: `${Math.random() * 2 + 2}s`
-})
-
 const copyReferralLink = () => {
   navigator.clipboard.writeText(referralLink.value)
+}
+
+const shareReferralLink = () => {
+  const text = 'Join me and play! Use my referral link:'
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink.value)}&text=${encodeURIComponent(text)}`
+  if (window.Telegram?.WebApp?.openTelegramLink) {
+    window.Telegram.WebApp.openTelegramLink(shareUrl)
+  } else {
+    window.open(shareUrl, '_blank')
+  }
 }
 
 onMounted(async () => {
@@ -465,278 +421,487 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.profile-view {
+/* ============================================
+   MyBalls.io Profile Design System
+   ============================================ */
+
+/* CSS Variables */
+.mb-profile {
+  --mb-bg: #0C0C0C;
+  --mb-primary: #34CDEF;
+  --mb-card: rgba(255, 255, 255, 0.05);
+  --mb-card-border: rgba(255, 255, 255, 0.08);
+  --mb-gradient-cyan: linear-gradient(180deg, rgba(52, 205, 239, 0.3) 0%, rgba(12, 12, 12, 0) 50%);
+  --mb-text-secondary: rgba(255, 255, 255, 0.5);
+  --mb-text-tertiary: rgba(255, 255, 255, 0.3);
+  --mb-radius-lg: 16px;
+  --mb-radius-md: 12px;
+  --mb-radius-sm: 8px;
+  --mb-font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --mb-green: #22C55E;
+}
+
+.mb-profile {
   min-height: 100vh;
-  background: #000;
+  background: var(--mb-bg);
   color: #fff;
   position: relative;
   overflow-x: hidden;
-  padding-bottom: 90px;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
 }
 
-/* Stars */
-.stars-bg {
-  position: fixed;
-  inset: 0;
+/* Cyan Gradient Header */
+.mb-gradient-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 300px;
+  background: var(--mb-gradient-cyan);
   pointer-events: none;
   z-index: 0;
 }
 
-.star {
-  position: absolute;
-  background: #fff;
-  border-radius: 50%;
-  opacity: 0.3;
-  animation: twinkle 3s infinite ease-in-out;
-}
-
-@keyframes twinkle {
-  0%, 100% { opacity: 0.2; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.3); }
-}
-
-/* Header */
-.profile-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
+/* ============================================
+   Play Balance Section
+   ============================================ */
+.mb-balance-section {
   position: relative;
-  z-index: 10;
-}
-
-.header-title {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.settings-btn {
-  width: 40px;
-  height: 40px;
-  background: #1c1c1e;
-  border: none;
-  border-radius: 12px;
-  color: #fff;
+  z-index: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  padding: 48px 16px 24px;
 }
 
-/* Stars Banner */
-.stars-banner {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin: 0 16px 16px;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-  border-radius: 16px;
-  text-decoration: none;
-  color: inherit;
-  position: relative;
-  z-index: 10;
-  transition: transform 0.2s, opacity 0.2s;
+.mb-balance-label {
+  font-size: 13px;
+  color: var(--mb-primary);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
 }
 
-.stars-banner:active {
-  transform: scale(0.98);
-  opacity: 0.9;
-}
-
-.banner-icon img {
-  object-fit: contain;
-}
-
-.banner-content {
-  flex: 1;
-}
-
-.banner-content h3 {
-  font-size: 15px;
-  font-weight: 700;
-  margin: 0 0 2px;
-  color: #fff;
-}
-
-.banner-content p {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
-  margin: 0;
-}
-
-.banner-arrow {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-/* User Card */
-.user-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 0 16px 20px;
-  position: relative;
-  z-index: 10;
-}
-
-.user-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.user-info {
-  flex: 1;
-}
-
-.user-name {
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 4px;
-}
-
-.user-id {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.user-badge {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.user-badge.vip {
-  background: linear-gradient(135deg, #f59e0b, #fbbf24);
-  color: #000;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.vip-star-icon {
-  flex-shrink: 0;
-  object-fit: contain;
-}
-
-/* Balance Card */
-.balance-card {
-  margin: 0 16px 20px;
-  background: linear-gradient(135deg, #1c1c1e 0%, #27272a 100%);
-  border-radius: 20px;
-  padding: 16px;
-  position: relative;
-  z-index: 10;
-  border: 1px solid #3a3a3c;
-}
-
-.balance-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.balance-item {
-  flex: 1;
+.mb-balance-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.balance-icon {
-  font-size: 24px;
+.mb-balance-value {
+  font-size: 40px;
+  font-weight: 700;
+  font-family: var(--mb-font-mono);
+  color: #fff;
+  line-height: 1.1;
 }
 
-.balance-icon-svg {
+.mb-ton-icon {
   flex-shrink: 0;
 }
 
-.balance-icon-img {
-  flex-shrink: 0;
-  object-fit: contain;
+/* ============================================
+   Action Circles Row
+   ============================================ */
+.mb-actions-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  padding: 0 16px 28px;
 }
 
-.btn-icon-svg {
-  flex-shrink: 0;
-  margin-right: 4px;
-}
-
-.btn-icon-img {
-  flex-shrink: 0;
-  margin-right: 4px;
-  object-fit: contain;
-}
-
-.balance-info {
+.mb-action-item {
   display: flex;
   flex-direction: column;
-}
-
-.balance-label {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.balance-value {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.balance-divider {
-  width: 1px;
-  height: 40px;
-  background: #3a3a3c;
-  margin: 0 12px;
-}
-
-.balance-actions {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.btn-deposit, .btn-withdraw, .btn-stars {
+.mb-action-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.mb-action-item:active .mb-action-circle {
+  transform: scale(0.93);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mb-action-label {
+  font-size: 10px;
+  color: var(--mb-text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ============================================
+   User Section
+   ============================================ */
+.mb-user-section {
+  position: relative;
+  z-index: 1;
+  padding: 0 16px 20px;
+}
+
+.mb-user-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mb-user-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.mb-user-info {
   flex: 1;
-  min-width: 80px;
-  padding: 12px 8px;
-  border: none;
-  border-radius: 12px;
-  font-size: 13px;
+  min-width: 0;
+}
+
+.mb-username {
+  font-size: 16px;
   font-weight: 600;
+  color: #fff;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mb-settings-btn {
+  width: 40px;
+  height: 40px;
+  background: var(--mb-card);
+  border: 1px solid var(--mb-card-border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.mb-settings-btn:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================
+   Card Base
+   ============================================ */
+.mb-card {
+  position: relative;
+  z-index: 1;
+  margin: 0 16px 16px;
+  background: var(--mb-card);
+  border: 1px solid var(--mb-card-border);
+  border-radius: var(--mb-radius-lg);
+  overflow: hidden;
+}
+
+/* ============================================
+   Inventory Card
+   ============================================ */
+.mb-inventory-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+}
+
+.mb-inventory-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.mb-inventory-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mb-inventory-count {
+  font-size: 13px;
+  color: var(--mb-text-secondary);
+}
+
+.mb-inventory-value {
+  font-size: 13px;
+  color: var(--mb-text-secondary);
+  display: flex;
+  align-items: center;
+}
+
+.mb-inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.mb-inventory-placeholder {
+  aspect-ratio: 1;
+  border: 1.5px dashed rgba(255, 255, 255, 0.1);
+  border-radius: var(--mb-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.mb-inventory-link {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  white-space: nowrap;
+  padding: 14px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--mb-primary);
+  text-decoration: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 12px;
+  transition: opacity 0.2s;
 }
 
-.btn-deposit {
-  background: #facc15;
+.mb-inventory-link:active {
+  opacity: 0.7;
+}
+
+.mb-inventory-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px 16px;
+}
+
+.mb-empty-text {
+  font-size: 12px;
+  color: var(--mb-text-tertiary);
+}
+
+.mb-deposit-link {
+  font-size: 12px;
+  color: var(--mb-primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 500;
+}
+
+.mb-deposit-link:active {
+  opacity: 0.7;
+}
+
+/* ============================================
+   Referral Card
+   ============================================ */
+.mb-referral-card {
+  padding: 20px 16px 16px;
+}
+
+.mb-referral-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.mb-referral-text-block {
+  flex: 1;
+}
+
+.mb-referral-description {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.mb-referral-badge {
+  display: inline-block;
+  background: var(--mb-green);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+.mb-referral-illustration {
+  flex-shrink: 0;
+}
+
+.mb-referral-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.mb-btn-invite {
+  flex: 1;
+  padding: 14px;
+  background: #fff;
   color: #000;
+  border: none;
+  border-radius: var(--mb-radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
 }
 
-.btn-stars {
-  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+.mb-btn-invite:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+.mb-btn-copy {
+  width: 48px;
+  height: 48px;
+  background: var(--mb-card);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--mb-radius-md);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.mb-btn-copy:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================
+   Claim Section
+   ============================================ */
+.mb-claim-card {
+  padding: 20px 16px 16px;
+}
+
+.mb-claim-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.mb-claim-ton-icon {
+  flex-shrink: 0;
+}
+
+.mb-claim-amounts {
+  display: flex;
+  flex-direction: column;
+}
+
+.mb-claim-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--mb-font-mono);
   color: #fff;
 }
 
-.btn-withdraw {
-  background: #1c1c1e;
-  border: 1px solid #3a3a3c;
+.mb-claim-label {
+  font-size: 12px;
+  color: var(--mb-text-secondary);
+  margin-top: 2px;
+}
+
+.mb-claim-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.mb-claim-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mb-claim-stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--mb-font-mono);
   color: #fff;
 }
 
-/* Modal Styles */
-.modal-overlay {
+.mb-claim-stat-label {
+  font-size: 11px;
+  color: var(--mb-text-secondary);
+}
+
+.mb-btn-claim {
+  width: 100%;
+  padding: 14px;
+  background: var(--mb-card);
+  border: 1px solid var(--mb-card-border);
+  border-radius: var(--mb-radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mb-text-secondary);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.mb-btn-claim:disabled {
+  cursor: not-allowed;
+  color: var(--mb-text-tertiary);
+}
+
+.mb-btn-claim:not(:disabled):active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* ============================================
+   Bottom Spacer
+   ============================================ */
+.mb-bottom-spacer {
+  height: 100px;
+}
+
+/* ============================================
+   Modal Styles
+   ============================================ */
+.mb-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -744,163 +909,179 @@ onMounted(async () => {
   padding: 16px;
 }
 
-.modal-content {
-  background: #1c1c1e;
+.mb-modal-content {
+  background: #1A1A1A;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   width: 100%;
   max-width: 360px;
   overflow: hidden;
 }
 
-.modal-header {
+.mb-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid #3a3a3c;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.modal-header h3 {
-  font-size: 18px;
-  font-weight: 700;
+.mb-modal-title {
+  font-size: 17px;
+  font-weight: 600;
   margin: 0;
-}
-
-.modal-title-with-icon {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.modal-title-icon {
-  flex-shrink: 0;
-  object-fit: contain;
-}
-
-.modal-close {
+.mb-modal-close {
   width: 32px;
   height: 32px;
-  background: #27272a;
+  background: rgba(255, 255, 255, 0.06);
   border: none;
   border-radius: 50%;
-  color: #fff;
-  font-size: 20px;
+  color: rgba(255, 255, 255, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-.modal-body {
+.mb-modal-close:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.mb-modal-body {
   padding: 20px;
 }
 
-.modal-text {
+.mb-modal-text {
   font-size: 14px;
-  color: #9ca3af;
+  color: var(--mb-text-secondary);
   margin: 0 0 16px;
   text-align: center;
 }
 
-.modal-hint {
+.mb-modal-hint {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--mb-text-tertiary);
   text-align: center;
   margin-top: 12px;
 }
 
-.connect-wallet-section {
+/* Connect Section */
+.mb-connect-section {
   text-align: center;
 }
 
-.btn-connect-wallet {
+.mb-btn-connect {
   width: 100%;
   padding: 14px;
-  background: #3b82f6;
+  background: var(--mb-primary);
   border: none;
-  border-radius: 12px;
-  color: #fff;
+  border-radius: var(--mb-radius-md);
+  color: #000;
   font-size: 15px;
   font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-.btn-connect-wallet:disabled {
-  opacity: 0.6;
+.mb-btn-connect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.wallet-address-box {
+/* Deposit Info */
+.mb-deposit-info {
+  text-align: center;
+}
+
+.mb-address-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #27272a;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--mb-radius-md);
   padding: 12px;
   margin-bottom: 12px;
 }
 
-.wallet-address {
+.mb-address {
   flex: 1;
-  font-family: monospace;
-  font-size: 12px;
-  color: #9ca3af;
+  font-family: var(--mb-font-mono);
+  font-size: 11px;
+  color: var(--mb-text-secondary);
   word-break: break-all;
+  text-align: left;
 }
 
-.copy-btn-sm {
+.mb-btn-copy-sm {
   width: 36px;
   height: 36px;
-  background: #3a3a3c;
+  background: rgba(255, 255, 255, 0.06);
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  border-radius: var(--mb-radius-sm);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
-.connected-wallet-info {
+.mb-wallet-info {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #3a3a3c;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.connected-wallet-info .label {
+.mb-wallet-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--mb-text-secondary);
 }
 
-.connected-wallet-info .value {
+.mb-wallet-value {
   font-size: 12px;
-  font-family: monospace;
-  color: #4ade80;
+  font-family: var(--mb-font-mono);
+  color: var(--mb-green);
 }
 
-.stars-packages {
+/* Stars Modal Grid */
+.mb-stars-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   margin-bottom: 16px;
 }
 
-.stars-package {
+.mb-stars-pkg {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   padding: 14px;
-  background: #27272a;
-  border: 2px solid #3a3a3c;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--mb-radius-md);
   color: #fff;
-  transition: all 0.2s;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
 }
 
-.stars-package.selected {
-  border-color: #a855f7;
-  background: rgba(168, 85, 247, 0.1);
+.mb-stars-pkg.selected {
+  border-color: var(--mb-primary);
+  background: rgba(52, 205, 239, 0.08);
 }
 
-.pkg-stars {
+.mb-pkg-amount {
   font-size: 16px;
   font-weight: 700;
   display: flex;
@@ -908,308 +1089,26 @@ onMounted(async () => {
   gap: 4px;
 }
 
-.pkg-star-icon {
-  flex-shrink: 0;
-  object-fit: contain;
-}
-
-.pkg-price {
+.mb-pkg-price {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--mb-text-secondary);
 }
 
-.btn-buy-stars {
+.mb-btn-buy {
   width: 100%;
   padding: 14px;
-  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  background: var(--mb-primary);
   border: none;
-  border-radius: 12px;
-  color: #fff;
+  border-radius: var(--mb-radius-md);
+  color: #000;
   font-size: 15px;
   font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-.btn-buy-stars:disabled {
-  opacity: 0.6;
+.mb-btn-buy:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
-
-/* Section Title */
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0 0 12px;
-}
-
-/* Stats Section */
-.stats-section {
-  padding: 0 16px 20px;
-  position: relative;
-  z-index: 10;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-
-.stat-card {
-  background: #1c1c1e;
-  border-radius: 14px;
-  padding: 14px 8px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.stat-icon {
-  font-size: 20px;
-}
-
-.stat-value {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.stat-label {
-  font-size: 10px;
-  color: #6b7280;
-}
-
-/* Referral Section */
-.referral-section {
-  padding: 0 16px 20px;
-  position: relative;
-  z-index: 10;
-}
-
-.referral-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.referral-bonus {
-  background: #22c55e;
-  color: #fff;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.referral-card {
-  background: #1c1c1e;
-  border-radius: 16px;
-  padding: 16px;
-}
-
-.referral-stats {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 16px;
-}
-
-.ref-stat {
-  display: flex;
-  flex-direction: column;
-}
-
-.ref-value {
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.ref-label {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.referral-link {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.link-input {
-  flex: 1;
-  background: #27272a;
-  border: 1px solid #3a3a3c;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 12px;
-  color: #9ca3af;
-  font-family: monospace;
-}
-
-.copy-btn {
-  width: 42px;
-  height: 42px;
-  background: #27272a;
-  border: 1px solid #3a3a3c;
-  border-radius: 10px;
-  font-size: 16px;
-}
-
-.btn-share {
-  width: 100%;
-  padding: 12px;
-  background: #3b82f6;
-  border: none;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-/* Activity Section */
-.activity-section {
-  padding: 0 16px 20px;
-  position: relative;
-  z-index: 10;
-}
-
-.activity-list {
-  background: #1c1c1e;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.activity-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  border-bottom: 1px solid #27272a;
-}
-
-.activity-item:last-child {
-  border-bottom: none;
-}
-
-.activity-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  background: #27272a;
-}
-
-.activity-icon.win { background: rgba(34, 197, 94, 0.2); }
-.activity-icon.loss { background: rgba(239, 68, 68, 0.2); }
-.activity-icon.deposit { background: rgba(59, 130, 246, 0.2); }
-
-.activity-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.activity-title {
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.activity-time {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.activity-amount {
-  font-size: 13px;
-  font-weight: 600;
-  color: #ef4444;
-}
-
-.activity-amount.positive {
-  color: #4ade80;
-}
-
-.empty-activity {
-  text-align: center;
-  padding: 40px;
-  color: #6b7280;
-}
-
-/* Menu Section */
-.menu-section {
-  padding: 0 16px 20px;
-  position: relative;
-  z-index: 10;
-}
-
-.menu-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: #1c1c1e;
-  border: none;
-  border-radius: 14px;
-  margin-bottom: 8px;
-  color: #fff;
-  text-align: left;
-}
-
-.menu-icon {
-  font-size: 20px;
-}
-
-.menu-label {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.menu-item svg {
-  color: #6b7280;
-}
-
-/* Version */
-.version-info {
-  text-align: center;
-  padding: 20px;
-  font-size: 12px;
-  color: #4b5563;
-  position: relative;
-  z-index: 10;
-}
-
-/* Bottom Nav */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #000;
-  border-top: 1px solid #1c1c1e;
-  display: flex;
-  padding: 8px 0 24px;
-  z-index: 100;
-}
-
-.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  color: #6b7280;
-  text-decoration: none;
-  font-size: 10px;
-}
-
-.nav-item.active { color: #fff; }
-.nav-item svg { width: 22px; height: 22px; }
 </style>

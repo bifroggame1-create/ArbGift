@@ -1,0 +1,94 @@
+/**
+ * MyBalls.io Design System
+ * Pixel-perfect extracted tokens
+ */
+
+/* ===== FONT FACES ===== */
+
+/* SF Pro Text */
+@font-face { font-family: 'SF Pro Text'; font-weight: 300; font-display: swap; src: url('https://myballs.io/fonts/sf-pro-text-300.woff2') format('woff2'); }
+@font-face { font-family: 'SF Pro Text'; font-weight: 400; font-display: swap; src: url('https://myballs.io/fonts/sf-pro-text-400.woff2') format('woff2'); }
+@font-face { font-family: 'SF Pro Text'; font-weight: 500; font-display: swap; src: url('https://myballs.io/fonts/sf-pro-text-500.woff2') format('woff2'); }
+@font-face { font-family: 'SF Pro Text'; font-weight: 600; font-display: swap; src: url('https://myballs.io/fonts/sf-pro-text-600.woff2') format('woff2'); }
+@font-face { font-family: 'SF Pro Text'; font-weight: 700; font-display: swap; src: url('https://myballs.io/fonts/sf-pro-text-700.woff2') format('woff2'); }
+@font-face { font-family: 'SF Pro Text'; font-weight: 800; font-display: swap; src: url('https://myballs.io/fonts/sf-pro-text-800.woff2') format('woff2'); }
+
+/* Chroma ST (Display) */
+@font-face { font-family: 'Chroma ST'; font-weight: 300; font-display: swap; src: url('https://myballs.io/fonts/chroma-st-light.woff2') format('woff2'); }
+@font-face { font-family: 'Chroma ST'; font-weight: 400; font-display: swap; src: url('https://myballs.io/fonts/chroma-st-regular.woff2') format('woff2'); }
+@font-face { font-family: 'Chroma ST'; font-weight: 500; font-display: swap; src: url('https://myballs.io/fonts/chroma-st-medium.woff2') format('woff2'); }
+@font-face { font-family: 'Chroma ST'; font-weight: 700; font-display: swap; src: url('https://myballs.io/fonts/chroma-st-bold.woff2') format('woff2'); }
+@font-face { font-family: 'Chroma ST'; font-weight: 900; font-display: swap; src: url('https://myballs.io/fonts/chroma-st-black.woff2') format('woff2'); }
+
+/* CoFo Sans Mono (Numbers) */
+@font-face { font-family: 'CoFo Sans Mono'; font-weight: 400; font-display: swap; src: url('https://myballs.io/fonts/cofo-sans-mono-400.woff2') format('woff2'); }
+@font-face { font-family: 'CoFo Sans Mono'; font-weight: 500; font-display: swap; src: url('https://myballs.io/fonts/cofo-sans-mono-500.woff2') format('woff2'); }
+@font-face { font-family: 'CoFo Sans Mono'; font-weight: 700; font-display: swap; src: url('https://myballs.io/fonts/cofo-sans-mono-700.woff2') format('woff2'); }
+@font-face { font-family: 'CoFo Sans Mono'; font-weight: 900; font-display: swap; src: url('https://myballs.io/fonts/cofo-sans-mono-900.woff2') format('woff2'); }
+
+
+/* ===== CSS VARIABLES ===== */
+
+:root {
+  /* Core Colors */
+  --mb-bg: #0C0C0C;
+  --mb-primary: #34CDEF;
+  --mb-green: #00FF62;
+  --mb-red: #E23535;
+  --mb-gold: #FFC502;
+
+  /* Surface Colors */
+  --mb-card: rgba(255, 255, 255, 0.05);
+  --mb-card-hover: rgba(255, 255, 255, 0.08);
+  --mb-surface: #1B1B1B;
+  --mb-border: rgba(255, 255, 255, 0.08);
+
+  /* Text Colors */
+  --mb-text: #FFFFFF;
+  --mb-text-secondary: rgba(255, 255, 255, 0.5);
+  --mb-text-tertiary: rgba(255, 255, 255, 0.25);
+  --mb-text-inactive: #808080;
+
+  /* Radii */
+  --mb-radius-sm: 8px;
+  --mb-radius-md: 12px;
+  --mb-radius-lg: 16px;
+  --mb-radius-xl: 22px;
+  --mb-radius-2xl: 24px;
+  --mb-radius-pill: 9999px;
+  --mb-radius-sheet: 47px 47px 0 0;
+
+  /* Layout */
+  --mb-container: 440px;
+  --mb-nav-height: 56px;
+  --mb-content-padding: 15px;
+
+  /* Safe Areas */
+  --top-safe: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+  --bottom-safe: calc(var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px));
+  --nav-height-safe: calc(var(--mb-nav-height) + var(--bottom-safe));
+
+  /* Fonts */
+  --mb-font: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mb-font-display: 'Chroma ST', 'SF Pro Display', sans-serif;
+  --mb-font-mono: 'CoFo Sans Mono', 'SF Mono', monospace;
+
+  /* Gradients */
+  --mb-gradient-primary: linear-gradient(135deg, #34CDEF 0%, #0098EA 100%);
+  --mb-gradient-card-bottom: linear-gradient(rgba(12,12,12,0) 0%, rgba(12,12,12,0.78) 14.84%, rgb(12,12,12) 28.68%);
+  --mb-gradient-nav: radial-gradient(119.98% 100% at 50% 100%, rgb(0,0,0) 45%, rgba(0,0,0,0) 100%);
+  --mb-gradient-purple: linear-gradient(180deg, #7B2FBE 0%, #0C0C0C 100%);
+  --mb-gradient-cyan: linear-gradient(180deg, rgba(52,205,239,0.3) 0%, rgba(12,12,12,0) 50%);
+
+  /* Timing */
+  --mb-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --mb-ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --mb-duration-fast: 0.16s;
+  --mb-duration-normal: 0.22s;
+  --mb-duration-slow: 0.3s;
+
+  /* Game Controls */
+  --game-controls-height: 161px;
+  --pvp-race-game-controls-height: 177px;
+  --solo-trading-game-controls-height: 157px;
+}
