@@ -98,8 +98,8 @@ def get_display_name(username: Optional[str], user_id: int) -> str:
 
 @router.get("/", response_model=LeaderboardResponse)
 async def get_leaderboard(
-    type: str = Query("WEEKLY", regex="^(ALL_TIME|WEEKLY|MONTHLY|DAILY)$"),
-    category: str = Query("TOTAL_PROFIT", regex="^(TOTAL_PROFIT|BIGGEST_WIN|WIN_STREAK|TOTAL_WAGERED|STAKING_REWARDS|REFERRAL_EARNINGS)$"),
+    type: str = Query("WEEKLY", pattern="^(ALL_TIME|WEEKLY|MONTHLY|DAILY)$"),
+    category: str = Query("TOTAL_PROFIT", pattern="^(TOTAL_PROFIT|BIGGEST_WIN|WIN_STREAK|TOTAL_WAGERED|STAKING_REWARDS|REFERRAL_EARNINGS)$"),
     limit: int = Query(100, ge=1, le=500),
     telegram_id: Optional[int] = Header(None, alias="X-Telegram-User-Id"),
     session: AsyncSession = Depends(get_db_session),
@@ -193,7 +193,7 @@ async def get_leaderboard(
 @router.get("/my-rankings", response_model=List[UserRankingSchema])
 async def get_my_rankings(
     telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
-    type: Optional[str] = Query(None, regex="^(ALL_TIME|WEEKLY|MONTHLY|DAILY)$"),
+    type: Optional[str] = Query(None, pattern="^(ALL_TIME|WEEKLY|MONTHLY|DAILY)$"),
     session: AsyncSession = Depends(get_db_session),
 ):
     """

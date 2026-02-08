@@ -113,7 +113,7 @@ class BalanceUpdateRequest(BaseModel):
     """Balance update request (admin only)."""
     amount_ton: Optional[Decimal] = None
     amount_stars: Optional[int] = None
-    operation: str = Field(..., regex="^(add|subtract|set)$")
+    operation: str = Field(..., pattern="^(add|subtract|set)$")
 
 
 # ============================================================
@@ -321,7 +321,7 @@ async def get_user_stats(
 @router.get("/leaderboard/top", response_model=List[UserProfileSchema])
 async def get_top_users(
     limit: int = Query(100, ge=1, le=500),
-    order_by: str = Query("net_profit", regex="^(net_profit|total_wagered|win_streak|level|xp)$"),
+    order_by: str = Query("net_profit", pattern="^(net_profit|total_wagered|win_streak|level|xp)$"),
     session: AsyncSession = Depends(get_db_session),
 ):
     """

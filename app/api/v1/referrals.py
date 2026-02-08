@@ -146,7 +146,7 @@ async def get_user_by_telegram_id(
 @router.get("/my-referrals", response_model=ReferralListResponse)
 async def get_my_referrals(
     telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
-    status: Optional[str] = Query(None, regex="^(active|inactive)$"),
+    status: Optional[str] = Query(None, pattern="^(active|inactive)$"),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db_session),
