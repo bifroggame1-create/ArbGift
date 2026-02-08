@@ -292,7 +292,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTonConnect } from '@/composables/useTonConnect'
-import apiClient from '@/api/client'
+import { api } from '@/api/client'
 
 const router = useRouter()
 const { wallet, connect } = useTonConnect()
@@ -377,7 +377,7 @@ const filteredGifts = computed(() => {
 // Methods
 async function loadUserStakes() {
   try {
-    const response = await apiClient.get('/staking/my-stakes')
+    const response = await api.get('/staking/my-stakes')
     userStakes.value = response.data.stakes || []
   } catch (error) {
     console.error('Failed to load stakes:', error)
@@ -385,10 +385,10 @@ async function loadUserStakes() {
 }
 
 async function loadAvailableGifts() {
-  if (!walletConnected.value) return
+  if (!walletConnected.value || !wallet.value) return
 
   try {
-    const response = await apiClient.get(`/gifts/owned/${wallet.value.address}`)
+    const response = await api.get(`/gifts/owned/${wallet.value.account.address}`)
     availableGifts.value = response.data.gifts || []
   } catch (error) {
     console.error('Failed to load gifts:', error)
@@ -423,7 +423,7 @@ async function loadStakePreview() {
   if (!selectedGift.value || !selectedPeriod.value) return
 
   try {
-    const response = await apiClient.get('/staking/preview', {
+    const response = await api.get('/staking/preview', {
       params: {
         gift_value_ton: selectedGift.value.floor_price,
         period: selectedPeriod.value,
@@ -447,7 +447,7 @@ async function confirmStake() {
   if (!selectedGift.value || !selectedPeriod.value) return
 
   try {
-    await apiClient.post('/staking/stake', {
+    await api.post('/staking/stake', {
       gift_address: selectedGift.value.address,
       period: selectedPeriod.value,
     })
@@ -472,7 +472,7 @@ async function handleStakeAction(stake: any) {
 
 async function claimStake(stake: any) {
   try {
-    await apiClient.post(`/staking/claim/${stake.id}`)
+    await api.post(`/staking/claim/${stake.id}`)
     alert(`✅ Claimed ${stake.total_at_unlock} TON!`)
     await loadUserStakes()
   } catch (error) {
@@ -488,7 +488,7 @@ async function earlyWithdraw(stake: any) {
   if (!confirmed) return
 
   try {
-    await apiClient.post(`/staking/withdraw/${stake.id}`)
+    await api.post(`/staking/withdraw/${stake.id}`)
     alert('Stake withdrawn with penalty')
     await loadUserStakes()
   } catch (error) {
@@ -499,7 +499,7 @@ async function earlyWithdraw(stake: any) {
 
 async function claimAllRewards() {
   try {
-    await apiClient.post('/staking/claim-all')
+    await api.post('/staking/claim-all')
     alert('✅ All rewards claimed!')
     await loadUserStakes()
   } catch (error) {
