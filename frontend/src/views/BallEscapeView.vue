@@ -101,13 +101,13 @@ let ballVY = 0
 const SPHERE_RADIUS = 120
 const BALL_RADIUS = 12
 const HOLE_SIZE = 0.45 // radians
-const GRAVITY = 0.22 // gentle gravity — casual feel
-const BOUNCE = 0.5 // soft wall bounces
-const SPRING_FORCE = 0.6 // gentle spring, not chaotic
-const FRICTION = 0.988 // more drag — ball settles faster
-const CENTRIFUGAL_FACTOR = 0.012 // mild outward push
-const CORIOLIS_FACTOR = 0.025 // subtle deflection
-const MAX_SPEED = 7 // slower, more readable movement
+const GRAVITY = 0.28 // moderate gravity — ball reaches walls with force
+const BOUNCE = 0.65 // visible bounces, not too springy
+const SPRING_FORCE = 1.1 // noticeable kick off walls, not chaotic
+const FRICTION = 0.992 // light drag — ball stays lively
+const CENTRIFUGAL_FACTOR = 0.018 // gentle outward push
+const CORIOLIS_FACTOR = 0.035 // subtle deflection
+const MAX_SPEED = 10 // fast enough to feel dynamic
 
 // Trail effect
 const TRAIL_LENGTH = 16
