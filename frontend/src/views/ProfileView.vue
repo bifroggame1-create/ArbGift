@@ -17,14 +17,14 @@
 
     <!-- Action Circles Row -->
     <div class="mb-actions-row">
-      <button class="mb-action-item" @click="openStarsModal">
+      <router-link to="/stars" class="mb-action-item" style="text-decoration:none;color:inherit">
         <div class="mb-action-circle">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FFCE4F" stroke="#FFCE4F" stroke-width="1"/>
           </svg>
         </div>
         <span class="mb-action-label">Top Up Stars</span>
-      </button>
+      </router-link>
       <button class="mb-action-item" @click="openDepositModal">
         <div class="mb-action-circle">
           <svg width="24" height="24" viewBox="0 0 56 56" fill="none">
@@ -217,54 +217,6 @@
       </div>
     </Teleport>
 
-    <!-- Stars Modal -->
-    <Teleport to="body">
-      <div v-if="showStarsModal" class="mb-modal-overlay" @click.self="closeStarsModal">
-        <div class="mb-modal-content">
-          <div class="mb-modal-header">
-            <h3 class="mb-modal-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FFCE4F"/>
-              </svg>
-              Buy Stars
-            </h3>
-            <button class="mb-modal-close" @click="closeStarsModal">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M18 6L6 18M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-          <div class="mb-modal-body">
-            <p class="mb-modal-text">Select Stars package</p>
-            <div class="mb-stars-grid">
-              <button
-                v-for="pkg in starsPackages"
-                :key="pkg.amount"
-                class="mb-stars-pkg"
-                :class="{ selected: selectedStarsPackage === pkg.amount }"
-                @click="selectedStarsPackage = pkg.amount"
-              >
-                <span class="mb-pkg-amount">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FFCE4F"/>
-                  </svg>
-                  {{ pkg.amount }}
-                </span>
-                <span class="mb-pkg-price">{{ pkg.priceRub }} RUB</span>
-              </button>
-            </div>
-            <button
-              class="mb-btn-buy"
-              @click="buyStars"
-              :disabled="!selectedStarsPackage || isProcessingStars"
-            >
-              {{ isProcessingStars ? 'Processing...' : 'Buy Stars' }}
-            </button>
-            <p class="mb-modal-hint">Payment via Telegram Stars</p>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>
 
@@ -286,7 +238,6 @@ const avatarGradient = 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
 
 // Balance
 const tonBalance = ref(0)
-const starsBalance = ref(0)
 
 // Stats
 const stats = ref({
@@ -311,17 +262,6 @@ const referralLink = computed(() => {
 const showDepositModal = ref(false)
 const projectWalletAddress = 'UQBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' // TODO: Replace with actual project wallet
 
-// Stars Modal
-const showStarsModal = ref(false)
-const selectedStarsPackage = ref<number | null>(null)
-const isProcessingStars = ref(false)
-const starsPackages = [
-  { amount: 50, priceRub: 90 },
-  { amount: 100, priceRub: 180 },
-  { amount: 250, priceRub: 450 },
-  { amount: 500, priceRub: 900 },
-]
-
 const openDepositModal = () => {
   showDepositModal.value = true
 }
@@ -330,15 +270,6 @@ const closeDepositModal = () => {
   showDepositModal.value = false
 }
 
-const openStarsModal = () => {
-  showStarsModal.value = true
-  selectedStarsPackage.value = null
-}
-
-const closeStarsModal = () => {
-  showStarsModal.value = false
-  selectedStarsPackage.value = null
-}
 
 const connectWallet = async () => {
   try {
@@ -350,44 +281,6 @@ const connectWallet = async () => {
 
 const copyProjectAddress = () => {
   navigator.clipboard.writeText(projectWalletAddress)
-}
-
-const buyStars = async () => {
-  if (!selectedStarsPackage.value) return
-
-  isProcessingStars.value = true
-  try {
-    // Create Stars invoice via backend API
-    const response = await fetch('/api/v1/stars/invoice', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: user.value?.id,
-        amount: selectedStarsPackage.value
-      })
-    })
-
-    if (!response.ok) throw new Error('Failed to create invoice')
-
-    const data = await response.json()
-
-    // Open Telegram Stars payment via WebApp
-    if (window.Telegram?.WebApp?.openInvoice) {
-      window.Telegram.WebApp.openInvoice(data.invoice_url, (status: string) => {
-        if (status === 'paid') {
-          starsBalance.value += selectedStarsPackage.value!
-          closeStarsModal()
-        }
-      })
-    } else {
-      // Fallback for web
-      window.open(data.invoice_url, '_blank')
-    }
-  } catch (e) {
-    console.error('Stars purchase failed:', e)
-  } finally {
-    isProcessingStars.value = false
-  }
 }
 
 const copyReferralLink = () => {
