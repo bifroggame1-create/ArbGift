@@ -44,6 +44,7 @@ export interface Gift {
   name: string
   description?: string
   image_url?: string
+  lottie_url?: string
   rarity?: string
   backdrop?: string
   model?: string

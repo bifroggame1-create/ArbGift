@@ -176,19 +176,19 @@ let canvasHeight = 500
 // Multipliers based on risk
 const multiplierSets: Record<string, Record<number, number[]>> = {
   low: {
-    8: [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6],
-    12: [8.9, 3, 1.4, 1.1, 1, 0.5, 0.3, 0.5, 1, 1.1, 1.4, 3, 8.9],
-    16: [16, 9, 2, 1.4, 1.1, 1, 0.5, 0.3, 0.3, 0.5, 1, 1.1, 1.4, 2, 9, 16]
+    8: [5.6, 1.5, 0.8, 0.5, 0.3, 0.5, 0.8, 1.5, 5.6],
+    12: [8.9, 3, 1.2, 0.7, 0.5, 0.3, 0.2, 0.3, 0.5, 0.7, 1.2, 3, 8.9],
+    16: [16, 9, 2, 1, 0.7, 0.4, 0.3, 0.2, 0.2, 0.3, 0.4, 0.7, 1, 2, 9, 16]
   },
   medium: {
-    8: [13, 3, 1.3, 0.7, 0.4, 0.7, 1.3, 3, 13],
-    12: [33, 11, 4, 2, 1.1, 0.6, 0.3, 0.6, 1.1, 2, 4, 11, 33],
-    16: [110, 41, 10, 5, 3, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 3, 5, 10, 41, 110]
+    8: [13, 3, 0.9, 0.4, 0.2, 0.4, 0.9, 3, 13],
+    12: [33, 11, 3, 1.2, 0.5, 0.3, 0.2, 0.3, 0.5, 1.2, 3, 11, 33],
+    16: [110, 41, 10, 3, 1.2, 0.5, 0.3, 0.2, 0.2, 0.3, 0.5, 1.2, 3, 10, 41, 110]
   },
   high: {
-    8: [29, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 29],
-    12: [170, 24, 8.1, 2, 0.7, 0.2, 0.2, 0.7, 2, 8.1, 24, 170],
-    16: [1000, 130, 26, 9, 4, 2, 0.2, 0.2, 0.2, 0.2, 2, 4, 9, 26, 130, 1000]
+    8: [29, 4, 0.9, 0.2, 0.1, 0.2, 0.9, 4, 29],
+    12: [170, 24, 8.1, 1.5, 0.4, 0.1, 0.1, 0.4, 1.5, 8.1, 24, 170],
+    16: [1000, 130, 26, 9, 2, 0.5, 0.1, 0.1, 0.1, 0.1, 0.5, 2, 9, 26, 130, 1000]
   }
 }
 
@@ -200,11 +200,11 @@ const currentMultipliers = computed(() => {
 // ========== PHYSICS ENGINE ==========
 
 const BALL_RADIUS = 7
-const GRAVITY = 0.25
-const FRICTION = 0.99        // Air friction
-const BOUNCE_COEFF = 0.65    // Elasticity on peg hit
-const WALL_BOUNCE = 0.4
-const MAX_SPEED = 12
+const GRAVITY = 0.22
+const FRICTION = 0.984        // Air friction — more drag
+const BOUNCE_COEFF = 0.42     // Elasticity on peg hit — softer bounce
+const WALL_BOUNCE = 0.3
+const MAX_SPEED = 7            // Lower cap so ball stays on field
 
 interface Ball {
   x: number
@@ -355,12 +355,18 @@ const playGame = async () => {
   balance.value -= selectedBet.value
   gameNumber.value++
 
-  // Determine outcome
+  // Determine outcome — house edge: ~85% losses, ~15% wins
   const mults = currentMultipliers.value
-  const weights = mults.map((m: number) => 1 / (m + 0.1))
+  const center = (mults.length - 1) / 2
+  // Gaussian-like distribution strongly biased toward center (losing) slots
+  const weights = mults.map((_m: number, i: number) => {
+    const distFromCenter = Math.abs(i - center) / center // 0 at center, 1 at edges
+    // Steep exponential decay from center — edges (big wins) extremely rare
+    return Math.exp(-distFromCenter * distFromCenter * 8)
+  })
   const totalWeight = weights.reduce((a: number, b: number) => a + b, 0)
   let r = Math.random() * totalWeight
-  targetSlot = Math.floor(mults.length / 2)
+  targetSlot = Math.floor(center)
 
   for (let i = 0; i < weights.length; i++) {
     r -= weights[i]
@@ -420,7 +426,7 @@ const animate = () => {
     if (holdTimer > 25) {
       // Release!
       dropPhase = 'releasing'
-      ball.vx = tubeAngularVel * canvasWidth * 0.08 // Inherit tube momentum
+      ball.vx = tubeAngularVel * canvasWidth * 0.04 // Inherit tube momentum (reduced)
       ball.vy = 0.5
     }
     draw(ctx)
@@ -493,19 +499,23 @@ const animate = () => {
         ball.vx -= (1 + BOUNCE_COEFF) * velAlongNormal * nx
         ball.vy -= (1 + BOUNCE_COEFF) * velAlongNormal * ny
 
-        // Add random horizontal deflection (the key to natural plinko feel)
-        const deflection = (Math.random() - 0.5) * 1.8
+        // Add random horizontal deflection (reduced to keep ball on field)
+        const deflection = (Math.random() - 0.5) * 0.9
         ball.vx += deflection
 
-        // Subtle steering toward target (only in bottom 40%)
+        // Steering toward target — starts early and grows stronger
         const progress = ball.y / canvasHeight
-        if (progress > 0.6) {
+        if (progress > 0.35) {
           const mults = currentMultipliers.value
           const slotWidth = canvasWidth / mults.length
           const targetX = (targetSlot + 0.5) * slotWidth
-          const steerForce = (targetX - ball.x) * 0.005 * (progress - 0.6)
+          const steerStrength = 0.008 * Math.pow((progress - 0.35) / 0.65, 1.5)
+          const steerForce = (targetX - ball.x) * steerStrength
           ball.vx += steerForce
         }
+
+        // Dampen horizontal velocity after each peg hit to prevent wild bounces
+        ball.vx *= 0.85
       }
 
       // Peg glow effect

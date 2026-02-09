@@ -6,8 +6,18 @@
   >
     <!-- Image area: square, backdrop-colored background -->
     <div class="gift-card__image">
+      <!-- Lottie animation from Fragment CDN -->
+      <LottieGift
+        v-if="lottieUrl"
+        :src="lottieUrl"
+        :fallback-src="gift.image_url"
+        :alt="gift.name"
+        :size="imageSize"
+        class="gift-card__lottie"
+      />
+      <!-- Static image fallback -->
       <img
-        v-if="gift.image_url"
+        v-else-if="gift.image_url"
         :src="gift.image_url"
         :alt="gift.name"
         loading="lazy"
@@ -69,6 +79,7 @@
 import { computed } from 'vue'
 import type { Gift } from '../api/client'
 import { useTelegram } from '../composables/useTelegram'
+import LottieGift from './LottieGift.vue'
 
 const props = defineProps<{
   gift: Gift
@@ -83,6 +94,24 @@ const emit = defineEmits<{
 }>()
 
 const { hapticImpact } = useTelegram()
+
+// Lottie animation URL — from backend or derived from image_url (Fragment CDN pattern)
+const lottieUrl = computed(() => {
+  // Direct lottie_url from API
+  if (props.gift.lottie_url) return props.gift.lottie_url
+  // Derive from Fragment CDN image URL:  *.webp → *.lottie.json
+  const img = props.gift.image_url
+  if (img && img.includes('nft.fragment.com/gift/')) {
+    return img.replace(/\.(webp|jpg|png|medium\.jpg|large\.jpg|small\.jpg)$/i, '.lottie.json')
+  }
+  return null
+})
+
+// Card image size for lottie (responsive)
+const imageSize = computed(() => {
+  // Grid cards are ~1/3 viewport, image area is square aspect-ratio
+  return Math.round(Math.min(window.innerWidth / 3 - 16, 140))
+})
 
 // Serial number from tg_id or id
 const serialNumber = computed(() => {
@@ -162,6 +191,17 @@ const handleBuy = () => {
   justify-content: center;
   background: var(--card-bg);
   overflow: hidden;
+}
+
+.gift-card__lottie {
+  width: 80%;
+  height: 80%;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
+  transition: transform 0.22s ease;
+}
+
+.gift-card:hover .gift-card__lottie {
+  transform: scale(1.04);
 }
 
 .gift-card__image img {

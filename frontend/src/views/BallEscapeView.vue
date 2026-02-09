@@ -141,8 +141,8 @@ const RING_COLORS = [
 const PREVIEW_RING = { main: '#ec4899', glow: 'rgba(236, 72, 153, ', light: '#f9a8d4' } // pink
 let currentRingColor = PREVIEW_RING
 
-// Constant sphere rotation speed (like MyBalls — no acceleration)
-const SPHERE_SPEED = 0.028
+// Constant sphere rotation speed — slower for better gameplay feel
+const SPHERE_SPEED = 0.016
 
 // Game phases
 let startTime = 0
@@ -151,6 +151,12 @@ let willEscape = false
 let targetMultiplier = 1.0
 let isFalling = false // Ball escaped and is falling
 let landedSide: 'green' | 'red' | null = null
+let bounceCount = 0          // How many times ball bounced off floor/walls after escape
+const MAX_BOUNCES = 5        // End game after this many floor bounces
+const FLOOR_BOUNCE = 0.55    // Floor elasticity — ball loses energy each bounce
+const WALL_BOUNCE_FALL = 0.6 // Wall elasticity during fall
+const FALL_GRAVITY = 0.35    // Gravity during fall phase
+const FALL_FRICTION = 0.992  // Air drag during fall
 
 const multiplierColor = computed(() => {
   if (gameState.value === 'won') return '#4ade80'
@@ -194,6 +200,7 @@ async function startGame() {
   impactFlash = 0
   isFalling = false
   landedSide = null
+  bounceCount = 0
 
   // Get server result
   try {
@@ -232,41 +239,79 @@ function gameLoop() {
   const currentHoleAngle = holeAngle + sphereRotation
 
   if (isFalling) {
-    // === FALLING PHASE ===
-    ballVY += 0.4 // gravity
-    ballVX *= 0.99 // air resistance
+    // === FALLING PHASE — ball bounces off floor & walls before settling ===
+    ballVY += FALL_GRAVITY
+    ballVX *= FALL_FRICTION
+    ballVY *= FALL_FRICTION
 
-    // Subtle correction to guide ball to correct side (server result)
-    const absoluteX = SPHERE_CENTER_X + ballX
-    const targetSide = willEscape ? canvasWidth * 0.25 : canvasWidth * 0.75
-    const correction = (targetSide - absoluteX) * 0.003
-    ballVX += correction
+    // Subtle steering toward correct side (only before first floor bounce)
+    if (bounceCount === 0) {
+      const absoluteX = SPHERE_CENTER_X + ballX
+      const targetSide = willEscape ? canvasWidth * 0.25 : canvasWidth * 0.75
+      const correction = (targetSide - absoluteX) * 0.004
+      ballVX += correction
+    }
 
     ballX += ballVX
     ballY += ballVY
+
+    const absoluteX = SPHERE_CENTER_X + ballX
+    const absoluteY = SPHERE_CENTER_Y + ballY
+
+    // --- Floor bounce ---
+    if (absoluteY >= FLOOR_Y - BALL_RADIUS) {
+      ballY = FLOOR_Y - BALL_RADIUS - SPHERE_CENTER_Y
+      ballVY = -Math.abs(ballVY) * FLOOR_BOUNCE
+      ballVX *= 0.85 // friction on floor contact
+      bounceCount++
+
+      // Update which side the ball is on each floor contact
+      landedSide = absoluteX < canvasWidth / 2 ? 'green' : 'red'
+
+      // If ball is barely bouncing or exceeded max bounces — settle
+      if (bounceCount >= MAX_BOUNCES || Math.abs(ballVY) < 1.2) {
+        ballVY = 0
+        ballVX = 0
+        const won = landedSide === 'green'
+        endGame(won)
+        return
+      }
+    }
+
+    // --- Left wall bounce ---
+    if (absoluteX <= BALL_RADIUS) {
+      ballX = BALL_RADIUS - SPHERE_CENTER_X
+      ballVX = Math.abs(ballVX) * WALL_BOUNCE_FALL
+    }
+
+    // --- Right wall bounce ---
+    if (absoluteX >= canvasWidth - BALL_RADIUS) {
+      ballX = canvasWidth - BALL_RADIUS - SPHERE_CENTER_X
+      ballVX = -Math.abs(ballVX) * WALL_BOUNCE_FALL
+    }
+
+    // --- Bounce off sphere exterior (ball can hit ring from outside) ---
+    const distFromCenter = Math.sqrt(ballX * ballX + ballY * ballY)
+    if (distFromCenter < SPHERE_RADIUS + BALL_RADIUS + 5 && ballY < 0) {
+      // Push ball away from sphere
+      const pushAngle = Math.atan2(ballY, ballX)
+      const pushDist = SPHERE_RADIUS + BALL_RADIUS + 6
+      ballX = Math.cos(pushAngle) * pushDist
+      ballY = Math.sin(pushAngle) * pushDist
+      // Reflect velocity outward
+      const nx = Math.cos(pushAngle)
+      const ny = Math.sin(pushAngle)
+      const dot = ballVX * nx + ballVY * ny
+      if (dot < 0) {
+        ballVX -= 2 * dot * nx * 0.5
+        ballVY -= 2 * dot * ny * 0.5
+      }
+    }
 
     // Update trail
     ballTrail.unshift({ x: SPHERE_CENTER_X + ballX, y: SPHERE_CENTER_Y + ballY })
     if (ballTrail.length > TRAIL_LENGTH) {
       ballTrail.pop()
-    }
-
-    // Check if landed on floor
-    const absoluteY = SPHERE_CENTER_Y + ballY
-    if (absoluteY >= FLOOR_Y - BALL_RADIUS) {
-      // Landed!
-      const finalX = SPHERE_CENTER_X + ballX
-      landedSide = finalX < canvasWidth / 2 ? 'green' : 'red'
-
-      // Stop ball on floor
-      ballY = FLOOR_Y - BALL_RADIUS - SPHERE_CENTER_Y
-      ballVY = 0
-      ballVX = 0
-
-      // End game based on where it landed
-      const won = landedSide === 'green'
-      endGame(won)
-      return
     }
 
     draw()
@@ -333,9 +378,9 @@ function gameLoop() {
       isFalling = true
       ballTrail = []
 
-      // Give ball outward velocity through the hole
-      ballVX = Math.cos(angle) * 4
-      ballVY = Math.sin(angle) * 4 + 2
+      // Give ball outward velocity through the hole — enough to fly visibly
+      ballVX = Math.cos(angle) * 6
+      ballVY = Math.sin(angle) * 5 + 3
 
       draw()
       animationId = requestAnimationFrame(gameLoop)
