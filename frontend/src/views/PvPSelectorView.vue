@@ -16,6 +16,12 @@
           <p>Classic ball race game</p>
         </div>
       </router-link>
+      <router-link to="/roulette" class="game-card base-active-btn">
+        <div class="game-card-content">
+          <h2>Gift Roulette</h2>
+          <p>Spin the wheel, win gifts</p>
+        </div>
+      </router-link>
     </div>
   </div>
 </template>

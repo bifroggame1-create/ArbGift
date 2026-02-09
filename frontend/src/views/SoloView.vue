@@ -49,11 +49,10 @@
       </div>
     </router-link>
 
-    <!-- 2x2 Game Grid -->
+    <!-- Game Grid -->
     <div class="games-grid">
       <router-link to="/plinko" class="game-card base-active-btn card-plinko">
         <div class="card-bg">
-          <!-- Plinko pin dots decoration -->
           <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
             <circle cx="60" cy="20" r="3" fill="rgba(59,130,246,0.5)"/>
             <circle cx="45" cy="38" r="3" fill="rgba(59,130,246,0.4)"/>
@@ -63,7 +62,6 @@
             <circle cx="90" cy="56" r="3" fill="rgba(59,130,246,0.3)"/>
             <circle cx="45" cy="74" r="3" fill="rgba(59,130,246,0.2)"/>
             <circle cx="75" cy="74" r="3" fill="rgba(59,130,246,0.2)"/>
-            <!-- Falling ball -->
             <circle cx="55" cy="45" r="6" fill="#3b82f6" opacity="0.8"/>
           </svg>
         </div>
@@ -75,14 +73,12 @@
 
       <router-link to="/gonka" class="game-card base-active-btn card-gonka">
         <div class="card-bg">
-          <!-- Bouncing dots decoration -->
           <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
             <circle cx="30" cy="85" r="8" fill="rgba(34,197,94,0.3)"/>
             <circle cx="60" cy="50" r="6" fill="rgba(34,197,94,0.4)"/>
             <circle cx="85" cy="70" r="10" fill="rgba(34,197,94,0.25)"/>
             <circle cx="50" cy="30" r="5" fill="rgba(34,197,94,0.35)"/>
             <circle cx="90" cy="35" r="4" fill="rgba(34,197,94,0.2)"/>
-            <!-- Trail line -->
             <path d="M30 90 Q45 40 60 55 Q75 70 90 35" stroke="rgba(34,197,94,0.3)" stroke-width="2" fill="none"/>
           </svg>
         </div>
@@ -94,7 +90,6 @@
 
       <router-link to="/ball-escape" class="game-card base-active-btn card-ball-escape">
         <div class="card-bg">
-          <!-- Abstract circles decoration -->
           <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
             <circle cx="70" cy="40" r="20" fill="rgba(139,92,246,0.2)"/>
             <circle cx="40" cy="65" r="15" fill="rgba(168,85,247,0.15)"/>
@@ -108,8 +103,94 @@
         </div>
       </router-link>
 
-      <!-- Empty 4th slot (hidden) -->
-      <div class="game-card card-empty"></div>
+      <router-link to="/upgrade" class="game-card base-active-btn card-upgrade">
+        <div class="card-bg">
+          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
+            <path d="M60 20 L80 55 H68 L75 95 H45 L52 55 H40 Z" fill="rgba(255,197,2,0.25)"/>
+            <path d="M55 35 L68 58 H60 L65 85 H50 L55 58 H47 Z" fill="rgba(255,197,2,0.15)"/>
+          </svg>
+        </div>
+        <div class="card-badge">HOT</div>
+        <div class="card-content">
+          <h3 class="card-title">Gift Upgrade</h3>
+          <p class="card-subtitle">Upgrade your gifts</p>
+        </div>
+      </router-link>
+
+      <router-link to="/contracts" class="game-card base-active-btn card-contracts">
+        <div class="card-bg">
+          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
+            <rect x="30" y="25" width="60" height="75" rx="6" fill="rgba(52,205,239,0.1)" stroke="rgba(52,205,239,0.2)" stroke-width="1"/>
+            <line x1="42" y1="45" x2="78" y2="45" stroke="rgba(52,205,239,0.25)" stroke-width="2"/>
+            <line x1="42" y1="57" x2="70" y2="57" stroke="rgba(52,205,239,0.2)" stroke-width="2"/>
+            <line x1="42" y1="69" x2="75" y2="69" stroke="rgba(52,205,239,0.15)" stroke-width="2"/>
+            <circle cx="55" cy="85" r="5" fill="rgba(52,205,239,0.3)"/>
+            <path d="M52 85 L54 87 L58 83" stroke="#34CDEF" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Contracts</h3>
+          <p class="card-subtitle">Smart contracts</p>
+        </div>
+      </router-link>
+
+      <router-link to="/rocket" class="game-card base-active-btn card-rocket">
+        <div class="card-bg">
+          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
+            <path d="M60 15 C60 15 80 40 80 70 C80 85 70 95 60 100 C50 95 40 85 40 70 C40 40 60 15 60 15Z" fill="rgba(239,68,68,0.15)" stroke="rgba(239,68,68,0.25)" stroke-width="1"/>
+            <circle cx="60" cy="55" r="8" fill="rgba(239,68,68,0.25)"/>
+            <path d="M50 85 L45 100" stroke="rgba(251,146,60,0.3)" stroke-width="2"/>
+            <path d="M60 90 L60 105" stroke="rgba(251,146,60,0.25)" stroke-width="2"/>
+            <path d="M70 85 L75 100" stroke="rgba(251,146,60,0.3)" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Rocket</h3>
+          <p class="card-subtitle">To the moon</p>
+        </div>
+      </router-link>
+
+      <router-link to="/lucky" class="game-card base-active-btn card-lucky">
+        <div class="card-bg">
+          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
+            <circle cx="60" cy="55" r="35" fill="rgba(0,255,98,0.06)" stroke="rgba(0,255,98,0.15)" stroke-width="1"/>
+            <path d="M60 30 L63 48 L80 42 L68 55 L85 60 L68 65 L80 78 L63 62 L60 80 L57 62 L40 78 L52 65 L35 60 L52 55 L40 42 L57 48 Z" fill="rgba(0,255,98,0.12)"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Lucky Wheel</h3>
+          <p class="card-subtitle">Spin to win</p>
+        </div>
+      </router-link>
+
+      <router-link to="/aviator" class="game-card base-active-btn card-aviator">
+        <div class="card-bg">
+          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
+            <path d="M20 90 Q40 85 55 60 Q65 45 75 35 Q85 28 95 25" stroke="rgba(239,68,68,0.35)" stroke-width="2" fill="none"/>
+            <path d="M20 90 Q40 85 55 60 Q65 45 75 35 Q85 28 95 25 L95 90 Z" fill="rgba(239,68,68,0.08)"/>
+            <circle cx="95" cy="25" r="4" fill="rgba(239,68,68,0.5)"/>
+            <path d="M88 22 L95 15 L98 28" stroke="rgba(239,68,68,0.4)" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Aviator</h3>
+          <p class="card-subtitle">Catch the moment</p>
+        </div>
+      </router-link>
+
+      <router-link to="/stars" class="game-card base-active-btn card-stars">
+        <div class="card-bg">
+          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
+            <polygon points="60,15 68,42 97,42 74,58 82,85 60,70 38,85 46,58 23,42 52,42" fill="rgba(255,197,2,0.15)" stroke="rgba(255,197,2,0.25)" stroke-width="1"/>
+            <polygon points="40,75 44,86 56,86 47,93 50,104 40,97 30,104 33,93 24,86 36,86" fill="rgba(255,197,2,0.1)"/>
+            <polygon points="85,65 87,72 95,72 89,76 91,83 85,79 79,83 81,76 75,72 83,72" fill="rgba(255,197,2,0.1)"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Stars</h3>
+          <p class="card-subtitle">Collect stars</p>
+        </div>
+      </router-link>
     </div>
   </div>
 </template>
@@ -217,10 +298,6 @@
   justify-content: flex-end;
 }
 
-.card-empty {
-  visibility: hidden;
-}
-
 /* Card backgrounds */
 .card-bg {
   position: absolute;
@@ -237,6 +314,44 @@
 
 .card-ball-escape .card-bg {
   background: linear-gradient(160deg, #2d1a5e 0%, #1a0f3a 60%, #100a24 100%);
+}
+
+.card-upgrade .card-bg {
+  background: linear-gradient(160deg, #3a2d0a 0%, #2a1f05 60%, #1a1400 100%);
+}
+
+.card-contracts .card-bg {
+  background: linear-gradient(160deg, #0a2a3a 0%, #071e2a 60%, #05141e 100%);
+}
+
+.card-rocket .card-bg {
+  background: linear-gradient(160deg, #3a1a1a 0%, #2a0e0e 60%, #1e0808 100%);
+}
+
+.card-lucky .card-bg {
+  background: linear-gradient(160deg, #0a3a1a 0%, #052a10 60%, #031e0a 100%);
+}
+
+.card-aviator .card-bg {
+  background: linear-gradient(160deg, #3a1020 0%, #2a0a15 60%, #1e050e 100%);
+}
+
+.card-stars .card-bg {
+  background: linear-gradient(160deg, #3a3010 0%, #2a220a 60%, #1e1805 100%);
+}
+
+.card-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: rgba(255, 197, 2, 0.15);
+  color: var(--mb-gold, #FFC502);
+  z-index: 2;
 }
 
 .card-decoration {

@@ -15,8 +15,8 @@
 html {
   background-color: var(--mb-bg);
   font-family: var(--mb-font);
-  height: var(--dvh, 100vh);
-  overflow: hidden;
+  min-height: var(--dvh, 100vh);
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
