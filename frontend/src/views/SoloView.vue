@@ -71,23 +71,6 @@
         </div>
       </router-link>
 
-      <router-link to="/gonka" class="game-card base-active-btn card-gonka">
-        <div class="card-bg">
-          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
-            <circle cx="30" cy="85" r="8" fill="rgba(34,197,94,0.3)"/>
-            <circle cx="60" cy="50" r="6" fill="rgba(34,197,94,0.4)"/>
-            <circle cx="85" cy="70" r="10" fill="rgba(34,197,94,0.25)"/>
-            <circle cx="50" cy="30" r="5" fill="rgba(34,197,94,0.35)"/>
-            <circle cx="90" cy="35" r="4" fill="rgba(34,197,94,0.2)"/>
-            <path d="M30 90 Q45 40 60 55 Q75 70 90 35" stroke="rgba(34,197,94,0.3)" stroke-width="2" fill="none"/>
-          </svg>
-        </div>
-        <div class="card-content">
-          <h3 class="card-title">Gonka</h3>
-          <p class="card-subtitle">Drop. Bounce. Win</p>
-        </div>
-      </router-link>
-
       <router-link to="/ball-escape" class="game-card base-active-btn card-ball-escape">
         <div class="card-bg">
           <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
@@ -114,23 +97,6 @@
         <div class="card-content">
           <h3 class="card-title">Gift Upgrade</h3>
           <p class="card-subtitle">Upgrade your gifts</p>
-        </div>
-      </router-link>
-
-      <router-link to="/contracts" class="game-card base-active-btn card-contracts">
-        <div class="card-bg">
-          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
-            <rect x="30" y="25" width="60" height="75" rx="6" fill="rgba(52,205,239,0.1)" stroke="rgba(52,205,239,0.2)" stroke-width="1"/>
-            <line x1="42" y1="45" x2="78" y2="45" stroke="rgba(52,205,239,0.25)" stroke-width="2"/>
-            <line x1="42" y1="57" x2="70" y2="57" stroke="rgba(52,205,239,0.2)" stroke-width="2"/>
-            <line x1="42" y1="69" x2="75" y2="69" stroke="rgba(52,205,239,0.15)" stroke-width="2"/>
-            <circle cx="55" cy="85" r="5" fill="rgba(52,205,239,0.3)"/>
-            <path d="M52 85 L54 87 L58 83" stroke="#34CDEF" stroke-width="1.5" fill="none"/>
-          </svg>
-        </div>
-        <div class="card-content">
-          <h3 class="card-title">Contracts</h3>
-          <p class="card-subtitle">Smart contracts</p>
         </div>
       </router-link>
 
@@ -163,34 +129,6 @@
         </div>
       </router-link>
 
-      <router-link to="/aviator" class="game-card base-active-btn card-aviator">
-        <div class="card-bg">
-          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
-            <path d="M20 90 Q40 85 55 60 Q65 45 75 35 Q85 28 95 25" stroke="rgba(239,68,68,0.35)" stroke-width="2" fill="none"/>
-            <path d="M20 90 Q40 85 55 60 Q65 45 75 35 Q85 28 95 25 L95 90 Z" fill="rgba(239,68,68,0.08)"/>
-            <circle cx="95" cy="25" r="4" fill="rgba(239,68,68,0.5)"/>
-            <path d="M88 22 L95 15 L98 28" stroke="rgba(239,68,68,0.4)" stroke-width="1.5" fill="none"/>
-          </svg>
-        </div>
-        <div class="card-content">
-          <h3 class="card-title">Aviator</h3>
-          <p class="card-subtitle">Catch the moment</p>
-        </div>
-      </router-link>
-
-      <router-link to="/stars" class="game-card base-active-btn card-stars">
-        <div class="card-bg">
-          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
-            <polygon points="60,15 68,42 97,42 74,58 82,85 60,70 38,85 46,58 23,42 52,42" fill="rgba(255,197,2,0.15)" stroke="rgba(255,197,2,0.25)" stroke-width="1"/>
-            <polygon points="40,75 44,86 56,86 47,93 50,104 40,97 30,104 33,93 24,86 36,86" fill="rgba(255,197,2,0.1)"/>
-            <polygon points="85,65 87,72 95,72 89,76 91,83 85,79 79,83 81,76 75,72 83,72" fill="rgba(255,197,2,0.1)"/>
-          </svg>
-        </div>
-        <div class="card-content">
-          <h3 class="card-title">Stars</h3>
-          <p class="card-subtitle">Collect stars</p>
-        </div>
-      </router-link>
     </div>
   </div>
 </template>
@@ -308,10 +246,6 @@
   background: linear-gradient(160deg, #1a3a6b 0%, #0e1e3a 60%, #0a1528 100%);
 }
 
-.card-gonka .card-bg {
-  background: linear-gradient(160deg, #0f3a20 0%, #0a2615 60%, #071a0e 100%);
-}
-
 .card-ball-escape .card-bg {
   background: linear-gradient(160deg, #2d1a5e 0%, #1a0f3a 60%, #100a24 100%);
 }
@@ -320,24 +254,12 @@
   background: linear-gradient(160deg, #3a2d0a 0%, #2a1f05 60%, #1a1400 100%);
 }
 
-.card-contracts .card-bg {
-  background: linear-gradient(160deg, #0a2a3a 0%, #071e2a 60%, #05141e 100%);
-}
-
 .card-rocket .card-bg {
   background: linear-gradient(160deg, #3a1a1a 0%, #2a0e0e 60%, #1e0808 100%);
 }
 
 .card-lucky .card-bg {
   background: linear-gradient(160deg, #0a3a1a 0%, #052a10 60%, #031e0a 100%);
-}
-
-.card-aviator .card-bg {
-  background: linear-gradient(160deg, #3a1020 0%, #2a0a15 60%, #1e050e 100%);
-}
-
-.card-stars .card-bg {
-  background: linear-gradient(160deg, #3a3010 0%, #2a220a 60%, #1e1805 100%);
 }
 
 .card-badge {

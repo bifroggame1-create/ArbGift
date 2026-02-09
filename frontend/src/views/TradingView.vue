@@ -55,9 +55,17 @@
           v-if="gameState === 'running'"
           class="multiplier-display"
           :class="multiplierColorClass"
+          :style="multiplierPosition"
         >
           <span class="multiplier-value">{{ displayMultiplier }}</span>
         </div>
+
+        <!-- Dashed Price Line (during RUNNING) -->
+        <div
+          v-if="gameState === 'running'"
+          class="price-line"
+          :style="{ top: priceLineY + 'px' }"
+        ></div>
 
         <!-- WAITING overlay: blurred chart + timer -->
         <div v-if="gameState === 'waiting'" class="waiting-overlay">
@@ -309,6 +317,14 @@ const canBuy = computed(() => {
   return gameState.value === 'running' && !playerBet.value && balance.value >= selectedBet.value
 })
 
+// Price line Y position & multiplier position (track chart coordinate)
+const priceLineY = ref(0)
+const multiplierPosition = computed(() => {
+  return {
+    top: Math.max(20, priceLineY.value - 14) + 'px',
+  }
+})
+
 // ======= Helpers =======
 function genMiniPath(isWin: boolean): string {
   const pts: string[] = []
@@ -359,13 +375,14 @@ function initChart() {
     leftPriceScale: {
       visible: true,
       borderVisible: false,
-      scaleMargins: { top: 0.15, bottom: 0.15 },
+      scaleMargins: { top: 0.1, bottom: 0.1 },
     },
     timeScale: {
       visible: false,
       borderVisible: false,
-      fixLeftEdge: true,
-      fixRightEdge: false,
+      barSpacing: 14,
+      minBarSpacing: 8,
+      rightOffset: 3,
       shiftVisibleRangeOnNewBar: true,
     },
     handleScroll: false,
@@ -384,7 +401,7 @@ function initChart() {
 
   candleSeries.priceScale().applyOptions({
     autoScale: true,
-    scaleMargins: { top: 0.15, bottom: 0.15 },
+    scaleMargins: { top: 0.1, bottom: 0.1 },
   })
 }
 
@@ -403,6 +420,19 @@ function pushCandle(candle: Candle) {
     low: candle.low,
     close: candle.close,
   })
+  updatePriceLineY(candle.close)
+}
+
+function updatePriceLineY(price: number) {
+  if (!chart || !candleSeries || !chartContainerRef.value) return
+  try {
+    const y = (candleSeries as any).priceToCoordinate(price)
+    if (y !== null && typeof y === 'number' && isFinite(y)) {
+      priceLineY.value = y
+    }
+  } catch {
+    // priceToCoordinate may fail before chart is fully rendered
+  }
 }
 
 // ======= Pre-determine outcome =======
@@ -834,13 +864,31 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* Multiplier (RUNNING) */
+/* Dashed Price Line */
+.price-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  z-index: 15;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.5) 0px,
+    rgba(255, 255, 255, 0.5) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  transition: top 0.08s linear;
+}
+
+/* Multiplier (RUNNING) — follows price line */
 .multiplier-display {
   position: absolute;
-  top: 16px;
   right: 16px;
   z-index: 20;
   pointer-events: none;
+  transition: top 0.08s linear;
 }
 .multiplier-value {
   font-size: 28px;

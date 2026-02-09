@@ -200,11 +200,11 @@ const currentMultipliers = computed(() => {
 // ========== PHYSICS ENGINE ==========
 
 const BALL_RADIUS = 7
-const GRAVITY = 0.22
-const FRICTION = 0.984        // Air friction — more drag
-const BOUNCE_COEFF = 0.42     // Elasticity on peg hit — softer bounce
-const WALL_BOUNCE = 0.3
-const MAX_SPEED = 7            // Lower cap so ball stays on field
+const GRAVITY = 0.14           // Slow gentle fall — casual feel
+const FRICTION = 0.978         // More air drag — ball floats longer
+const BOUNCE_COEFF = 0.38      // Soft peg bounce
+const WALL_BOUNCE = 0.25
+const MAX_SPEED = 5.5          // Slower overall movement
 
 interface Ball {
   x: number

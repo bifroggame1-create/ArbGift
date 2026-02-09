@@ -101,13 +101,13 @@ let ballVY = 0
 const SPHERE_RADIUS = 120
 const BALL_RADIUS = 12
 const HOLE_SIZE = 0.45 // radians
-const GRAVITY = 0.35 // strong gravity so ball hits walls hard
-const BOUNCE = 0.82 // very elastic — springy bounces
-const SPRING_FORCE = 1.8 // extra spring push away from wall
-const FRICTION = 0.995 // less drag = ball keeps moving
-const CENTRIFUGAL_FACTOR = 0.025 // strong centrifugal throws ball outward
-const CORIOLIS_FACTOR = 0.06 // strong deflection from rotation
-const MAX_SPEED = 14
+const GRAVITY = 0.22 // gentle gravity — casual feel
+const BOUNCE = 0.5 // soft wall bounces
+const SPRING_FORCE = 0.6 // gentle spring, not chaotic
+const FRICTION = 0.988 // more drag — ball settles faster
+const CENTRIFUGAL_FACTOR = 0.012 // mild outward push
+const CORIOLIS_FACTOR = 0.025 // subtle deflection
+const MAX_SPEED = 7 // slower, more readable movement
 
 // Trail effect
 const TRAIL_LENGTH = 16
