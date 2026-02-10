@@ -182,7 +182,7 @@ import { getGifts, searchGifts, getStats } from '../api/client'
 
 const router = useRouter()
 const { hapticImpact } = useTelegram()
-const { preloadPrices, enrichGiftsWithPrices } = useMarketAggregator()
+const { preloadPrices, aggregatedData } = useMarketAggregator()
 
 // Tabs
 const tabs = [
@@ -409,18 +409,26 @@ const fetchGifts = async () => {
       totalPages.value = Math.ceil(data.total / limit)
     }
 
-    // Preload aggregated prices from multiple markets
+    // Show API data immediately
+    gifts.value = items
+
+    // Enrich with aggregated prices in background (merge into existing objects)
     const giftIds = items.map((g: any) => g.id || g.gift_id).filter(Boolean)
     if (giftIds.length > 0) {
-      // Start with API data immediately
-      gifts.value = items
-
-      // Enrich with aggregated prices in background
       preloadPrices(giftIds).then(() => {
-        gifts.value = enrichGiftsWithPrices(items)
+        gifts.value = items.map((gift: any) => {
+          const id = String(gift.id || gift.gift_id || '')
+          const agg = aggregatedData.value.get(id)
+          if (agg && agg.minPrice > 0) {
+            return {
+              ...gift,
+              lowest_price_ton: agg.minPrice,
+              lowest_price_market: agg.bestDeal?.source || gift.lowest_price_market
+            }
+          }
+          return gift
+        })
       })
-    } else {
-      gifts.value = items
     }
   } catch (err) {
     console.error('Fetch gifts error:', err)
