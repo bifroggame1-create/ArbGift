@@ -7,40 +7,7 @@
     <!-- Trading — full-width banner card -->
     <router-link to="/trading" class="banner-card base-active-btn">
       <div class="banner-bg">
-        <!-- Candlestick chart decoration -->
-        <svg class="banner-chart" viewBox="0 0 320 120" fill="none" preserveAspectRatio="none">
-          <!-- Grid lines -->
-          <line x1="0" y1="30" x2="320" y2="30" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-          <line x1="0" y1="60" x2="320" y2="60" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-          <line x1="0" y1="90" x2="320" y2="90" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-          <!-- Candle wicks -->
-          <line x1="40" y1="20" x2="40" y2="80" stroke="#22c55e" stroke-width="1" opacity="0.6"/>
-          <line x1="70" y1="35" x2="70" y2="90" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
-          <line x1="100" y1="15" x2="100" y2="70" stroke="#22c55e" stroke-width="1" opacity="0.6"/>
-          <line x1="130" y1="25" x2="130" y2="85" stroke="#22c55e" stroke-width="1" opacity="0.6"/>
-          <line x1="160" y1="40" x2="160" y2="95" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
-          <line x1="190" y1="10" x2="190" y2="65" stroke="#22c55e" stroke-width="1" opacity="0.6"/>
-          <line x1="220" y1="30" x2="220" y2="80" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
-          <line x1="250" y1="5" x2="250" y2="55" stroke="#22c55e" stroke-width="1" opacity="0.6"/>
-          <line x1="280" y1="20" x2="280" y2="70" stroke="#22c55e" stroke-width="1" opacity="0.6"/>
-          <!-- Candle bodies -->
-          <rect x="34" y="35" width="12" height="30" rx="2" fill="#22c55e" opacity="0.7"/>
-          <rect x="64" y="45" width="12" height="25" rx="2" fill="#ef4444" opacity="0.7"/>
-          <rect x="94" y="25" width="12" height="28" rx="2" fill="#22c55e" opacity="0.7"/>
-          <rect x="124" y="35" width="12" height="32" rx="2" fill="#22c55e" opacity="0.7"/>
-          <rect x="154" y="50" width="12" height="28" rx="2" fill="#ef4444" opacity="0.7"/>
-          <rect x="184" y="20" width="12" height="30" rx="2" fill="#22c55e" opacity="0.7"/>
-          <rect x="214" y="40" width="12" height="25" rx="2" fill="#ef4444" opacity="0.7"/>
-          <rect x="244" y="15" width="12" height="25" rx="2" fill="#22c55e" opacity="0.7"/>
-          <rect x="274" y="30" width="12" height="22" rx="2" fill="#22c55e" opacity="0.7"/>
-          <!-- Price line -->
-          <polyline
-            fill="none"
-            stroke="rgba(34,197,94,0.5)"
-            stroke-width="1.5"
-            points="40,35 70,55 100,25 130,35 160,60 190,20 220,45 250,15 280,30"
-          />
-        </svg>
+        <img src="/images/app-trading-bg-1.webp" class="banner-image" alt="" />
       </div>
       <div class="banner-badge">NEW</div>
       <div class="banner-content">
@@ -53,17 +20,7 @@
     <div class="games-grid">
       <router-link to="/plinko" class="game-card base-active-btn card-plinko">
         <div class="card-bg">
-          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
-            <circle cx="60" cy="20" r="3" fill="rgba(59,130,246,0.5)"/>
-            <circle cx="45" cy="38" r="3" fill="rgba(59,130,246,0.4)"/>
-            <circle cx="75" cy="38" r="3" fill="rgba(59,130,246,0.4)"/>
-            <circle cx="30" cy="56" r="3" fill="rgba(59,130,246,0.3)"/>
-            <circle cx="60" cy="56" r="3" fill="rgba(59,130,246,0.3)"/>
-            <circle cx="90" cy="56" r="3" fill="rgba(59,130,246,0.3)"/>
-            <circle cx="45" cy="74" r="3" fill="rgba(59,130,246,0.2)"/>
-            <circle cx="75" cy="74" r="3" fill="rgba(59,130,246,0.2)"/>
-            <circle cx="55" cy="45" r="6" fill="#3b82f6" opacity="0.8"/>
-          </svg>
+          <img src="/images/plinko-card-bg-1.webp" class="card-image" alt="" />
         </div>
         <div class="card-content">
           <h3 class="card-title">Gift Plinko</h3>
@@ -171,15 +128,12 @@
 .banner-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #0a1628 0%, #0f2847 40%, #0d1f3a 100%);
 }
 
-.banner-chart {
-  position: absolute;
-  inset: 0;
+.banner-image {
   width: 100%;
   height: 100%;
-  opacity: 0.7;
+  object-fit: cover;
 }
 
 .banner-badge {
@@ -242,8 +196,10 @@
   inset: 0;
 }
 
-.card-plinko .card-bg {
-  background: linear-gradient(160deg, #1a3a6b 0%, #0e1e3a 60%, #0a1528 100%);
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .card-ball-escape .card-bg {
