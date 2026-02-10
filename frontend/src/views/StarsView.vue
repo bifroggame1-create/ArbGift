@@ -18,7 +18,7 @@
       <!-- Promo Banner -->
       <div class="promo-banner">
         <div class="promo-icon">
-          <img src="/icons/stars.png" alt="Stars" width="48" height="48" />
+          <img src="/images/starBonus-banner.svg" alt="Stars" class="promo-icon-img" />
         </div>
         <div class="promo-text">
           <h2>Telegram Stars</h2>
@@ -101,8 +101,8 @@
           <div class="step">
             <div class="step-number">2</div>
             <div class="step-content">
-              <p class="step-title">Оплатите</p>
-              <p class="step-desc">Через Telegram Stars</p>
+              <p class="step-title">Выберите метод оплаты</p>
+              <p class="step-desc">Telegram Stars или другие способы</p>
             </div>
           </div>
           <div class="step">
@@ -114,6 +114,23 @@
           </div>
         </div>
       </div>
+
+      <!-- Buy Button -->
+      <button
+        class="buy-btn"
+        :disabled="isProcessing || !usernameInput.trim()"
+        @click="handlePurchase"
+      >
+        <template v-if="isProcessing">
+          <div class="spinner"></div>
+          <span>Создание...</span>
+        </template>
+        <template v-else>
+          <img src="/icons/stars.png" alt="Stars" width="20" height="20" class="btn-star-icon" />
+          <span>Купить {{ starsAmount.toLocaleString() }} Stars</span>
+          <span class="btn-price">• {{ formatPrice(calculatePrice(starsAmount)) }} ₽</span>
+        </template>
+      </button>
 
       <!-- Features -->
       <div class="features-grid">
@@ -130,25 +147,6 @@
           <span class="feature-text">Гарантия</span>
         </div>
       </div>
-    </div>
-
-    <!-- Sticky Buy Button -->
-    <div class="sticky-footer">
-      <button
-        class="buy-btn"
-        :disabled="isProcessing || !usernameInput.trim()"
-        @click="handlePurchase"
-      >
-        <template v-if="isProcessing">
-          <div class="spinner"></div>
-          <span>Создание...</span>
-        </template>
-        <template v-else>
-          <img src="/icons/stars.png" alt="Stars" width="20" height="20" class="btn-star-icon" />
-          <span>Купить {{ starsAmount.toLocaleString() }} Stars</span>
-          <span class="btn-price">• {{ formatPrice(calculatePrice(starsAmount)) }} ₽</span>
-        </template>
-      </button>
     </div>
   </div>
 </template>
@@ -330,7 +328,9 @@ const handlePurchase = async () => {
   margin-bottom: 24px;
 }
 
-.promo-icon img {
+.promo-icon-img {
+  width: 48px;
+  height: 48px;
   object-fit: contain;
 }
 
@@ -563,18 +563,7 @@ const handlePurchase = async () => {
   color: #6b7280;
 }
 
-/* Sticky Footer */
-.sticky-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid #1c1c1e;
-}
-
+/* Buy Button (inline) */
 .buy-btn {
   width: 100%;
   display: flex;
@@ -589,6 +578,7 @@ const handlePurchase = async () => {
   font-size: 16px;
   font-weight: 700;
   transition: opacity 0.2s;
+  margin-bottom: 24px;
 }
 
 .buy-btn:disabled {
