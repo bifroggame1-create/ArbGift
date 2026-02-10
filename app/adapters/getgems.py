@@ -320,6 +320,7 @@ class GetGemsAdapter(BaseMarketAdapter):
                     "index": node.get("index"),
                     "collection": node.get("collection", {}).get("address"),
                     "marketplace": sale.get("marketplace", {}).get("name"),
+                    "image_url": (node.get("content") or {}).get("image", {}).get("originalUrl"),
                 },
             )
 

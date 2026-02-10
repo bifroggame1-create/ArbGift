@@ -330,6 +330,40 @@ async def sync_major_market(max_items: int = 500):
         return JSONResponse(status_code=500, content={"detail": str(e)})
 
 
+@app.post("/api/v1/admin/sync/getgems", tags=["Admin"])
+async def sync_getgems_market(max_items: int = 1000):
+    """Синхронизировать GetGems (GraphQL API)."""
+    from app.sync import get_loader
+    try:
+        loader = await get_loader()
+        count = await loader.sync_getgems_listings(max_items)
+        return {
+            "status": "completed",
+            "market": "getgems",
+            "synced": count,
+        }
+    except Exception as e:
+        logger.error(f"GetGems sync error: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+
+@app.post("/api/v1/admin/sync/fragment", tags=["Admin"])
+async def sync_fragment_market(max_items: int = 1000):
+    """Синхронизировать Fragment (TON API / blockchain)."""
+    from app.sync import get_loader
+    try:
+        loader = await get_loader()
+        count = await loader.sync_fragment_listings(max_items)
+        return {
+            "status": "completed",
+            "market": "fragment",
+            "synced": count,
+        }
+    except Exception as e:
+        logger.error(f"Fragment sync error: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+
 # =====================================
 # LEGACY CELERY ENDPOINTS (deprecated)
 # =====================================
