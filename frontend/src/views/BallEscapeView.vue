@@ -362,86 +362,112 @@ function gameLoop() {
   // === Decay impact flash ===
   impactFlash *= 0.88
 
-  // === WALL COLLISION (springy bounce) ===
+  // === WALL COLLISION ===
   const maxDist = SPHERE_RADIUS - BALL_RADIUS
   const newDist = Math.sqrt(ballX * ballX + ballY * ballY)
 
-  if (newDist > maxDist) {
+  if (newDist >= maxDist) {
     const angle = Math.atan2(ballY, ballX)
 
-    // Check if near hole
+    // Check if ball is at the hole opening
     const angleDiff = Math.abs(normalizeAngle(angle - currentHoleAngle))
-    const nearHole = angleDiff < HOLE_SIZE / 2
+    const atHole = angleDiff < HOLE_SIZE / 2
 
-    // Ball escapes through hole
-    if (nearHole && newDist > maxDist - 5) {
+    if (atHole) {
+      // === ESCAPE through hole — clean exit along hole center ===
       isFalling = true
       ballTrail = []
 
-      // Give ball outward velocity through the hole — enough to fly visibly
-      ballVX = Math.cos(angle) * 6
-      ballVY = Math.sin(angle) * 5 + 3
+      // Exit velocity: aligned precisely with hole center direction
+      const exitSpeed = Math.max(Math.sqrt(ballVX * ballVX + ballVY * ballVY), 5)
+      const holeDir = currentHoleAngle
+      ballVX = Math.cos(holeDir) * exitSpeed
+      ballVY = Math.sin(holeDir) * exitSpeed
+
+      // Snap ball position to hole edge so it looks clean
+      ballX = Math.cos(holeDir) * (SPHERE_RADIUS + BALL_RADIUS + 2)
+      ballY = Math.sin(holeDir) * (SPHERE_RADIUS + BALL_RADIUS + 2)
 
       draw()
       animationId = requestAnimationFrame(gameLoop)
       return
     }
 
-    // === SPRING BOUNCE off sphere wall ===
-    // Push ball back inside
+    // === BOUNCE off sphere wall ===
+    // Clamp ball inside
     ballX = Math.cos(angle) * maxDist
     ballY = Math.sin(angle) * maxDist
 
-    // Normal vector (pointing inward)
+    // Normal vector (outward from center)
     const nx = Math.cos(angle)
     const ny = Math.sin(angle)
 
-    // Radial velocity (outward component)
+    // Decompose velocity into normal and tangential components
     const vDotN = ballVX * nx + ballVY * ny
 
     if (vDotN > 0) {
-      // Reflect velocity
-      ballVX -= 2 * vDotN * nx
-      ballVY -= 2 * vDotN * ny
+      // Tangential component (preserved fully — ball slides along wall)
+      const tangVX = ballVX - vDotN * nx
+      const tangVY = ballVY - vDotN * ny
 
-      // Apply bounce coefficient (elastic)
-      ballVX *= BOUNCE
-      ballVY *= BOUNCE
+      // Reflected normal component (with restitution)
+      const reflectedN = -vDotN * BOUNCE
 
-      // === SPRING PUSH: extra kick away from wall ===
-      const springKick = SPRING_FORCE + Math.abs(vDotN) * 0.3
+      // Recombine: full tangential + dampened reflected normal
+      ballVX = tangVX + reflectedN * nx
+      ballVY = tangVY + reflectedN * ny
+
+      // === SPRING PUSH: extra inward kick ===
+      const springKick = SPRING_FORCE + Math.abs(vDotN) * 0.2
       ballVX -= nx * springKick
       ballVY -= ny * springKick
 
       // === WALL FRICTION: rotating wall imparts tangential velocity ===
       const tangentX = -ny
       const tangentY = nx
-      const wallTangentSpeed = sphereAngularVelocity * SPHERE_RADIUS * 0.5
+      const wallTangentSpeed = sphereAngularVelocity * SPHERE_RADIUS * 0.4
       ballVX += tangentX * wallTangentSpeed
       ballVY += tangentY * wallTangentSpeed
 
-      // === RANDOMIZED DEFLECTION for unpredictability ===
-      const deflection = (Math.random() - 0.5) * 2.5
+      // === SLIGHT RANDOM DEFLECTION ===
+      const deflection = (Math.random() - 0.5) * 1.5
       ballVX += tangentX * deflection
       ballVY += tangentY * deflection
 
-      // Trigger impact flash
+      // Impact flash
       impactFlash = 1.0
       impactAngle = angle
     }
   }
 
-  // Time's up - force escape
+  // Time's up — steer ball toward hole for natural escape
   if (progress >= 1 && !isFalling) {
-    // Force ball to escape towards correct side based on server result
-    isFalling = true
-    ballTrail = []
+    const overTime = elapsed - gameDuration
 
-    const targetX = willEscape ? -60 : 60 // Left for win, right for lose
-    ballX = 0
-    ballY = SPHERE_RADIUS // At bottom of sphere
-    ballVX = targetX / 25 // Velocity towards correct side
-    ballVY = 2
+    if (overTime > 2000) {
+      // Force escape after 2s of steering — prevent infinite loop
+      isFalling = true
+      ballTrail = []
+      const holeDir = currentHoleAngle
+      ballX = Math.cos(holeDir) * (SPHERE_RADIUS + BALL_RADIUS + 2)
+      ballY = Math.sin(holeDir) * (SPHERE_RADIUS + BALL_RADIUS + 2)
+      ballVX = Math.cos(holeDir) * 5
+      ballVY = Math.sin(holeDir) * 5
+    } else {
+      // Nudge ball velocity toward the hole opening
+      const holeDir = currentHoleAngle
+      const holeX = Math.cos(holeDir) * maxDist
+      const holeY = Math.sin(holeDir) * maxDist
+      const toHoleX = holeX - ballX
+      const toHoleY = holeY - ballY
+      const toHoleDist = Math.sqrt(toHoleX * toHoleX + toHoleY * toHoleY)
+      if (toHoleDist > 1) {
+        // Stronger steering as time goes on
+        const steerForce = 1.0 + overTime * 0.002
+        ballVX += (toHoleX / toHoleDist) * steerForce
+        ballVY += (toHoleY / toHoleDist) * steerForce
+      }
+    }
   }
 
   draw()
