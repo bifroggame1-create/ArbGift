@@ -44,7 +44,7 @@ export interface Gift {
   name: string
   description?: string
   image_url?: string
-  lottie_url?: string
+  animation_url?: string
   rarity?: string
   backdrop?: string
   model?: string
@@ -52,11 +52,18 @@ export interface Gift {
   symbol?: string
   collection_id: number
   collection_name?: string
+  collection_slug?: string
   is_on_sale: boolean
+  lowest_price_ton?: string | number
+  lowest_price_market?: string
+  attributes?: Array<{ type?: string; trait_type?: string; value: string }>
+  listings?: Listing[]
+  // Legacy compat fields (from some market adapters)
+  lottie_url?: string
   min_price_ton?: string
-  listings_count: number
   tg_id?: number
   price?: number
+  index?: number
 }
 
 export interface Listing {

@@ -35,7 +35,7 @@
       <div class="gift-card__serial">#{{ serialNumber }}</div>
 
       <!-- Price pill -->
-      <button class="gift-card__price" @click.stop="handleBuy">
+      <button v-if="formattedPrice" class="gift-card__price" @click.stop="handleBuy">
         <svg
           class="gift-card__ton-icon"
           width="12"
@@ -93,9 +93,11 @@ const { hapticImpact } = useTelegram()
 
 const imgError = ref(false)
 
-// Lottie animation URL — from backend or derived from image_url (Fragment CDN pattern)
+// Animation URL — from backend fields
 const lottieUrl = computed(() => {
-  // Direct lottie_url from API
+  // Direct animation_url from backend (CDN-preferred)
+  if (props.gift.animation_url) return props.gift.animation_url
+  // Legacy lottie_url field
   if (props.gift.lottie_url) return props.gift.lottie_url
   // Derive from Fragment CDN image URL:  *.webp → *.lottie.json
   const img = props.gift.image_url
@@ -111,39 +113,43 @@ const imageSize = computed(() => {
   return Math.round(Math.min(window.innerWidth / 3 - 16, 140))
 })
 
-// Serial number from tg_id or id
+// Serial number from tg_id, index, or id
 const serialNumber = computed(() => {
   if (props.gift.tg_id) return props.gift.tg_id
+  if (props.gift.index) return props.gift.index
   return props.gift.id
 })
 
-// Formatted price — prefer min_price_ton from API
+// Formatted price — use lowest_price_ton from backend (fallback to legacy fields)
 const formattedPrice = computed(() => {
-  const price = props.gift.min_price_ton || props.gift.price || 0
+  const price = props.gift.lowest_price_ton || props.gift.min_price_ton || props.gift.price || 0
   const num = Number(price)
-  if (num === 0) return 'Free'
+  if (num <= 0) return null
   // Remove unnecessary trailing zeros: 10.000 → 10, 3.40 → 3.4
   return num.toFixed(2).replace(/\.?0+$/, '')
 })
 
-// Card style based on collection/rarity (backdrop gradient)
+// Card style — use backdrop colors from API if available, fallback to default gradient
 const cardStyle = computed(() => {
-  const bgColors: Record<string, string> = {
-    'Instant Ramen': 'linear-gradient(180deg, #E8D5B7 0%, #C4A77D 100%)',
-    'Lol Pop': 'linear-gradient(180deg, #A8D8FF 0%, #5BA3D9 100%)',
-    'Hypno Lollipop': 'linear-gradient(180deg, #D4B8E8 0%, #9B6DC6 100%)',
-    'Eternal Candle': 'linear-gradient(180deg, #4A4A4A 0%, #2A2A2A 100%)',
-    'Bling Binky': 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)',
-    'Pet Snake': 'linear-gradient(180deg, #90EE90 0%, #228B22 100%)',
-    'Happy Brownie': 'linear-gradient(180deg, #D2B48C 0%, #8B4513 100%)',
-    'Fresh Socks': 'linear-gradient(180deg, #F5DEB3 0%, #DEB887 100%)',
-    'Ice Cream': 'linear-gradient(180deg, #FFB6C1 0%, #FF69B4 100%)',
-    'default': 'linear-gradient(180deg, #3A3A3A 0%, #282727 100%)',
+  const gift = props.gift as any
+  // If backdrop colors come from API (center_color, edge_color as integers)
+  if (gift.backdrop_center_color && gift.backdrop_edge_color) {
+    const center = intToHex(gift.backdrop_center_color)
+    const edge = intToHex(gift.backdrop_edge_color)
+    return { '--card-bg': `linear-gradient(180deg, ${center} 0%, ${edge} 100%)` }
   }
-
-  const bg = bgColors[props.gift.name] || bgColors['default']
-  return { '--card-bg': bg }
+  // Fallback: generate a deterministic color from gift name
+  const hash = hashString(props.gift.name || '')
+  const hue = hash % 360
+  return { '--card-bg': `linear-gradient(180deg, hsl(${hue}, 25%, 28%) 0%, hsl(${hue}, 30%, 18%) 100%)` }
 })
+
+const intToHex = (n: number): string => '#' + (n & 0xFFFFFF).toString(16).padStart(6, '0')
+const hashString = (s: string): number => {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
 
 const handleClick = () => {
   hapticImpact('light')
