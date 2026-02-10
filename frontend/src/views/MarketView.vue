@@ -1,112 +1,117 @@
 <template>
-  <!--
-    myballs.io Market Page Design
-    Background: #0C0C0C (inherited from --mb-bg)
-    Font: Chroma ST (font-display)
-  -->
   <div class="market-view">
-    <!-- Online indicator -->
-    <div class="online-indicator">
-      <span class="online-dot"></span>
-      <span class="online-text">22 online</span>
-    </div>
-
-    <!-- Header: Title + Balance -->
-    <div class="market-header">
-      <div class="market-header__spacer"></div>
-      <h1 class="market-title">Market</h1>
-      <div class="market-header__right">
-        <BalancePill :balance="0" @add="() => {}" />
-      </div>
-    </div>
-
-    <!-- Tab bar -->
-    <nav class="market-tabs">
-      <div class="market-tabs__scroll">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          class="market-tabs__item"
-          :class="{ active: activeTab === tab.id }"
-          @click="setTab(tab.id)"
-        >
-          {{ tab.label }}
-        </button>
-      </div>
+    <!-- Tabs: Gifts / Stickers -->
+    <nav class="tabs">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        class="tabs__item"
+        :class="{ active: activeTab === tab.id }"
+        @click="setTab(tab.id)"
+      >{{ tab.label }}</button>
     </nav>
 
-    <!-- Filter bar -->
-    <div class="filter-bar">
-      <!-- Sort icon button -->
-      <button class="filter-bar__sort-btn" @click="showSortMenu = !showSortMenu">
+    <!-- Search + sort/refresh -->
+    <div class="search-row">
+      <div class="search-box">
+        <svg class="search-box__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Enter a keyword to search"
+          class="search-box__input"
+          @keyup.enter="applyFilters()"
+        />
+      </div>
+      <button class="icon-btn" @click="showSortMenu = !showSortMenu">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 6h18M6 12h12M9 18h6"/>
+          <path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/>
         </svg>
       </button>
-
-      <!-- Type dropdown -->
-      <button
-        class="filter-bar__dropdown"
-        :class="{ 'has-value': filters.names.length > 0 }"
-        @click="openDropdown = openDropdown === 'type' ? null : 'type'"
-      >
-        <span>{{ filters.names.length > 0 ? filters.names[0] + (filters.names.length > 1 ? ` +${filters.names.length - 1}` : '') : 'Type' }}</span>
-        <svg v-if="filters.names.length === 0" class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="m6 9 6 6 6-6"/>
-        </svg>
-        <svg v-else class="filter-bar__clear" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" @click.stop="filters.names = []; applyFilters()">
-          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-        </svg>
-      </button>
-
-      <!-- Skin / Model dropdown -->
-      <button
-        class="filter-bar__dropdown"
-        :class="{ 'has-value': filters.models.length > 0 }"
-        @click="openDropdown = openDropdown === 'model' ? null : 'model'"
-      >
-        <span>{{ filters.models.length > 0 ? filters.models[0] + (filters.models.length > 1 ? ` +${filters.models.length - 1}` : '') : 'Skin' }}</span>
-        <svg v-if="filters.models.length === 0" class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="m6 9 6 6 6-6"/>
-        </svg>
-        <svg v-else class="filter-bar__clear" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" @click.stop="filters.models = []; applyFilters()">
-          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-        </svg>
-      </button>
-
-      <!-- Backdrop dropdown -->
-      <button
-        class="filter-bar__dropdown"
-        :class="{ 'has-value': filters.backdrops.length > 0 }"
-        @click="openDropdown = openDropdown === 'backdrop' ? null : 'backdrop'"
-      >
-        <span>{{ filters.backdrops.length > 0 ? filters.backdrops[0] + (filters.backdrops.length > 1 ? ` +${filters.backdrops.length - 1}` : '') : 'Backdrop' }}</span>
-        <svg v-if="filters.backdrops.length === 0" class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="m6 9 6 6 6-6"/>
-        </svg>
-        <svg v-else class="filter-bar__clear" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" @click.stop="filters.backdrops = []; applyFilters()">
-          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+      <button class="icon-btn" @click="fetchGifts()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+          <path d="M21 3v5h-5"/>
         </svg>
       </button>
     </div>
 
-    <!-- Active Filter Chips -->
-    <div v-if="activeFilterTags.length > 0" class="active-filters">
+    <!-- Filter chips (horizontal scroll) -->
+    <div class="filters">
       <button
-        v-for="tag in activeFilterTags"
-        :key="tag.key"
-        class="active-filter-chip"
-        @click="removeFilterTag(tag)"
+        v-for="f in filterButtons"
+        :key="f.key"
+        class="filter-btn"
+        :class="{ active: isFilterActive(f.key) }"
+        @click="openDropdown = openDropdown === f.key ? null : f.key"
       >
-        <span>{{ tag.label }}</span>
+        <span>{{ getFilterLabel(f) }}</span>
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          <path d="m6 9 6 6 6-6"/>
         </svg>
       </button>
-      <button class="clear-all-btn" @click="resetFilters(); applyFilters()">Clear</button>
     </div>
 
-    <!-- Sort Dropdown Overlay -->
+    <!-- Gift Grid (2 columns) -->
+    <div class="grid-wrap">
+      <div v-if="loading" class="grid">
+        <SkeletonCard v-for="i in 8" :key="'sk-' + i" />
+      </div>
+
+      <div v-else class="grid">
+        <GiftCard
+          v-for="gift in gifts"
+          :key="gift.id"
+          :gift="gift"
+          :selectable="bulkMode"
+          :is-selected="selectedGifts.includes(gift.id)"
+          @click="handleGiftClick"
+          @buy="handleBuy"
+          @select="handleSelect"
+        />
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="!loading && totalPages > 1" class="pagination">
+        <button class="pagination__btn" :disabled="currentPage <= 1" @click="prevPage">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <span class="pagination__info">{{ currentPage }} / {{ totalPages }}</span>
+        <button class="pagination__btn" :disabled="currentPage >= totalPages" @click="nextPage">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+
+      <!-- Empty -->
+      <div v-if="!loading && gifts.length === 0" class="empty">
+        <p class="empty__title">No gifts found</p>
+        <p class="empty__hint">Try adjusting your filters</p>
+      </div>
+    </div>
+
+    <!-- Cart bar (bottom) -->
+    <div class="cart-bar">
+      <div class="cart-bar__counter">
+        <button class="cart-bar__btn" :disabled="selectedGifts.length === 0" @click="selectedGifts.pop()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg>
+        </button>
+        <span class="cart-bar__count">{{ selectedGifts.length }}</span>
+        <button class="cart-bar__btn" @click="bulkMode = !bulkMode">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        </button>
+      </div>
+      <button class="cart-bar__checkout" :disabled="selectedGifts.length === 0" @click="bulkBuy">
+        <span>Cart</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M12.7238 1.00488H3.27565C1.53846 1.00488 0.437395 2.87874 1.31137 4.39358L7.14243 14.5002C7.52294 15.1601 8.47652 15.1601 8.85703 14.5002L14.6893 4.39358C15.5621 2.88116 14.461 1.00488 12.725 1.00488H12.7238ZM7.13769 11.4694L5.86778 9.01168L2.80363 3.53153C2.60149 3.18078 2.85116 2.7313 3.27446 2.7313H7.1365V11.4705L7.13769 11.4694ZM13.1935 3.53035L10.1305 9.01287L8.86059 11.4694V2.73011H12.7226C13.1459 2.73011 13.3956 3.17959 13.1935 3.53035Z" fill="currentColor"/>
+        </svg>
+        <span>0.00</span>
+      </button>
+    </div>
+
+    <!-- Sort Overlay -->
     <Teleport to="body">
       <Transition name="sort-fade">
         <div v-if="showSortMenu" class="sort-overlay" @click.self="showSortMenu = false">
@@ -128,86 +133,6 @@
         </div>
       </Transition>
     </Teleport>
-
-    <!-- Gift Grid -->
-    <div class="gift-grid-wrapper">
-      <!-- Skeleton loading state -->
-      <div v-if="loading" class="gift-grid">
-        <SkeletonCard v-for="i in 12" :key="'skeleton-' + i" />
-      </div>
-
-      <!-- Loaded grid -->
-      <div v-else class="gift-grid">
-        <GiftCard
-          v-for="gift in gifts"
-          :key="gift.id"
-          :gift="gift"
-          :selectable="bulkMode"
-          :is-selected="selectedGifts.includes(gift.id)"
-          @click="handleGiftClick"
-          @buy="handleBuy"
-          @select="handleSelect"
-        />
-      </div>
-
-      <!-- Pagination -->
-      <div v-if="!loading && totalPages > 1" class="pagination">
-        <button
-          class="pagination__btn"
-          :disabled="currentPage <= 1"
-          @click="prevPage"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m15 18-6-6 6-6"/>
-          </svg>
-        </button>
-
-        <span class="pagination__info">
-          <span class="pagination__current">{{ currentPage }}</span>
-          <span class="pagination__sep">/</span>
-          <span class="pagination__total">{{ totalPages }}</span>
-        </span>
-
-        <button
-          class="pagination__btn"
-          :disabled="currentPage >= totalPages"
-          @click="nextPage"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m9 18 6-6-6-6"/>
-          </svg>
-        </button>
-      </div>
-
-      <!-- Empty State -->
-      <div v-if="!loading && gifts.length === 0" class="empty-state">
-        <div class="empty-state__icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M21 8v13H3V8"/>
-            <path d="M1 3h22v5H1z"/>
-            <path d="M10 12h4"/>
-          </svg>
-        </div>
-        <p class="empty-state__text">No gifts available</p>
-        <p class="empty-state__hint">Try adjusting your filters</p>
-      </div>
-    </div>
-
-    <!-- Bulk Buy FAB -->
-    <Transition name="fab-pop">
-      <button
-        v-if="selectedGifts.length > 0"
-        class="bulk-fab"
-        @click="bulkBuy"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-          <path d="M3 6h18"/>
-          <path d="M16 10a4 4 0 0 1-8 0"/>
-        </svg>
-        <span>{{ selectedGifts.length }}</span>
-      </button>
-    </Transition>
 
     <!-- Filter Bottom Sheet -->
     <Teleport to="body">
@@ -232,15 +157,11 @@
                     class="filter-chip"
                     :class="{ active: isDropdownOptionActive(opt) }"
                     @click="toggleDropdownOption(opt)"
-                  >
-                    {{ opt }}
-                  </button>
+                  >{{ opt }}</button>
                 </div>
               </div>
               <div class="filter-sheet__footer">
-                <button class="filter-sheet__done" @click="openDropdown = null; applyFilters()">
-                  Done
-                </button>
+                <button class="filter-sheet__done" @click="openDropdown = null; applyFilters()">Done</button>
               </div>
             </div>
           </Transition>
@@ -255,7 +176,6 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import GiftCard from '../components/GiftCard.vue'
 import SkeletonCard from '../components/SkeletonCard.vue'
-import BalancePill from '../components/BalancePill.vue'
 import { useTelegram } from '../composables/useTelegram'
 import { useMarketAggregator } from '../composables/useMarketAggregator'
 import { getGifts, searchGifts, getStats } from '../api/client'
@@ -277,7 +197,7 @@ const gifts = ref<any[]>([])
 const searchQuery = ref('')
 const sortBy = ref('listed_at desc')
 const showSortMenu = ref(false)
-const openDropdown = ref<'type' | 'model' | 'backdrop' | null>(null)
+const openDropdown = ref<string | null>(null)
 const bulkMode = ref(false)
 const selectedGifts = ref<number[]>([])
 
@@ -319,38 +239,27 @@ const availableNames = computed(() => [...new Set(allLoadedGifts.value.map(g => 
 const availableModels = computed(() => [...new Set(allLoadedGifts.value.map(g => g.model).filter(Boolean))].sort())
 const availableBackdrops = computed(() => [...new Set(allLoadedGifts.value.map(g => g.backdrop).filter(Boolean))].sort())
 
-const rarityOptions = [
-  { value: 'common', label: 'Common', color: '#6b7280' },
-  { value: 'uncommon', label: 'Uncommon', color: '#22c55e' },
-  { value: 'rare', label: 'Rare', color: '#3b82f6' },
-  { value: 'epic', label: 'Epic', color: '#a855f7' },
-  { value: 'legendary', label: 'Legendary', color: '#f59e0b' },
-  { value: 'mythic', label: 'Mythic', color: '#ef4444' },
+// Filter buttons config
+const filterButtons = [
+  { key: 'type', label: 'Collections', filterGroup: 'names' },
+  { key: 'model', label: 'Model', filterGroup: 'models' },
+  { key: 'backdrop', label: 'Background', filterGroup: 'backdrops' },
 ]
 
-
-interface FilterTag {
-  key: string
-  group: string
-  value: string
-  label: string
+const isFilterActive = (key: string) => {
+  const btn = filterButtons.find(f => f.key === key)
+  if (!btn) return false
+  const arr = filters[btn.filterGroup as keyof typeof filters]
+  return Array.isArray(arr) && arr.length > 0
 }
 
-const activeFilterTags = computed<FilterTag[]>(() => {
-  const tags: FilterTag[] = []
-  filters.names.forEach(v => tags.push({ key: `name-${v}`, group: 'names', value: v, label: v }))
-  filters.models.forEach(v => tags.push({ key: `model-${v}`, group: 'models', value: v, label: `Skin: ${v}` }))
-  filters.backdrops.forEach(v => tags.push({ key: `backdrop-${v}`, group: 'backdrops', value: v, label: `Backdrop: ${v}` }))
-  filters.patterns.forEach(v => tags.push({ key: `pattern-${v}`, group: 'patterns', value: v, label: `Pattern: ${v}` }))
-  filters.symbols.forEach(v => tags.push({ key: `symbol-${v}`, group: 'symbols', value: v, label: `Symbol: ${v}` }))
-  filters.rarities.forEach(v => {
-    const opt = rarityOptions.find(r => r.value === v)
-    tags.push({ key: `rarity-${v}`, group: 'rarities', value: v, label: opt?.label || v })
-  })
-  if (filters.minPrice !== null) tags.push({ key: 'minPrice', group: 'minPrice', value: String(filters.minPrice), label: `from ${filters.minPrice} TON` })
-  if (filters.maxPrice !== null) tags.push({ key: 'maxPrice', group: 'maxPrice', value: String(filters.maxPrice), label: `to ${filters.maxPrice} TON` })
-  return tags
-})
+const getFilterLabel = (f: typeof filterButtons[number]) => {
+  const arr = filters[f.filterGroup as keyof typeof filters]
+  if (Array.isArray(arr) && arr.length > 0) {
+    return arr[0] + (arr.length > 1 ? ` +${arr.length - 1}` : '')
+  }
+  return f.label
+}
 
 // Dropdown helpers for bottom sheet
 const dropdownTitle = computed(() => {
@@ -396,30 +305,6 @@ const toggleFilter = (group: 'names' | 'models' | 'backdrops' | 'patterns' | 'sy
   } else {
     arr.push(value)
   }
-}
-
-const removeFilterTag = (tag: FilterTag) => {
-  if (tag.group === 'minPrice') {
-    filters.minPrice = null
-  } else if (tag.group === 'maxPrice') {
-    filters.maxPrice = null
-  } else {
-    const arr = filters[tag.group as keyof typeof filters] as string[]
-    const idx = arr.indexOf(tag.value)
-    if (idx > -1) arr.splice(idx, 1)
-  }
-  applyFilters()
-}
-
-const resetFilters = () => {
-  filters.names = []
-  filters.models = []
-  filters.backdrops = []
-  filters.patterns = []
-  filters.symbols = []
-  filters.rarities = []
-  filters.minPrice = null
-  filters.maxPrice = null
 }
 
 const applyFilters = () => {
@@ -610,253 +495,254 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ============================================
-   myballs.io Market Page
-   --mb-bg: #0C0C0C
-   --mb-primary: #34CDEF
-   --mb-card: rgba(255, 255, 255, 0.05)
-   --mb-text-secondary: rgba(255, 255, 255, 0.5)
-   --mb-radius-lg: 16px
-   --mb-radius-md: 12px
-   --mb-content-padding: 15px
-   ============================================ */
-
 .market-view {
   min-height: 100vh;
-  background: var(--mb-bg, #0C0C0C);
+  background: #0C0C0C;
   color: #fff;
-  padding-bottom: 100px;
+  padding-bottom: 80px;
 }
 
-/* --- Online indicator --- */
-.online-indicator {
+/* === Tabs === */
+.tabs {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 10px 0 4px;
-}
-
-.online-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #22c55e;
-  flex-shrink: 0;
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-.online-text {
-  font-size: 12px;
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
-  font-weight: 400;
-}
-
-/* --- Header --- */
-.market-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px var(--mb-content-padding, 15px) 12px;
-}
-
-.market-header__spacer {
-  width: 80px; /* Balance against right side for centering */
-}
-
-.market-title {
-  font-family: 'Chroma ST', var(--mb-font-display, system-ui), sans-serif;
-  font-size: 28px;
-  font-weight: 700;
-  color: #fff;
-  margin: 0;
-  text-align: center;
-  flex: 1;
-}
-
-.market-header__right {
-  display: flex;
-  justify-content: flex-end;
-  min-width: 80px;
-}
-
-/* --- Tab bar --- */
-.market-tabs {
-  padding: 0 var(--mb-content-padding, 15px);
-}
-
-.market-tabs__scroll {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   gap: 24px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  padding-bottom: 1px;
+  padding: 12px 16px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
-
-.market-tabs__scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.market-tabs__item {
-  position: relative;
+.tabs__item {
   background: none;
   border: none;
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
-  font-size: 15px;
+  color: rgba(255,255,255,0.4);
+  font-size: 18px;
   font-weight: 600;
-  padding: 10px 0 12px;
+  padding: 8px 0 12px;
   cursor: pointer;
-  white-space: nowrap;
-  transition: color 0.2s;
+  position: relative;
   -webkit-tap-highlight-color: transparent;
 }
-
-.market-tabs__item.active {
+.tabs__item.active {
   color: #fff;
 }
-
-.market-tabs__item.active::after {
+.tabs__item.active::after {
   content: '';
   position: absolute;
-  bottom: 0;
+  bottom: -1px;
   left: 0;
   right: 0;
   height: 2px;
   background: #fff;
-  border-radius: 1px 1px 0 0;
+  border-radius: 1px;
 }
 
-/* --- Filter bar --- */
-.filter-bar {
+/* === Search row === */
+.search-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px var(--mb-content-padding, 15px);
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  padding: 12px 16px;
 }
-
-.filter-bar::-webkit-scrollbar {
-  display: none;
+.search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px;
 }
-
-.filter-bar__sort-btn {
+.search-box__icon {
+  color: rgba(255,255,255,0.3);
+  flex-shrink: 0;
+}
+.search-box__input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 14px;
+}
+.search-box__input::placeholder {
+  color: rgba(255,255,255,0.3);
+}
+.icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: var(--mb-card, rgba(255, 255, 255, 0.05));
+  background: rgba(255,255,255,0.06);
   border: none;
-  border-radius: var(--mb-radius-md, 12px);
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  border-radius: 12px;
+  color: rgba(255,255,255,0.5);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.2s, color 0.2s;
   -webkit-tap-highlight-color: transparent;
 }
-
-.filter-bar__sort-btn:active {
-  background: rgba(255, 255, 255, 0.1);
+.icon-btn:active {
+  background: rgba(255,255,255,0.12);
   color: #fff;
 }
 
-.filter-bar__dropdown {
+/* === Filters === */
+.filters {
+  display: flex;
+  gap: 6px;
+  padding: 0 16px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.filters::-webkit-scrollbar { display: none; }
+.filter-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
-  background: var(--mb-card, rgba(255, 255, 255, 0.05));
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.06);
   border: none;
-  border-radius: var(--mb-radius-md, 12px);
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
-  font-size: 14px;
+  border-radius: 10px;
+  color: rgba(255,255,255,0.5);
+  font-size: 13px;
   font-weight: 500;
-  cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
-  transition: background 0.2s, color 0.2s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.filter-bar__dropdown.has-value {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.filter-bar__dropdown:active {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.filter-bar__chevron {
-  flex-shrink: 0;
-  opacity: 0.5;
-}
-
-/* --- Active filter chips --- */
-.active-filters {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 var(--mb-content-padding, 15px) 8px;
-  flex-wrap: wrap;
-}
-
-.active-filter-chip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  background: rgba(52, 205, 239, 0.12);
-  border: 1px solid rgba(52, 205, 239, 0.25);
-  border-radius: 8px;
-  color: var(--mb-primary, #34CDEF);
-  font-size: 12px;
-  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s;
+  flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
 }
-
-.active-filter-chip:active {
-  background: rgba(52, 205, 239, 0.2);
+.filter-btn.active {
+  background: rgba(38,129,255,0.15);
+  color: #2681FF;
+}
+.filter-btn:active {
+  background: rgba(255,255,255,0.1);
 }
 
-.active-filter-chip svg {
-  opacity: 0.6;
+/* === Grid === */
+.grid-wrap {
+  padding: 0 10px 20px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
 }
 
-.clear-all-btn {
-  padding: 5px 10px;
+/* === Pagination === */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 12px 0;
+}
+.pagination__btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pagination__btn:disabled { opacity: 0.3; }
+.pagination__btn:not(:disabled):active { background: rgba(255,255,255,0.12); }
+.pagination__info {
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+}
+
+/* === Empty state === */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 20px;
+}
+.empty__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 6px;
+}
+.empty__hint {
+  font-size: 14px;
+  color: rgba(255,255,255,0.4);
+  margin: 0;
+}
+
+/* === Cart bar === */
+.cart-bar {
+  position: fixed;
+  bottom: 64px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #1a1a1a;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  z-index: 40;
+}
+.cart-bar__counter {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.cart-bar__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
-  font-size: 12px;
+  border: none;
+  color: rgba(255,255,255,0.5);
   cursor: pointer;
-  transition: all 0.2s;
   -webkit-tap-highlight-color: transparent;
 }
-
-.clear-all-btn:active {
+.cart-bar__btn:disabled { opacity: 0.3; }
+.cart-bar__btn:active { color: #fff; }
+.cart-bar__count {
+  font-size: 14px;
+  font-weight: 600;
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.3);
+  min-width: 24px;
+  text-align: center;
 }
+.cart-bar__checkout {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: #2681FF;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cart-bar__checkout:disabled { opacity: 0.5; }
+.cart-bar__checkout:active { background: #1a6ae0; }
 
-/* --- Sort overlay --- */
+/* === Sort overlay === */
 .sort-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0,0,0,0.6);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -864,24 +750,21 @@ onMounted(() => {
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
-
 .sort-menu {
   background: #1A1A1A;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--mb-radius-lg, 16px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
   min-width: 240px;
   overflow: hidden;
 }
-
 .sort-menu__header {
   padding: 14px 16px 8px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  color: rgba(255,255,255,0.5);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-
 .sort-menu__option {
   display: flex;
   align-items: center;
@@ -894,166 +777,19 @@ onMounted(() => {
   font-size: 15px;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
+.sort-menu__option:active { background: rgba(255,255,255,0.06); }
+.sort-menu__option.active { color: #2681FF; }
+.sort-menu__option.active svg { stroke: #2681FF; }
+.sort-fade-enter-active, .sort-fade-leave-active { transition: opacity 0.2s; }
+.sort-fade-enter-from, .sort-fade-leave-to { opacity: 0; }
 
-.sort-menu__option:active {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.sort-menu__option.active {
-  color: var(--mb-primary, #34CDEF);
-}
-
-.sort-menu__option.active svg {
-  stroke: var(--mb-primary, #34CDEF);
-}
-
-/* Sort transition */
-.sort-fade-enter-active,
-.sort-fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.sort-fade-enter-from,
-.sort-fade-leave-to {
-  opacity: 0;
-}
-
-/* --- Gift grid --- */
-.gift-grid-wrapper {
-  padding: 0 12px 20px;
-}
-
-.gift-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-/* --- Pagination --- */
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 20px;
-  padding: 12px 0;
-}
-
-.pagination__btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--mb-card, rgba(255, 255, 255, 0.05));
-  border: none;
-  border-radius: var(--mb-radius-md, 12px);
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.2s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.pagination__btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.pagination__btn:not(:disabled):active {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.pagination__info {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-}
-
-.pagination__current {
-  color: #fff;
-  font-weight: 600;
-}
-
-.pagination__sep {
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
-}
-
-.pagination__total {
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
-}
-
-/* --- Empty state --- */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-}
-
-.empty-state__icon {
-  color: rgba(255, 255, 255, 0.15);
-  margin-bottom: 16px;
-}
-
-.empty-state__text {
-  font-size: 17px;
-  color: #fff;
-  font-weight: 600;
-  margin: 0 0 6px;
-}
-
-.empty-state__hint {
-  font-size: 14px;
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
-  margin: 0;
-}
-
-/* --- Bulk FAB --- */
-.bulk-fab {
-  position: fixed;
-  bottom: 90px;
-  right: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 20px;
-  background: var(--mb-primary, #34CDEF);
-  border: none;
-  border-radius: var(--mb-radius-lg, 16px);
-  color: #000;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 24px rgba(52, 205, 239, 0.35);
-  z-index: 50;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.bulk-fab:active {
-  transform: scale(0.95);
-}
-
-.fab-pop-enter-active {
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.fab-pop-leave-active {
-  transition: all 0.15s ease-in;
-}
-.fab-pop-enter-from,
-.fab-pop-leave-to {
-  opacity: 0;
-  transform: scale(0.5);
-}
-
-/* --- Filter bottom sheet --- */
+/* === Filter bottom sheet === */
 .filter-sheet-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0,0,0,0.6);
   z-index: 300;
   display: flex;
   align-items: flex-end;
@@ -1061,7 +797,6 @@ onMounted(() => {
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
-
 .filter-sheet {
   width: 100%;
   max-width: 480px;
@@ -1070,128 +805,86 @@ onMounted(() => {
   border-radius: 20px 20px 0 0;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
 }
-
 .filter-sheet__handle {
   width: 36px;
   height: 4px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255,255,255,0.2);
   border-radius: 2px;
   margin: 10px auto 0;
 }
-
 .filter-sheet__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px 10px;
 }
-
 .filter-sheet__title {
   font-size: 18px;
   font-weight: 700;
   color: #fff;
   margin: 0;
 }
-
 .filter-sheet__close {
   width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--mb-card, rgba(255, 255, 255, 0.05));
+  background: rgba(255,255,255,0.06);
   border: none;
   border-radius: 10px;
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  color: rgba(255,255,255,0.5);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-
 .filter-sheet__body {
   flex: 1;
   overflow-y: auto;
   padding: 8px 20px 16px;
   -webkit-overflow-scrolling: touch;
 }
-
 .filter-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
-
 .filter-chip {
   padding: 8px 14px;
-  background: var(--mb-card, rgba(255, 255, 255, 0.05));
+  background: rgba(255,255,255,0.06);
   border: 1px solid transparent;
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255,255,255,0.6);
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
-
-.filter-chip:active {
-  background: rgba(255, 255, 255, 0.1);
-}
-
+.filter-chip:active { background: rgba(255,255,255,0.1); }
 .filter-chip.active {
-  background: rgba(52, 205, 239, 0.12);
-  border-color: rgba(52, 205, 239, 0.4);
-  color: var(--mb-primary, #34CDEF);
+  background: rgba(38,129,255,0.12);
+  border-color: rgba(38,129,255,0.4);
+  color: #2681FF;
 }
-
 .filter-sheet__footer {
   padding: 12px 20px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
-
 .filter-sheet__done {
   width: 100%;
   padding: 14px;
-  background: var(--mb-primary, #34CDEF);
+  background: #2681FF;
   border: none;
-  border-radius: var(--mb-radius-md, 12px);
-  color: #000;
+  border-radius: 12px;
+  color: #fff;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-
-.filter-sheet__done:active {
-  opacity: 0.85;
-}
-
-.filter-bar__clear {
-  flex-shrink: 0;
-  opacity: 0.7;
-}
-
-/* Filter transitions */
-.filter-overlay-enter-active,
-.filter-overlay-leave-active {
-  transition: opacity 0.25s ease;
-}
-
-.filter-overlay-enter-from,
-.filter-overlay-leave-to {
-  opacity: 0;
-}
-
-.sheet-slide-enter-active {
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.sheet-slide-leave-active {
-  transition: transform 0.2s ease-in;
-}
-
-.sheet-slide-enter-from,
-.sheet-slide-leave-to {
-  transform: translateY(100%);
-}
+.filter-sheet__done:active { opacity: 0.85; }
+.filter-overlay-enter-active, .filter-overlay-leave-active { transition: opacity 0.25s; }
+.filter-overlay-enter-from, .filter-overlay-leave-to { opacity: 0; }
+.sheet-slide-enter-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.sheet-slide-leave-active { transition: transform 0.2s ease-in; }
+.sheet-slide-enter-from, .sheet-slide-leave-to { transform: translateY(100%); }
 </style>
