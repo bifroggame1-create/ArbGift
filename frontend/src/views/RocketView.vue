@@ -6,19 +6,23 @@
     </div>
 
     <!-- Header -->
-    <header class="game-header">
-      <button class="back-btn" @click="$router.back()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <header class="game-header-bar">
+      <button class="header-back" @click="$router.push('/solo')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M15 18l-6-6 6-6"/>
         </svg>
       </button>
-      <div class="game-title">
-        <span class="rocket-icon-title">🚀</span>
-        <span>Rocket</span>
+      <div class="header-title">
+        <span class="title-main">Rocket</span>
+        <span class="title-badge" style="background:#f59e0b">x100</span>
       </div>
-      <div class="online-badge">
-        <span class="online-dot"></span>
-        {{ onlineCount }}
+      <div class="header-balance">
+        <svg width="16" height="16" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+        </svg>
+        <span class="balance-val">{{ balance.toFixed(2) }}</span>
+        <button class="balance-plus">+</button>
       </div>
     </header>
 
@@ -159,6 +163,7 @@ interface ActiveBet {
 }
 
 // State
+const balance = ref(5.00)
 const gameState = ref<'waiting' | 'flying' | 'crashed'>('waiting')
 const currentMultiplier = ref(1.00)
 const crashPoint = ref(0)
@@ -397,18 +402,14 @@ onUnmounted(() => {
   50% { opacity: 0.6; transform: scale(1.3); }
 }
 
-.game-header {
-  display: flex; align-items: center; padding: 12px 16px;
-  position: relative; z-index: 10; gap: 12px;
-}
-.back-btn {
-  width: 36px; height: 36px; background: #1c1c1e; border: none;
-  border-radius: 10px; color: #fff; display: flex; align-items: center; justify-content: center;
-}
-.game-title { flex: 1; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.rocket-icon-title { font-size: 22px; }
-.online-badge { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #999; }
-.online-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; }
+.game-header-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; position: relative; z-index: 10; }
+.header-back { width: 40px; height: 40px; background: #1c1c1e; border: none; border-radius: 12px; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.header-title { display: flex; align-items: center; gap: 8px; }
+.title-main { font-size: 18px; font-weight: 700; }
+.title-badge { color: #000; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+.header-balance { display: flex; align-items: center; gap: 6px; background: #1c1c1e; padding: 8px 12px; border-radius: 12px; }
+.balance-val { font-size: 14px; font-weight: 600; }
+.balance-plus { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #4b5563; background: transparent; color: #fff; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
 .history-bar {
   display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto;

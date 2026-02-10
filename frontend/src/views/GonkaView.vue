@@ -1,36 +1,25 @@
 <template>
   <div class="gonka-view min-h-screen flex flex-col" style="background: #000; padding-bottom: 16px;">
-    <div class="px-3 pt-3 flex flex-col gap-2">
-      <!-- Tournament Banner -->
-      <div class="rounded-xl px-4 py-2.5 flex items-center justify-between"
-        style="background: linear-gradient(135deg, #ca8a04 0%, #22c55e 60%, #4ade80 100%);">
-        <span class="text-white font-bold text-sm">Giftomania</span>
-        <span class="text-white/70 text-xs font-mono">3:04:57:06</span>
+    <!-- Header -->
+    <header class="game-header-bar">
+      <button class="header-back" @click="$router.push('/solo')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+      <div class="header-title">
+        <span class="title-main">Gonka</span>
+        <span class="title-badge" style="background:#22c55e">x30</span>
       </div>
-      <!-- Header Row -->
-      <div class="flex items-center justify-between">
-        <div class="flex gap-2">
-          <button class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.06);">
-            <svg class="w-4 h-4" fill="none" stroke="rgba(255,255,255,0.45)" viewBox="0 0 24 24">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="1.5"/>
-              <path d="M16 2v4M8 2v4M3 10h18" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <div class="flex items-center gap-1 rounded-full px-3 py-1" style="background: rgba(255,255,255,0.08);">
-            <span class="text-white/50 text-xs">Max Prize</span>
-            <span class="text-white/40 text-xs">▼</span>
-            <span class="text-white font-bold text-sm">30</span>
-          </div>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <button class="flex items-center gap-1.5 rounded-full px-3 py-1.5" style="background: rgba(255,255,255,0.08);">
-            <span class="text-white/45 text-xs">▼</span>
-            <span class="text-white font-bold text-sm">{{ balance.toFixed(2) }}</span>
-          </button>
-          <button class="w-7 h-7 rounded-full flex items-center justify-center text-white/50 text-sm" style="background: rgba(255,255,255,0.12);">+</button>
-        </div>
+      <div class="header-balance">
+        <svg width="16" height="16" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+        </svg>
+        <span class="balance-val">{{ balance.toFixed(2) }}</span>
+        <button class="balance-plus">+</button>
       </div>
-    </div>
+    </header>
 
     <!-- Lite / Hard Toggle -->
     <div class="flex justify-center gap-1 px-4 py-2">
@@ -318,3 +307,14 @@ onUnmounted(() => {
   if (animationId) cancelAnimationFrame(animationId)
 })
 </script>
+
+<style scoped>
+.game-header-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
+.header-back { width: 40px; height: 40px; background: #1c1c1e; border: none; border-radius: 12px; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.header-title { display: flex; align-items: center; gap: 8px; }
+.title-main { font-size: 18px; font-weight: 700; color: #fff; }
+.title-badge { color: #000; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+.header-balance { display: flex; align-items: center; gap: 6px; background: #1c1c1e; padding: 8px 12px; border-radius: 12px; }
+.balance-val { font-size: 14px; font-weight: 600; color: #fff; }
+.balance-plus { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #4b5563; background: transparent; color: #fff; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+</style>

@@ -1,40 +1,25 @@
 <template>
   <div class="trading-view">
-    <!-- Tournament Banner -->
-    <div class="tournament-banner" @click="$router.push('/tournament')">
-      <span class="banner-emoji">&#127942;</span>
-      <span class="banner-text">Trading Mega Tournament</span>
-      <span class="banner-timer">{{ tournamentTimer }}</span>
-    </div>
-
-    <!-- Top Bar -->
-    <div class="top-bar">
-      <div class="top-left">
-        <button class="icon-btn" @click="$router.push('/history?sorting=solo_trading')">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-        </button>
-        <button class="icon-btn" @click="showHelp = true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-        </button>
+    <!-- Header -->
+    <header class="game-header-bar">
+      <button class="header-back" @click="$router.push('/solo')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+      <div class="header-title">
+        <span class="title-main">Trading</span>
+        <span class="title-badge" style="background:#ef4444">CRASH</span>
       </div>
-      <div class="balance-pill" @click="$router.push('/deposit')">
-        <svg class="ton-icon" width="16" height="16" viewBox="0 0 56 56" fill="none">
-          <path d="M28 56C43.464 56 56 43.464 56 28C56 12.536 43.464 0 28 0C12.536 0 0 12.536 0 28C0 43.464 12.536 56 28 56Z" fill="#0098EA"/>
+      <div class="header-balance">
+        <svg width="16" height="16" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
           <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
         </svg>
-        <span class="balance-value">{{ balance.toFixed(2) }}</span>
-        <span class="balance-add">+</span>
+        <span class="balance-val">{{ balance.toFixed(2) }}</span>
+        <button class="balance-plus">+</button>
       </div>
-    </div>
+    </header>
 
     <!-- Chart Container -->
     <div class="chart-wrapper">
@@ -247,8 +232,6 @@ const waitingCountdown = ref(5.0)
 const gameNumber = ref(30772)
 const gameHash = ref('2b2c...c667')
 const ping = ref(73)
-const tournamentTimer = ref('14:13:24:13')
-const showHelp = ref(false)
 
 // Result of current round (pre-determined)
 const lastResult = ref<'win' | 'lose'>('lose')
@@ -776,64 +759,15 @@ onUnmounted(() => {
   padding-bottom: 100px;
 }
 
-/* Tournament Banner */
-.tournament-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #0098EA 0%, #006AFF 100%);
-  padding: 10px 20px;
-  border-radius: 24px;
-  cursor: pointer;
-  margin-bottom: 12px;
-}
-.banner-emoji { font-size: 18px; }
-.banner-text { font-size: 14px; font-weight: 600; }
-.banner-timer { font-size: 14px; font-weight: 600; font-family: ui-monospace, monospace; }
-
-/* Top Bar */
-.top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-.top-left { display: flex; gap: 8px; }
-.icon-btn {
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.05);
-  border: none;
-  border-radius: 14px;
-  color: rgba(255, 255, 255, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.balance-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 8px 12px;
-  border-radius: 16px;
-  cursor: pointer;
-}
-.ton-icon { width: 16px; height: 16px; }
-.balance-value { font-size: 14px; font-weight: 600; font-family: ui-monospace, monospace; }
-.balance-add {
-  width: 20px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  color: #fff;
-}
+/* Header */
+.game-header-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; position: relative; z-index: 10; }
+.header-back { width: 40px; height: 40px; background: #1c1c1e; border: none; border-radius: 12px; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.header-title { display: flex; align-items: center; gap: 8px; }
+.title-main { font-size: 18px; font-weight: 700; }
+.title-badge { color: #000; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+.header-balance { display: flex; align-items: center; gap: 6px; background: #1c1c1e; padding: 8px 12px; border-radius: 12px; }
+.balance-val { font-size: 14px; font-weight: 600; }
+.balance-plus { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #4b5563; background: transparent; color: #fff; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
 /* ====== Chart ====== */
 .chart-wrapper {

@@ -1,18 +1,23 @@
 <template>
   <div class="ball-escape-view">
     <!-- Header -->
-    <header class="game-header">
-      <button class="header-close" @click="$router.back()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 6L6 18M6 6l12 12"/>
+    <header class="game-header-bar">
+      <button class="header-back" @click="$router.push('/solo')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 18l-6-6 6-6"/>
         </svg>
-        <span>Закрыть</span>
       </button>
-      <div class="game-id">
-        <span class="label">Game #{{ gameId }}</span>
+      <div class="header-title">
+        <span class="title-main">Ball Escape</span>
+        <span class="title-badge" style="background:#8b5cf6">x50</span>
       </div>
-      <div class="balance-badge">
-        <span>{{ balance.toFixed(2) }} ◇</span>
+      <div class="header-balance">
+        <svg width="16" height="16" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+        </svg>
+        <span class="balance-val">{{ balance.toFixed(2) }}</span>
+        <button class="balance-plus">+</button>
       </div>
     </header>
 
@@ -773,37 +778,14 @@ onUnmounted(() => {
   padding-bottom: 100px;
 }
 
-.game-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-}
-
-.header-close {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  color: #fff;
-  padding: 8px 14px;
-  border-radius: 12px;
-  font-size: 13px;
-}
-
-.game-id {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.balance-badge {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 8px 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-}
+.game-header-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
+.header-back { width: 40px; height: 40px; background: #1c1c1e; border: none; border-radius: 12px; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.header-title { display: flex; align-items: center; gap: 8px; }
+.title-main { font-size: 18px; font-weight: 700; }
+.title-badge { color: #000; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+.header-balance { display: flex; align-items: center; gap: 6px; background: #1c1c1e; padding: 8px 12px; border-radius: 12px; }
+.balance-val { font-size: 14px; font-weight: 600; }
+.balance-plus { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #4b5563; background: transparent; color: #fff; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
 .arena-container {
   flex: 1;
