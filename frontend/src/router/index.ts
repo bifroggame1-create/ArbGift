@@ -82,11 +82,6 @@ const router = createRouter({
       name: 'ball-escape',
       component: () => import('../views/BallEscapeView.vue'),
     },
-    {
-      path: '/gonka',
-      name: 'gonka',
-      component: () => import('../views/GonkaView.vue'),
-    },
     // Redirects
     {
       path: '/topup',

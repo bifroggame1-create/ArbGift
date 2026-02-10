@@ -127,31 +127,6 @@ export const getStats = async () => {
 
 const SOLO_GAMES_BASE = import.meta.env.VITE_SOLO_GAMES_URL || 'http://localhost:8007'
 
-export interface GonkaBuyRequest {
-  amount: number
-  mode: string
-  client_seed: string
-  nonce: number
-  user_id: string
-}
-
-export interface GonkaBuyResponse {
-  cell_index: number
-  mode: string
-  multiplier: number
-  balls: number
-  payout: number
-  profit: number
-  server_seed: string
-  server_seed_hash: string
-  nonce: number
-}
-
-export const gonkaPlay = async (data: GonkaBuyRequest): Promise<GonkaBuyResponse> => {
-  const response = await axios.post(`${SOLO_GAMES_BASE}/api/solo-race-game/buy/ton`, data)
-  return response.data
-}
-
 export interface EscapeBuyRequest {
   amount: number
   client_seed: string
