@@ -75,6 +75,7 @@
 import { computed, ref } from 'vue'
 import type { Gift } from '../api/client'
 import { useTelegram } from '../composables/useTelegram'
+import { getBackdropGradient } from '../utils/backdropColors'
 import LottieGift from './LottieGift.vue'
 
 const props = defineProps<{
@@ -129,27 +130,10 @@ const formattedPrice = computed(() => {
   return num.toFixed(2).replace(/\.?0+$/, '')
 })
 
-// Card style — use backdrop colors from API if available, fallback to default gradient
+// Card style — use backdrop colors from known Telegram backdrop map
 const cardStyle = computed(() => {
-  const gift = props.gift as any
-  // If backdrop colors come from API (center_color, edge_color as integers)
-  if (gift.backdrop_center_color && gift.backdrop_edge_color) {
-    const center = intToHex(gift.backdrop_center_color)
-    const edge = intToHex(gift.backdrop_edge_color)
-    return { '--card-bg': `linear-gradient(180deg, ${center} 0%, ${edge} 100%)` }
-  }
-  // Fallback: generate a deterministic color from gift name
-  const hash = hashString(props.gift.name || '')
-  const hue = hash % 360
-  return { '--card-bg': `linear-gradient(180deg, hsl(${hue}, 25%, 28%) 0%, hsl(${hue}, 30%, 18%) 100%)` }
+  return { '--card-bg': getBackdropGradient(props.gift.backdrop) }
 })
-
-const intToHex = (n: number): string => '#' + (n & 0xFFFFFF).toString(16).padStart(6, '0')
-const hashString = (s: string): number => {
-  let h = 0
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
-  return Math.abs(h)
-}
 
 const handleClick = () => {
   hapticImpact('light')
