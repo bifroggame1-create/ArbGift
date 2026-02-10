@@ -403,7 +403,7 @@ interface Player {
   color: string
 }
 
-interface Gift {
+interface PvPGiftItem {
   id: number | string
   name: string
   image: string
@@ -432,7 +432,7 @@ const showBetModal = ref(false)
 const showWinnerModal = ref(false)
 const giftTab = ref<'ton' | 'stars'>('ton')
 const giftSearch = ref('')
-const selectedGift = ref<Gift | null>(null)
+const selectedGift = ref<PvPGiftItem | null>(null)
 const userBalance = ref(0)
 const winner = ref<Player | null>(null)
 const winAmount = ref(0)
@@ -495,7 +495,7 @@ const players = computed<Player[]>(() => {
 })
 
 // Gifts from inventory
-const trendingGifts = computed<Gift[]>(() =>
+const trendingGifts = computed<PvPGiftItem[]>(() =>
   pvp.inventory.value.slice(0, 3).map((nft, i) => ({
     id: nft.address || i,
     name: nft.name,
@@ -505,7 +505,7 @@ const trendingGifts = computed<Gift[]>(() =>
   }))
 )
 
-const allGifts = computed<Gift[]>(() =>
+const allGifts = computed<PvPGiftItem[]>(() =>
   pvp.inventory.value.slice(3).map((nft, i) => ({
     id: nft.address || i + 3,
     name: nft.name,
