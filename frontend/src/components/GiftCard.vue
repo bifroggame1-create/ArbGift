@@ -17,19 +17,15 @@
       />
       <!-- Static image fallback -->
       <img
-        v-else-if="gift.image_url"
+        v-else-if="gift.image_url && !imgError"
         :src="gift.image_url"
         :alt="gift.name"
         loading="lazy"
         draggable="false"
+        @error="imgError = true"
       />
       <div v-else class="gift-card__placeholder">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-          <path
-            d="M38.17 3.01H9.827C4.615 3.01 1.312 8.636 3.934 13.18L21.427 43.5C22.569 45.48 25.43 45.48 26.571 43.5L44.068 13.18C46.686 8.644 43.383 3.01 38.175 3.01H38.17ZM21.413 34.408L17.603 27.035L8.411 10.594C7.805 9.542 8.554 8.194 9.823 8.194H21.41V34.412L21.413 34.408ZM39.58 10.591L30.391 27.039L26.582 34.408V8.19H38.168C39.437 8.19 40.187 9.539 39.58 10.591Z"
-            fill="rgba(255,255,255,0.15)"
-          />
-        </svg>
+        <span class="gift-card__placeholder-emoji">🎁</span>
       </div>
     </div>
 
@@ -76,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { Gift } from '../api/client'
 import { useTelegram } from '../composables/useTelegram'
 import LottieGift from './LottieGift.vue'
@@ -94,6 +90,8 @@ const emit = defineEmits<{
 }>()
 
 const { hapticImpact } = useTelegram()
+
+const imgError = ref(false)
 
 // Lottie animation URL — from backend or derived from image_url (Fragment CDN pattern)
 const lottieUrl = computed(() => {
@@ -119,10 +117,13 @@ const serialNumber = computed(() => {
   return props.gift.id
 })
 
-// Formatted price
+// Formatted price — prefer min_price_ton from API
 const formattedPrice = computed(() => {
   const price = props.gift.min_price_ton || props.gift.price || 0
-  return Number(price).toFixed(2).replace(/\.?0+$/, '')
+  const num = Number(price)
+  if (num === 0) return 'Free'
+  // Remove unnecessary trailing zeros: 10.000 → 10, 3.40 → 3.4
+  return num.toFixed(2).replace(/\.?0+$/, '')
 })
 
 // Card style based on collection/rarity (backdrop gradient)
@@ -222,6 +223,13 @@ const handleBuy = () => {
   justify-content: center;
   width: 100%;
   height: 100%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+}
+
+.gift-card__placeholder-emoji {
+  font-size: 40px;
+  opacity: 0.5;
+  filter: grayscale(0.3);
 }
 
 /* ---- Info section ---- */

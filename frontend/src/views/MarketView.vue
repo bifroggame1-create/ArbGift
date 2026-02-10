@@ -48,11 +48,14 @@
       <button
         class="filter-bar__dropdown"
         :class="{ 'has-value': filters.names.length > 0 }"
-        @click="showFilters = true"
+        @click="openDropdown = openDropdown === 'type' ? null : 'type'"
       >
-        <span>{{ filters.names.length > 0 ? filters.names[0] : 'Type' }}</span>
-        <svg class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <span>{{ filters.names.length > 0 ? filters.names[0] + (filters.names.length > 1 ? ` +${filters.names.length - 1}` : '') : 'Type' }}</span>
+        <svg v-if="filters.names.length === 0" class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="m6 9 6 6 6-6"/>
+        </svg>
+        <svg v-else class="filter-bar__clear" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" @click.stop="filters.names = []; applyFilters()">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
         </svg>
       </button>
 
@@ -60,11 +63,14 @@
       <button
         class="filter-bar__dropdown"
         :class="{ 'has-value': filters.models.length > 0 }"
-        @click="showFilters = true"
+        @click="openDropdown = openDropdown === 'model' ? null : 'model'"
       >
-        <span>{{ filters.models.length > 0 ? filters.models[0] : 'Skin' }}</span>
-        <svg class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <span>{{ filters.models.length > 0 ? filters.models[0] + (filters.models.length > 1 ? ` +${filters.models.length - 1}` : '') : 'Skin' }}</span>
+        <svg v-if="filters.models.length === 0" class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="m6 9 6 6 6-6"/>
+        </svg>
+        <svg v-else class="filter-bar__clear" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" @click.stop="filters.models = []; applyFilters()">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
         </svg>
       </button>
 
@@ -72,11 +78,14 @@
       <button
         class="filter-bar__dropdown"
         :class="{ 'has-value': filters.backdrops.length > 0 }"
-        @click="showFilters = true"
+        @click="openDropdown = openDropdown === 'backdrop' ? null : 'backdrop'"
       >
-        <span>{{ filters.backdrops.length > 0 ? filters.backdrops[0] : 'Backdrop' }}</span>
-        <svg class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <span>{{ filters.backdrops.length > 0 ? filters.backdrops[0] + (filters.backdrops.length > 1 ? ` +${filters.backdrops.length - 1}` : '') : 'Backdrop' }}</span>
+        <svg v-if="filters.backdrops.length === 0" class="filter-bar__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="m6 9 6 6 6-6"/>
+        </svg>
+        <svg v-else class="filter-bar__clear" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" @click.stop="filters.backdrops = []; applyFilters()">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
         </svg>
       </button>
     </div>
@@ -200,153 +209,37 @@
       </button>
     </Transition>
 
-    <!-- Filter Sidebar -->
+    <!-- Filter Bottom Sheet -->
     <Teleport to="body">
       <Transition name="filter-overlay">
-        <div v-if="showFilters" class="filter-overlay" @click.self="showFilters = false">
-          <Transition name="filter-slide">
-            <div v-if="showFilters" class="filter-sidebar">
-              <div class="filter-sidebar__header">
-                <h3 class="filter-sidebar__title">Filters</h3>
-                <button class="filter-sidebar__close" @click="showFilters = false">
+        <div v-if="openDropdown" class="filter-sheet-overlay" @click.self="openDropdown = null">
+          <Transition name="sheet-slide">
+            <div v-if="openDropdown" class="filter-sheet">
+              <div class="filter-sheet__handle"></div>
+              <div class="filter-sheet__header">
+                <h3 class="filter-sheet__title">{{ dropdownTitle }}</h3>
+                <button class="filter-sheet__close" @click="openDropdown = null">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
                   </svg>
                 </button>
               </div>
-
-              <div class="filter-sidebar__body">
-                <!-- Gift Name / Type -->
-                <div class="filter-section">
-                  <div class="filter-section__title">Type</div>
-                  <div class="filter-chips">
-                    <button
-                      v-for="name in availableNames"
-                      :key="name"
-                      class="filter-chip"
-                      :class="{ active: filters.names.includes(name) }"
-                      @click="toggleFilter('names', name)"
-                    >
-                      {{ name }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Model / Skin -->
-                <div class="filter-section" v-if="availableModels.length">
-                  <div class="filter-section__title">Skin</div>
-                  <div class="filter-chips">
-                    <button
-                      v-for="m in availableModels"
-                      :key="m"
-                      class="filter-chip"
-                      :class="{ active: filters.models.includes(m) }"
-                      @click="toggleFilter('models', m)"
-                    >
-                      {{ m }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Backdrop -->
-                <div class="filter-section" v-if="availableBackdrops.length">
-                  <div class="filter-section__title">Backdrop</div>
-                  <div class="filter-chips">
-                    <button
-                      v-for="b in availableBackdrops"
-                      :key="b"
-                      class="filter-chip"
-                      :class="{ active: filters.backdrops.includes(b) }"
-                      @click="toggleFilter('backdrops', b)"
-                    >
-                      {{ b }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Pattern -->
-                <div class="filter-section" v-if="availablePatterns.length">
-                  <div class="filter-section__title">Pattern</div>
-                  <div class="filter-chips">
-                    <button
-                      v-for="p in availablePatterns"
-                      :key="p"
-                      class="filter-chip"
-                      :class="{ active: filters.patterns.includes(p) }"
-                      @click="toggleFilter('patterns', p)"
-                    >
-                      {{ p }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Symbol -->
-                <div class="filter-section" v-if="availableSymbols.length">
-                  <div class="filter-section__title">Symbol</div>
-                  <div class="filter-chips">
-                    <button
-                      v-for="s in availableSymbols"
-                      :key="s"
-                      class="filter-chip"
-                      :class="{ active: filters.symbols.includes(s) }"
-                      @click="toggleFilter('symbols', s)"
-                    >
-                      {{ s }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Rarity -->
-                <div class="filter-section">
-                  <div class="filter-section__title">Rarity</div>
-                  <div class="filter-chips">
-                    <button
-                      v-for="r in rarityOptions"
-                      :key="r.value"
-                      class="filter-chip rarity-chip"
-                      :class="{ active: filters.rarities.includes(r.value) }"
-                      :style="filters.rarities.includes(r.value) ? { background: r.color, borderColor: r.color } : {}"
-                      @click="toggleFilter('rarities', r.value)"
-                    >
-                      {{ r.label }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Price Range -->
-                <div class="filter-section">
-                  <div class="filter-section__title">Price (TON)</div>
-                  <div class="price-range">
-                    <div class="price-input-wrap">
-                      <input
-                        v-model.number="filters.minPrice"
-                        type="number"
-                        placeholder="Min"
-                        class="price-input"
-                        min="0"
-                        step="0.1"
-                      />
-                    </div>
-                    <span class="price-dash">&mdash;</span>
-                    <div class="price-input-wrap">
-                      <input
-                        v-model.number="filters.maxPrice"
-                        type="number"
-                        placeholder="Max"
-                        class="price-input"
-                        min="0"
-                        step="0.1"
-                      />
-                    </div>
-                  </div>
+              <div class="filter-sheet__body">
+                <div class="filter-chips">
+                  <button
+                    v-for="opt in dropdownOptions"
+                    :key="opt"
+                    class="filter-chip"
+                    :class="{ active: isDropdownOptionActive(opt) }"
+                    @click="toggleDropdownOption(opt)"
+                  >
+                    {{ opt }}
+                  </button>
                 </div>
               </div>
-
-              <div class="filter-sidebar__footer">
-                <button class="filter-sidebar__reset" @click="resetFilters">Reset</button>
-                <button class="filter-sidebar__apply" @click="applyFilters">
-                  Apply
-                  <span v-if="activeFilterCount > 0" class="filter-sidebar__count">{{ activeFilterCount }}</span>
+              <div class="filter-sheet__footer">
+                <button class="filter-sheet__done" @click="openDropdown = null; applyFilters()">
+                  Done
                 </button>
               </div>
             </div>
@@ -374,9 +267,7 @@ const { preloadPrices, enrichGiftsWithPrices } = useMarketAggregator()
 // Tabs
 const tabs = [
   { id: 'all', label: 'Gifts' },
-  { id: 'lootpacks', label: 'Lootpacks' },
   { id: 'upgrades', label: 'Upgrades' },
-  { id: 'real', label: 'Real Items' },
 ]
 const activeTab = ref('all')
 
@@ -386,7 +277,7 @@ const gifts = ref<any[]>([])
 const searchQuery = ref('')
 const sortBy = ref('listed_at desc')
 const showSortMenu = ref(false)
-const showFilters = ref(false)
+const openDropdown = ref<'type' | 'model' | 'backdrop' | null>(null)
 const bulkMode = ref(false)
 const selectedGifts = ref<number[]>([])
 
@@ -427,8 +318,6 @@ const allLoadedGifts = ref<any[]>([])
 const availableNames = computed(() => [...new Set(allLoadedGifts.value.map(g => g.name).filter(Boolean))].sort())
 const availableModels = computed(() => [...new Set(allLoadedGifts.value.map(g => g.model).filter(Boolean))].sort())
 const availableBackdrops = computed(() => [...new Set(allLoadedGifts.value.map(g => g.backdrop).filter(Boolean))].sort())
-const availablePatterns = computed(() => [...new Set(allLoadedGifts.value.map(g => g.pattern).filter(Boolean))].sort())
-const availableSymbols = computed(() => [...new Set(allLoadedGifts.value.map(g => g.symbol).filter(Boolean))].sort())
 
 const rarityOptions = [
   { value: 'common', label: 'Common', color: '#6b7280' },
@@ -439,18 +328,6 @@ const rarityOptions = [
   { value: 'mythic', label: 'Mythic', color: '#ef4444' },
 ]
 
-const activeFilterCount = computed(() => {
-  let count = 0
-  count += filters.names.length
-  count += filters.models.length
-  count += filters.backdrops.length
-  count += filters.patterns.length
-  count += filters.symbols.length
-  count += filters.rarities.length
-  if (filters.minPrice !== null) count++
-  if (filters.maxPrice !== null) count++
-  return count
-})
 
 interface FilterTag {
   key: string
@@ -474,6 +351,42 @@ const activeFilterTags = computed<FilterTag[]>(() => {
   if (filters.maxPrice !== null) tags.push({ key: 'maxPrice', group: 'maxPrice', value: String(filters.maxPrice), label: `to ${filters.maxPrice} TON` })
   return tags
 })
+
+// Dropdown helpers for bottom sheet
+const dropdownTitle = computed(() => {
+  switch (openDropdown.value) {
+    case 'type': return 'Type'
+    case 'model': return 'Skin'
+    case 'backdrop': return 'Backdrop'
+    default: return ''
+  }
+})
+
+const dropdownOptions = computed(() => {
+  switch (openDropdown.value) {
+    case 'type': return availableNames.value
+    case 'model': return availableModels.value
+    case 'backdrop': return availableBackdrops.value
+    default: return []
+  }
+})
+
+const isDropdownOptionActive = (opt: string) => {
+  switch (openDropdown.value) {
+    case 'type': return filters.names.includes(opt)
+    case 'model': return filters.models.includes(opt)
+    case 'backdrop': return filters.backdrops.includes(opt)
+    default: return false
+  }
+}
+
+const toggleDropdownOption = (opt: string) => {
+  switch (openDropdown.value) {
+    case 'type': toggleFilter('names', opt); break
+    case 'model': toggleFilter('models', opt); break
+    case 'backdrop': toggleFilter('backdrops', opt); break
+  }
+}
 
 const toggleFilter = (group: 'names' | 'models' | 'backdrops' | 'patterns' | 'symbols' | 'rarities', value: string) => {
   const arr = filters[group]
@@ -510,7 +423,6 @@ const resetFilters = () => {
 }
 
 const applyFilters = () => {
-  showFilters.value = false
   currentPage.value = 1
   fetchGifts()
 }
@@ -527,9 +439,7 @@ const sortOptions = [
 const setTab = (tab: string) => {
   hapticImpact('light')
   activeTab.value = tab
-  if (tab === 'lootpacks') {
-    router.push('/collection-list')
-  } else if (tab === 'upgrades') {
+  if (tab === 'upgrades') {
     router.push('/upgrade')
   }
 }
@@ -1139,44 +1049,53 @@ onMounted(() => {
   transform: scale(0.5);
 }
 
-/* --- Filter sidebar --- */
-.filter-overlay {
+/* --- Filter bottom sheet --- */
+.filter-sheet-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
   z-index: 300;
   display: flex;
-  justify-content: flex-end;
+  align-items: flex-end;
+  justify-content: center;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
 
-.filter-sidebar {
-  width: 320px;
-  max-width: 85vw;
-  height: 100%;
-  background: #111111;
+.filter-sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 65vh;
+  background: #1A1A1A;
+  border-radius: 20px 20px 0 0;
   display: flex;
   flex-direction: column;
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
 }
 
-.filter-sidebar__header {
+.filter-sheet__handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 10px auto 0;
+}
+
+.filter-sheet__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 14px 20px 10px;
 }
 
-.filter-sidebar__title {
+.filter-sheet__title {
   font-size: 18px;
   font-weight: 700;
   color: #fff;
   margin: 0;
 }
 
-.filter-sidebar__close {
+.filter-sheet__close {
   width: 36px;
   height: 36px;
   display: flex;
@@ -1187,32 +1106,14 @@ onMounted(() => {
   border-radius: 10px;
   color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
   cursor: pointer;
-  transition: all 0.2s;
   -webkit-tap-highlight-color: transparent;
 }
 
-.filter-sidebar__close:active {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.filter-sidebar__body {
+.filter-sheet__body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  padding: 8px 20px 16px;
   -webkit-overflow-scrolling: touch;
-}
-
-.filter-section__title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 10px;
 }
 
 .filter-chips {
@@ -1222,14 +1123,14 @@ onMounted(() => {
 }
 
 .filter-chip {
-  padding: 7px 12px;
+  padding: 8px 14px;
   background: var(--mb-card, rgba(255, 255, 255, 0.05));
   border: 1px solid transparent;
   border-radius: 10px;
   color: rgba(255, 255, 255, 0.6);
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -1243,111 +1144,31 @@ onMounted(() => {
   color: var(--mb-primary, #34CDEF);
 }
 
-.rarity-chip.active {
-  color: #fff;
-}
-
-/* Price Range */
-.price-range {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.price-input-wrap {
-  flex: 1;
-}
-
-.price-input {
-  width: 100%;
-  padding: 10px 12px;
-  background: var(--mb-card, rgba(255, 255, 255, 0.05));
-  border: 1px solid transparent;
-  border-radius: 10px;
-  color: #fff;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-  -moz-appearance: textfield;
-}
-
-.price-input::-webkit-inner-spin-button,
-.price-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-}
-
-.price-input:focus {
-  border-color: var(--mb-primary, #34CDEF);
-}
-
-.price-input::placeholder {
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
-}
-
-.price-dash {
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
-  font-size: 16px;
-}
-
-/* Filter Footer */
-.filter-sidebar__footer {
-  display: flex;
-  gap: 10px;
-  padding: 16px 20px;
+.filter-sheet__footer {
+  padding: 12px 20px 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.filter-sidebar__reset {
-  flex: 1;
-  padding: 12px;
-  background: var(--mb-card, rgba(255, 255, 255, 0.05));
-  border: none;
-  border-radius: var(--mb-radius-md, 12px);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.filter-sidebar__reset:active {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.filter-sidebar__apply {
-  flex: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px;
+.filter-sheet__done {
+  width: 100%;
+  padding: 14px;
   background: var(--mb-primary, #34CDEF);
   border: none;
   border-radius: var(--mb-radius-md, 12px);
   color: #000;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.2s;
   -webkit-tap-highlight-color: transparent;
 }
 
-.filter-sidebar__apply:active {
+.filter-sheet__done:active {
   opacity: 0.85;
 }
 
-.filter-sidebar__count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 700;
+.filter-bar__clear {
+  flex-shrink: 0;
+  opacity: 0.7;
 }
 
 /* Filter transitions */
@@ -1361,16 +1182,16 @@ onMounted(() => {
   opacity: 0;
 }
 
-.filter-slide-enter-active {
+.sheet-slide-enter-active {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.filter-slide-leave-active {
+.sheet-slide-leave-active {
   transition: transform 0.2s ease-in;
 }
 
-.filter-slide-enter-from,
-.filter-slide-leave-to {
-  transform: translateX(100%);
+.sheet-slide-enter-from,
+.sheet-slide-leave-to {
+  transform: translateY(100%);
 }
 </style>
