@@ -25,11 +25,6 @@
           @keyup.enter="applyFilters()"
         />
       </div>
-      <button class="icon-btn" @click="showSortMenu = !showSortMenu">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/>
-        </svg>
-      </button>
       <button class="icon-btn" @click="fetchGifts()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
@@ -38,14 +33,14 @@
       </button>
     </div>
 
-    <!-- Filter chips (horizontal scroll) -->
+    <!-- Filter chips (horizontal scroll) — Thermos-style -->
     <div class="filters">
       <button
         v-for="f in filterButtons"
         :key="f.key"
         class="filter-btn"
         :class="{ active: isFilterActive(f.key) }"
-        @click="openDropdown = openDropdown === f.key ? null : f.key"
+        @click="openFilter(f.key)"
       >
         <span>{{ getFilterLabel(f) }}</span>
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -53,6 +48,35 @@
         </svg>
       </button>
     </div>
+
+    <!-- Sort + quantity row -->
+    <div class="controls-row">
+      <div class="controls-row__left">
+        <div class="cart-bar__counter">
+          <button class="cart-bar__btn" :disabled="selectedGifts.length === 0" @click="selectedGifts.pop()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg>
+          </button>
+          <span class="cart-bar__count">{{ selectedGifts.length }}</span>
+          <button class="cart-bar__btn" @click="bulkMode = !bulkMode">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="controls-row__right">
+        <button class="icon-btn icon-btn--sm" @click="showSortDropdown = !showSortDropdown">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Filter Tags -->
+    <ActiveFilterTags
+      :tags="activeFilterTags"
+      @remove="handleRemoveTag"
+      @clear-all="clearAllFilters"
+    />
 
     <!-- Gift Grid (2 columns) -->
     <div class="grid-wrap">
@@ -93,81 +117,79 @@
 
     <!-- Cart bar (bottom) -->
     <div class="cart-bar">
-      <div class="cart-bar__counter">
-        <button class="cart-bar__btn" :disabled="selectedGifts.length === 0" @click="selectedGifts.pop()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg>
-        </button>
-        <span class="cart-bar__count">{{ selectedGifts.length }}</span>
-        <button class="cart-bar__btn" @click="bulkMode = !bulkMode">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-        </button>
-      </div>
       <button class="cart-bar__checkout" :disabled="selectedGifts.length === 0" @click="bulkBuy">
-        <span>Cart</span>
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <svg class="cart-bar__ton" width="14" height="14" viewBox="0 0 16 16" fill="none">
           <path d="M12.7238 1.00488H3.27565C1.53846 1.00488 0.437395 2.87874 1.31137 4.39358L7.14243 14.5002C7.52294 15.1601 8.47652 15.1601 8.85703 14.5002L14.6893 4.39358C15.5621 2.88116 14.461 1.00488 12.725 1.00488H12.7238ZM7.13769 11.4694L5.86778 9.01168L2.80363 3.53153C2.60149 3.18078 2.85116 2.7313 3.27446 2.7313H7.1365V11.4705L7.13769 11.4694ZM13.1935 3.53035L10.1305 9.01287L8.86059 11.4694V2.73011H12.7226C13.1459 2.73011 13.3956 3.17959 13.1935 3.53035Z" fill="currentColor"/>
         </svg>
-        <span>0.00</span>
+        <span>Cart ({{ selectedGifts.length }})</span>
       </button>
     </div>
 
-    <!-- Sort Overlay -->
-    <Teleport to="body">
-      <Transition name="sort-fade">
-        <div v-if="showSortMenu" class="sort-overlay" @click.self="showSortMenu = false">
-          <div class="sort-menu">
-            <div class="sort-menu__header">Sort by</div>
-            <button
-              v-for="opt in sortOptions"
-              :key="opt.value"
-              class="sort-menu__option"
-              :class="{ active: sortBy === opt.value }"
-              @click="setSortBy(opt.value)"
-            >
-              <span>{{ opt.label }}</span>
-              <svg v-if="sortBy === opt.value" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M20 6 9 17l-5-5"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <!-- Sort Dropdown -->
+    <SortDropdown
+      :visible="showSortDropdown"
+      :options="sortOptions"
+      :current="sortBy"
+      @update:visible="showSortDropdown = $event"
+      @select="setSortBy"
+    />
 
-    <!-- Filter Bottom Sheet -->
-    <Teleport to="body">
-      <Transition name="filter-overlay">
-        <div v-if="openDropdown" class="filter-sheet-overlay" @click.self="openDropdown = null">
-          <Transition name="sheet-slide">
-            <div v-if="openDropdown" class="filter-sheet">
-              <div class="filter-sheet__handle"></div>
-              <div class="filter-sheet__header">
-                <h3 class="filter-sheet__title">{{ dropdownTitle }}</h3>
-                <button class="filter-sheet__close" @click="openDropdown = null">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-                  </svg>
-                </button>
-              </div>
-              <div class="filter-sheet__body">
-                <div class="filter-chips">
-                  <button
-                    v-for="opt in dropdownOptions"
-                    :key="opt"
-                    class="filter-chip"
-                    :class="{ active: isDropdownOptionActive(opt) }"
-                    @click="toggleDropdownOption(opt)"
-                  >{{ opt }}</button>
-                </div>
-              </div>
-              <div class="filter-sheet__footer">
-                <button class="filter-sheet__done" @click="openDropdown = null; applyFilters()">Done</button>
-              </div>
-            </div>
-          </Transition>
-        </div>
-      </Transition>
-    </Teleport>
+    <!-- Filter Modals -->
+    <FilterListModal
+      :visible="activeModal === 'collections'"
+      title="Collections"
+      :options="collectionOptions"
+      :selected="filters.names"
+      :show-thumbnails="true"
+      @update:visible="activeModal = $event ? 'collections' : null"
+      @apply="applyCollectionFilter"
+    />
+
+    <FilterListModal
+      :visible="activeModal === 'model'"
+      title="Model"
+      :options="modelOptions"
+      :selected="filters.models"
+      :show-thumbnails="true"
+      :show-rarity="true"
+      @update:visible="activeModal = $event ? 'model' : null"
+      @apply="applyModelFilter"
+    />
+
+    <FilterListModal
+      :visible="activeModal === 'backdrop'"
+      title="Background"
+      :options="backdropOptions"
+      :selected="filters.backdrops"
+      :show-thumbnails="false"
+      @update:visible="activeModal = $event ? 'backdrop' : null"
+      @apply="applyBackdropFilter"
+    />
+
+    <FilterListModal
+      :visible="activeModal === 'symbol'"
+      title="Symbol"
+      :options="symbolOptions"
+      :selected="filters.symbols"
+      :show-thumbnails="true"
+      @update:visible="activeModal = $event ? 'symbol' : null"
+      @apply="applySymbolFilter"
+    />
+
+    <PriceRangeModal
+      :visible="activeModal === 'price'"
+      :min-price="filters.minPrice"
+      :max-price="filters.maxPrice"
+      @update:visible="activeModal = $event ? 'price' : null"
+      @apply="applyPriceFilter"
+    />
+
+    <GiftIdModal
+      :visible="activeModal === 'giftId'"
+      :gift-id="filters.giftId"
+      @update:visible="activeModal = $event ? 'giftId' : null"
+      @apply="applyGiftIdFilter"
+    />
   </div>
 </template>
 
@@ -176,6 +198,11 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import GiftCard from '../components/GiftCard.vue'
 import SkeletonCard from '../components/SkeletonCard.vue'
+import FilterListModal from '../components/FilterListModal.vue'
+import PriceRangeModal from '../components/PriceRangeModal.vue'
+import GiftIdModal from '../components/GiftIdModal.vue'
+import SortDropdown from '../components/SortDropdown.vue'
+import ActiveFilterTags from '../components/ActiveFilterTags.vue'
 import { useTelegram } from '../composables/useTelegram'
 import { useMarketAggregator } from '../composables/useMarketAggregator'
 import { getGifts, searchGifts, getStats } from '../api/client'
@@ -195,9 +222,9 @@ const activeTab = ref('all')
 const loading = ref(true)
 const gifts = ref<any[]>([])
 const searchQuery = ref('')
-const sortBy = ref('listed_at desc')
-const showSortMenu = ref(false)
-const openDropdown = ref<string | null>(null)
+const sortBy = ref('price asc')
+const showSortDropdown = ref(false)
+const activeModal = ref<string | null>(null)
 const bulkMode = ref(false)
 const selectedGifts = ref<number[]>([])
 
@@ -206,11 +233,7 @@ const currentPage = ref(1)
 const totalPages = ref(50)
 const limit = 50
 
-// Market stats
-const tonPrice = ref('1.33')
-const volume24h = ref('247.5K')
-
-// Filters (Thermos-style)
+// Filters (Thermos-style — expanded)
 interface Filters {
   names: string[]
   models: string[]
@@ -220,6 +243,7 @@ interface Filters {
   rarities: string[]
   minPrice: number | null
   maxPrice: number | null
+  giftId: number | null
 }
 
 const filters = reactive<Filters>({
@@ -231,80 +255,267 @@ const filters = reactive<Filters>({
   rarities: [],
   minPrice: null,
   maxPrice: null,
+  giftId: null,
 })
 
 // Available filter options (populated from loaded gifts)
 const allLoadedGifts = ref<any[]>([])
-const availableNames = computed(() => [...new Set(allLoadedGifts.value.map(g => g.name).filter(Boolean))].sort())
-const availableModels = computed(() => [...new Set(allLoadedGifts.value.map(g => g.model).filter(Boolean))].sort())
-const availableBackdrops = computed(() => [...new Set(allLoadedGifts.value.map(g => g.backdrop).filter(Boolean))].sort())
 
-// Filter buttons config
+// Build filter options for modals
+const collectionOptions = computed(() => {
+  const map = new Map<string, { count: number; minPrice: number; imageUrl?: string }>()
+  allLoadedGifts.value.forEach((g: any) => {
+    if (!g.name) return
+    const existing = map.get(g.name)
+    const price = Number(g.lowest_price_ton || g.min_price_ton || g.price || 0)
+    if (existing) {
+      existing.count++
+      if (price > 0 && (existing.minPrice === 0 || price < existing.minPrice)) {
+        existing.minPrice = price
+      }
+      if (!existing.imageUrl && g.image_url) existing.imageUrl = g.image_url
+    } else {
+      map.set(g.name, { count: 1, minPrice: price, imageUrl: g.image_url })
+    }
+  })
+  return Array.from(map.entries())
+    .map(([name, data]) => ({
+      value: name,
+      label: name,
+      count: data.count,
+      floorPrice: data.minPrice > 0 ? data.minPrice : undefined,
+      imageUrl: data.imageUrl,
+    }))
+    .sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0))
+})
+
+const modelOptions = computed(() => {
+  const map = new Map<string, { count: number; minPrice: number; total: number }>()
+  allLoadedGifts.value.forEach((g: any) => {
+    if (!g.model) return
+    const existing = map.get(g.model)
+    const price = Number(g.lowest_price_ton || g.min_price_ton || g.price || 0)
+    if (existing) {
+      existing.count++
+      if (price > 0 && (existing.minPrice === 0 || price < existing.minPrice)) {
+        existing.minPrice = price
+      }
+    } else {
+      map.set(g.model, { count: 1, minPrice: price, total: allLoadedGifts.value.length })
+    }
+  })
+  return Array.from(map.entries())
+    .map(([model, data]) => ({
+      value: model,
+      label: model,
+      count: data.count,
+      floorPrice: data.minPrice > 0 ? data.minPrice : undefined,
+      rarity: allLoadedGifts.value.length > 0
+        ? (data.count / allLoadedGifts.value.length * 100).toFixed(1) + '%'
+        : undefined,
+    }))
+    .sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0))
+})
+
+const backdropOptions = computed(() => {
+  const map = new Map<string, { count: number; minPrice: number }>()
+  allLoadedGifts.value.forEach((g: any) => {
+    if (!g.backdrop) return
+    const existing = map.get(g.backdrop)
+    const price = Number(g.lowest_price_ton || g.min_price_ton || g.price || 0)
+    if (existing) {
+      existing.count++
+      if (price > 0 && (existing.minPrice === 0 || price < existing.minPrice)) {
+        existing.minPrice = price
+      }
+    } else {
+      map.set(g.backdrop, { count: 1, minPrice: price })
+    }
+  })
+  return Array.from(map.entries())
+    .map(([backdrop, data]) => ({
+      value: backdrop,
+      label: backdrop,
+      count: data.count,
+      floorPrice: data.minPrice > 0 ? data.minPrice : undefined,
+    }))
+    .sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0))
+})
+
+const symbolOptions = computed(() => {
+  const map = new Map<string, { count: number; minPrice: number }>()
+  allLoadedGifts.value.forEach((g: any) => {
+    if (!g.symbol) return
+    const existing = map.get(g.symbol)
+    const price = Number(g.lowest_price_ton || g.min_price_ton || g.price || 0)
+    if (existing) {
+      existing.count++
+      if (price > 0 && (existing.minPrice === 0 || price < existing.minPrice)) {
+        existing.minPrice = price
+      }
+    } else {
+      map.set(g.symbol, { count: 1, minPrice: price })
+    }
+  })
+  return Array.from(map.entries())
+    .map(([symbol, data]) => ({
+      value: symbol,
+      label: symbol,
+      count: data.count,
+      floorPrice: data.minPrice > 0 ? data.minPrice : undefined,
+    }))
+    .sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0))
+})
+
+// Filter button config (Thermos-style: 7 buttons)
 const filterButtons = [
-  { key: 'type', label: 'Collections', filterGroup: 'names' },
+  { key: 'collections', label: 'Collections', filterGroup: 'names' },
   { key: 'model', label: 'Model', filterGroup: 'models' },
   { key: 'backdrop', label: 'Background', filterGroup: 'backdrops' },
+  { key: 'symbol', label: 'Symbol', filterGroup: 'symbols' },
+  { key: 'price', label: 'Price', filterGroup: 'price' },
+  { key: 'giftId', label: 'Gift ID', filterGroup: 'giftId' },
 ]
 
 const isFilterActive = (key: string) => {
-  const btn = filterButtons.find(f => f.key === key)
-  if (!btn) return false
-  const arr = filters[btn.filterGroup as keyof typeof filters]
-  return Array.isArray(arr) && arr.length > 0
-}
-
-const getFilterLabel = (f: typeof filterButtons[number]) => {
-  const arr = filters[f.filterGroup as keyof typeof filters]
-  if (Array.isArray(arr) && arr.length > 0) {
-    return arr[0] + (arr.length > 1 ? ` +${arr.length - 1}` : '')
-  }
-  return f.label
-}
-
-// Dropdown helpers for bottom sheet
-const dropdownTitle = computed(() => {
-  switch (openDropdown.value) {
-    case 'type': return 'Type'
-    case 'model': return 'Skin'
-    case 'backdrop': return 'Backdrop'
-    default: return ''
-  }
-})
-
-const dropdownOptions = computed(() => {
-  switch (openDropdown.value) {
-    case 'type': return availableNames.value
-    case 'model': return availableModels.value
-    case 'backdrop': return availableBackdrops.value
-    default: return []
-  }
-})
-
-const isDropdownOptionActive = (opt: string) => {
-  switch (openDropdown.value) {
-    case 'type': return filters.names.includes(opt)
-    case 'model': return filters.models.includes(opt)
-    case 'backdrop': return filters.backdrops.includes(opt)
+  switch (key) {
+    case 'collections': return filters.names.length > 0
+    case 'model': return filters.models.length > 0
+    case 'backdrop': return filters.backdrops.length > 0
+    case 'symbol': return filters.symbols.length > 0
+    case 'price': return filters.minPrice !== null || filters.maxPrice !== null
+    case 'giftId': return filters.giftId !== null
     default: return false
   }
 }
 
-const toggleDropdownOption = (opt: string) => {
-  switch (openDropdown.value) {
-    case 'type': toggleFilter('names', opt); break
-    case 'model': toggleFilter('models', opt); break
-    case 'backdrop': toggleFilter('backdrops', opt); break
+const getFilterLabel = (f: typeof filterButtons[number]) => {
+  switch (f.key) {
+    case 'collections':
+      return filters.names.length > 0
+        ? `Collections (${filters.names.length})`
+        : 'Collections'
+    case 'model':
+      return filters.models.length > 0
+        ? `Model (${filters.models.length})`
+        : 'Model'
+    case 'backdrop':
+      return filters.backdrops.length > 0
+        ? `Background (${filters.backdrops.length})`
+        : 'Background'
+    case 'symbol':
+      return filters.symbols.length > 0
+        ? `Symbol (${filters.symbols.length})`
+        : 'Symbol'
+    case 'price':
+      if (filters.minPrice !== null || filters.maxPrice !== null) {
+        const min = filters.minPrice ?? 0
+        const max = filters.maxPrice ?? '...'
+        return `${min} - ${max} TON`
+      }
+      return 'Price'
+    case 'giftId':
+      return filters.giftId !== null ? `#${filters.giftId}` : 'Gift ID'
+    default: return f.label
   }
 }
 
-const toggleFilter = (group: 'names' | 'models' | 'backdrops' | 'patterns' | 'symbols' | 'rarities', value: string) => {
-  const arr = filters[group]
-  const idx = arr.indexOf(value)
-  if (idx > -1) {
-    arr.splice(idx, 1)
-  } else {
-    arr.push(value)
+// Active filter tags (for removable tag bar)
+const activeFilterTags = computed(() => {
+  const tags: { key: string; label: string; imageUrl?: string }[] = []
+  filters.names.forEach(name => {
+    const opt = collectionOptions.value.find(o => o.value === name)
+    tags.push({ key: 'names', label: name, imageUrl: opt?.imageUrl })
+  })
+  filters.models.forEach(model => {
+    tags.push({ key: 'models', label: model })
+  })
+  filters.backdrops.forEach(backdrop => {
+    tags.push({ key: 'backdrops', label: backdrop })
+  })
+  filters.symbols.forEach(symbol => {
+    tags.push({ key: 'symbols', label: symbol })
+  })
+  if (filters.minPrice !== null || filters.maxPrice !== null) {
+    tags.push({ key: 'price', label: `${filters.minPrice ?? 0} - ${filters.maxPrice ?? '...'} TON` })
   }
+  if (filters.giftId !== null) {
+    tags.push({ key: 'giftId', label: `#${filters.giftId}` })
+  }
+  return tags
+})
+
+const handleRemoveTag = (key: string, label: string) => {
+  hapticImpact('light')
+  switch (key) {
+    case 'names':
+      filters.names = filters.names.filter(n => n !== label)
+      break
+    case 'models':
+      filters.models = filters.models.filter(m => m !== label)
+      break
+    case 'backdrops':
+      filters.backdrops = filters.backdrops.filter(b => b !== label)
+      break
+    case 'symbols':
+      filters.symbols = filters.symbols.filter(s => s !== label)
+      break
+    case 'price':
+      filters.minPrice = null
+      filters.maxPrice = null
+      break
+    case 'giftId':
+      filters.giftId = null
+      break
+  }
+  applyFilters()
+}
+
+const clearAllFilters = () => {
+  hapticImpact('medium')
+  filters.names = []
+  filters.models = []
+  filters.backdrops = []
+  filters.patterns = []
+  filters.symbols = []
+  filters.rarities = []
+  filters.minPrice = null
+  filters.maxPrice = null
+  filters.giftId = null
+  applyFilters()
+}
+
+// Open filter modals
+const openFilter = (key: string) => {
+  hapticImpact('light')
+  activeModal.value = key
+}
+
+// Apply filter handlers
+const applyCollectionFilter = (selected: string[]) => {
+  filters.names = selected
+  applyFilters()
+}
+const applyModelFilter = (selected: string[]) => {
+  filters.models = selected
+  applyFilters()
+}
+const applyBackdropFilter = (selected: string[]) => {
+  filters.backdrops = selected
+  applyFilters()
+}
+const applySymbolFilter = (selected: string[]) => {
+  filters.symbols = selected
+  applyFilters()
+}
+const applyPriceFilter = (min: number | null, max: number | null) => {
+  filters.minPrice = min
+  filters.maxPrice = max
+  applyFilters()
+}
+const applyGiftIdFilter = (id: number | null) => {
+  filters.giftId = id
+  applyFilters()
 }
 
 const applyFilters = () => {
@@ -312,12 +523,15 @@ const applyFilters = () => {
   fetchGifts()
 }
 
-// Sort options
+// Sort options (Thermos-style: 7 options)
 const sortOptions = [
-  { value: 'listed_at desc', label: 'Newest first' },
-  { value: 'listed_at asc', label: 'Oldest first' },
   { value: 'price asc', label: 'Price: Low to High' },
   { value: 'price desc', label: 'Price: High to Low' },
+  { value: 'id asc', label: 'Gift ID: Ascending' },
+  { value: 'id desc', label: 'Gift ID: Descending' },
+  { value: 'rarity asc', label: 'Model Rarity: Low to High' },
+  { value: 'rarity desc', label: 'Model Rarity: High to Low' },
+  { value: 'listed_at desc', label: 'Newest First' },
 ]
 
 // Methods
@@ -332,7 +546,6 @@ const setTab = (tab: string) => {
 const setSortBy = (value: string) => {
   hapticImpact('light')
   sortBy.value = value
-  showSortMenu.value = false
   fetchGifts()
 }
 
@@ -366,8 +579,7 @@ const fetchGifts = async () => {
         limit,
         offset,
       }
-      // Apply filters
-      if (filters.rarities.length === 1) params.rarity = filters.rarities[0]
+      // Apply server-side filters (single value)
       if (filters.models.length === 1) params.model = filters.models[0]
       if (filters.backdrops.length === 1) params.backdrop = filters.backdrops[0]
       if (filters.patterns.length === 1) params.pattern = filters.patterns[0]
@@ -384,20 +596,17 @@ const fetchGifts = async () => {
     if (filters.names.length > 0) {
       items = items.filter((g: any) => filters.names.includes(g.name))
     }
-    if (filters.rarities.length > 1) {
-      items = items.filter((g: any) => filters.rarities.includes(g.rarity))
-    }
     if (filters.models.length > 1) {
       items = items.filter((g: any) => filters.models.includes(g.model))
     }
     if (filters.backdrops.length > 1) {
       items = items.filter((g: any) => filters.backdrops.includes(g.backdrop))
     }
-    if (filters.patterns.length > 1) {
-      items = items.filter((g: any) => filters.patterns.includes(g.pattern))
-    }
     if (filters.symbols.length > 1) {
       items = items.filter((g: any) => filters.symbols.includes(g.symbol))
+    }
+    if (filters.giftId !== null) {
+      items = items.filter((g: any) => g.tg_id === filters.giftId || g.id === filters.giftId || g.index === filters.giftId)
     }
 
     // Populate filter options from first page load
@@ -412,7 +621,7 @@ const fetchGifts = async () => {
     // Show API data immediately
     gifts.value = items
 
-    // Enrich with aggregated prices in background (merge into existing objects)
+    // Enrich with aggregated prices in background
     const giftIds = items.map((g: any) => g.id || g.gift_id).filter(Boolean)
     if (giftIds.length > 0) {
       preloadPrices(giftIds).then(() => {
@@ -452,22 +661,10 @@ const fetchFilterOptions = async () => {
 
 const fetchMarketStats = async () => {
   try {
-    const data = await getStats()
-    if (data.volume_24h) {
-      volume24h.value = formatVolume(data.volume_24h)
-    }
-    if (data.ton_price) {
-      tonPrice.value = data.ton_price.toFixed(2)
-    }
-  } catch (e) {
+    await getStats()
+  } catch {
     // Use defaults
   }
-}
-
-const formatVolume = (vol: number): string => {
-  if (vol >= 1000000) return (vol / 1000000).toFixed(1) + 'M'
-  if (vol >= 1000) return (vol / 1000).toFixed(1) + 'K'
-  return vol.toString()
 }
 
 const handleGiftClick = (gift: any) => {
@@ -477,7 +674,6 @@ const handleGiftClick = (gift: any) => {
 
 const handleBuy = (_gift: any) => {
   hapticImpact('medium')
-  // Open buy modal
 }
 
 const handleSelect = (gift: any) => {
@@ -492,7 +688,6 @@ const handleSelect = (gift: any) => {
 
 const bulkBuy = () => {
   hapticImpact('heavy')
-  // Process bulk buy
 }
 
 onMounted(() => {
@@ -591,12 +786,17 @@ onMounted(() => {
   background: rgba(255,255,255,0.12);
   color: #fff;
 }
+.icon-btn--sm {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
 
-/* === Filters === */
+/* === Filters (Thermos-style) === */
 .filters {
   display: flex;
   gap: 6px;
-  padding: 0 16px 12px;
+  padding: 0 16px 8px;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -624,6 +824,24 @@ onMounted(() => {
 }
 .filter-btn:active {
   background: rgba(255,255,255,0.1);
+}
+
+/* === Controls row (quantity + sort) === */
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 8px;
+}
+.controls-row__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.controls-row__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* === Grid === */
@@ -745,154 +963,8 @@ onMounted(() => {
 }
 .cart-bar__checkout:disabled { opacity: 0.5; }
 .cart-bar__checkout:active { background: #1a6ae0; }
-
-/* === Sort overlay === */
-.sort-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+.cart-bar__ton {
+  flex-shrink: 0;
+  opacity: 0.85;
 }
-.sort-menu {
-  background: #1A1A1A;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 16px;
-  min-width: 240px;
-  overflow: hidden;
-}
-.sort-menu__header {
-  padding: 14px 16px 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.5);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.sort-menu__option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 12px 16px;
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 15px;
-  text-align: left;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.sort-menu__option:active { background: rgba(255,255,255,0.06); }
-.sort-menu__option.active { color: #2681FF; }
-.sort-menu__option.active svg { stroke: #2681FF; }
-.sort-fade-enter-active, .sort-fade-leave-active { transition: opacity 0.2s; }
-.sort-fade-enter-from, .sort-fade-leave-to { opacity: 0; }
-
-/* === Filter bottom sheet === */
-.filter-sheet-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  z-index: 300;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-.filter-sheet {
-  width: 100%;
-  max-width: 480px;
-  max-height: 65vh;
-  background: #1A1A1A;
-  border-radius: 20px 20px 0 0;
-  display: flex;
-  flex-direction: column;
-}
-.filter-sheet__handle {
-  width: 36px;
-  height: 4px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 2px;
-  margin: 10px auto 0;
-}
-.filter-sheet__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px 10px;
-}
-.filter-sheet__title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #fff;
-  margin: 0;
-}
-.filter-sheet__close {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,255,255,0.06);
-  border: none;
-  border-radius: 10px;
-  color: rgba(255,255,255,0.5);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.filter-sheet__body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 20px 16px;
-  -webkit-overflow-scrolling: touch;
-}
-.filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.filter-chip {
-  padding: 8px 14px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid transparent;
-  border-radius: 10px;
-  color: rgba(255,255,255,0.6);
-  font-size: 14px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.filter-chip:active { background: rgba(255,255,255,0.1); }
-.filter-chip.active {
-  background: rgba(38,129,255,0.12);
-  border-color: rgba(38,129,255,0.4);
-  color: #2681FF;
-}
-.filter-sheet__footer {
-  padding: 12px 20px 20px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-}
-.filter-sheet__done {
-  width: 100%;
-  padding: 14px;
-  background: #2681FF;
-  border: none;
-  border-radius: 12px;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.filter-sheet__done:active { opacity: 0.85; }
-.filter-overlay-enter-active, .filter-overlay-leave-active { transition: opacity 0.25s; }
-.filter-overlay-enter-from, .filter-overlay-leave-to { opacity: 0; }
-.sheet-slide-enter-active { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-.sheet-slide-leave-active { transition: transform 0.2s ease-in; }
-.sheet-slide-enter-from, .sheet-slide-leave-to { transform: translateY(100%); }
 </style>
