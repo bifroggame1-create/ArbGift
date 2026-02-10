@@ -101,13 +101,13 @@ let ballVY = 0
 const SPHERE_RADIUS = 120
 const BALL_RADIUS = 12
 const HOLE_SIZE = 0.45 // radians
-const GRAVITY = 0.28 // moderate gravity
-const BOUNCE = 0.72 // strong bounces — ball keeps energy on hits
-const SPRING_FORCE = 1.3 // solid kick off walls
-const FRICTION = 0.997 // minimal drag — ball holds inertia long
-const CENTRIFUGAL_FACTOR = 0.018 // gentle outward push
-const CORIOLIS_FACTOR = 0.035 // subtle deflection
-const MAX_SPEED = 11 // headroom for lively movement
+const GRAVITY = 0.30 // enough weight to hit walls
+const BOUNCE = 0.85 // superball-like restitution (real rubber ball = 0.85-0.92)
+const SPRING_FORCE = 0.8 // mild extra kick (less needed with high BOUNCE)
+const FRICTION = 0.998 // near-zero drag — ball stays lively for many seconds
+const CENTRIFUGAL_FACTOR = 0.020 // outward push in rotating frame
+const CORIOLIS_FACTOR = 0.04 // sideways deflection — adds interesting paths
+const MAX_SPEED = 12 // enough for energetic bounces
 
 // Trail effect
 const TRAIL_LENGTH = 16
