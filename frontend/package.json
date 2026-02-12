@@ -18,11 +18,14 @@
     "axios": "^1.6.8",
     "lightweight-charts": "^5.1.0",
     "lottie-web": "^5.13.0",
+    "matter-js": "^0.20.0",
     "pinia": "^2.1.7",
+    "pixi.js": "^8.16.0",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
   },
   "devDependencies": {
+    "@types/matter-js": "^0.20.2",
     "@types/node": "^20.12.7",
     "@vitejs/plugin-vue": "^5.0.4",
     "autoprefixer": "^10.4.19",

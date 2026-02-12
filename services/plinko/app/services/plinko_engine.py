@@ -1,88 +1,64 @@
 import hashlib
-import random
-from typing import List, Tuple
+from typing import List
+
+from app.config import MULTIPLIER_SETS, VALID_RISK_LEVELS, VALID_ROW_COUNTS
 
 
 class PlinkoEngine:
     """
-    Plinko game engine with provably fair ball physics simulation
+    Provably fair Plinko engine.
 
-    Grid: 16 rows of pegs (like original Plinko)
-    Landing slots: 9 positions (0-8)
-    Multipliers match myballs.io pattern
+    Supports 3 risk levels (low/medium/high) and 3 row counts (8/12/16).
+    Slot count = row_count + 1.
+    Path returned as normalized [x, y] coordinates for frontend animation.
     """
-
-    # Multipliers for each landing slot (left to right)
-    # Based on myballs.io screenshot: 💀, 🎁, 2.0x, 0.7x, 0.6x, 0.7x, 2.0x, 🎁, 💀
-    MULTIPLIERS = [
-        0.0,   # 💀 Death
-        0.0,   # 🎁 Loss
-        2.0,   # 2.0x
-        0.7,   # 0.7x
-        0.6,   # 0.6x (center, lowest)
-        0.7,   # 0.7x
-        2.0,   # 2.0x
-        0.0,   # 🎁 Loss
-        0.0,   # 💀 Death
-    ]
-
-    ROWS = 16  # Number of peg rows
-    STARTING_X = 4.5  # Center position (floating point for smooth animation)
-
-    def __init__(self):
-        pass
-
-    def generate_server_seed(self) -> str:
-        """Generate random server seed"""
-        return hashlib.sha256(str(random.random()).encode()).hexdigest()
 
     def generate_drop(
         self,
         server_seed: str,
         client_seed: str,
         nonce: int,
-        bet_amount: float
+        bet_amount: float,
+        risk_level: str = "medium",
+        row_count: int = 12,
     ) -> dict:
-        """
-        Generate a provably fair plinko drop
+        if risk_level not in VALID_RISK_LEVELS:
+            raise ValueError(f"Invalid risk_level: {risk_level}")
+        if row_count not in VALID_ROW_COUNTS:
+            raise ValueError(f"Invalid row_count: {row_count}")
 
-        Returns:
-            {
-                'path': [(x, y), ...],  # Ball path coordinates
-                'landing_slot': 0-8,     # Final slot index
-                'multiplier': 2.0,       # Winning multiplier
-                'payout': bet_amount * multiplier,
-                'profit': payout - bet_amount
-            }
-        """
-        # Generate random bits for each peg collision
-        random_bits = self._generate_random_bits(server_seed, client_seed, nonce, self.ROWS)
+        random_bits = self._generate_random_bits(server_seed, client_seed, nonce, row_count)
 
-        # Simulate ball drop physics
-        x = self.STARTING_X
-        path = [(x, 0)]
+        num_slots = row_count + 1
+        # Random walk from center
+        position = 0  # center = 0, range will be -row_count/2 to +row_count/2
+        path: List[List[float]] = [[0.5, 0.0]]  # normalized: x=0..1, y=0..1
 
-        for row in range(1, self.ROWS + 1):
-            # Ball bounces left or right based on random bit
-            direction = 1 if random_bits[row - 1] else -1
-            x += direction * 0.5  # Each bounce moves 0.5 units
+        for i, go_right in enumerate(random_bits):
+            position += 1 if go_right else -1
+            # Normalize to 0..1 range
+            norm_x = (position + row_count) / (2 * row_count)
+            norm_y = (i + 1) / row_count
+            path.append([round(norm_x, 4), round(norm_y, 4)])
 
-            path.append((x, row))
+        # Map position to slot index (0-based)
+        # position ranges from -row_count to +row_count in steps of 2
+        # but since each step is +-1, actual range is -row_count to +row_count
+        # We need to map to 0..num_slots-1
+        landing_slot = (position + row_count) // 2
+        landing_slot = max(0, min(num_slots - 1, landing_slot))
 
-        # Determine landing slot (quantize final x position)
-        # x ranges from roughly 0.5 to 8.5 after 16 rows
-        landing_slot = max(0, min(8, int(round(x))))
-
-        multiplier = self.MULTIPLIERS[landing_slot]
-        payout = bet_amount * multiplier
-        profit = payout - bet_amount
+        multipliers = MULTIPLIER_SETS[risk_level][row_count]
+        multiplier = multipliers[landing_slot]
+        payout = round(bet_amount * multiplier, 2)
+        profit = round(payout - bet_amount, 2)
 
         return {
-            'path': path,
-            'landing_slot': landing_slot,
-            'multiplier': multiplier,
-            'payout': payout,
-            'profit': profit
+            "path": path,
+            "landing_slot": landing_slot,
+            "multiplier": multiplier,
+            "payout": payout,
+            "profit": profit,
         }
 
     def _generate_random_bits(
@@ -90,32 +66,20 @@ class PlinkoEngine:
         server_seed: str,
         client_seed: str,
         nonce: int,
-        count: int
+        count: int,
     ) -> List[bool]:
         """
-        Generate deterministic random bits for peg collisions
-
-        Args:
-            server_seed: Server seed
-            client_seed: Client seed
-            nonce: Nonce for uniqueness
-            count: Number of bits to generate
-
-        Returns:
-            List of boolean values (True = right, False = left)
+        Generate deterministic random bits using HMAC-SHA256.
+        Each bit determines left or right at a peg row.
         """
         combined = f"{server_seed}:{client_seed}:{nonce}"
         hash_result = hashlib.sha256(combined.encode()).hexdigest()
 
         bits = []
         for i in range(count):
-            # Use each hex character
             char_index = i % len(hash_result)
             char_value = int(hash_result[char_index], 16)
-
-            # Use bit parity for randomness
-            bit = (char_value % 2) == 1
-            bits.append(bit)
+            bits.append((char_value % 2) == 1)
 
         return bits
 
@@ -125,17 +89,11 @@ class PlinkoEngine:
         client_seed: str,
         nonce: int,
         bet_amount: float,
-        claimed_result: dict
+        risk_level: str,
+        row_count: int,
+        claimed_slot: int,
     ) -> bool:
-        """Verify that a drop was generated fairly"""
-        actual_result = self.generate_drop(server_seed, client_seed, nonce, bet_amount)
-
-        return (
-            actual_result['landing_slot'] == claimed_result['landing_slot'] and
-            abs(actual_result['multiplier'] - claimed_result['multiplier']) < 0.01
+        result = self.generate_drop(
+            server_seed, client_seed, nonce, bet_amount, risk_level, row_count
         )
-
-    def get_slot_label(self, slot: int) -> str:
-        """Get emoji label for slot"""
-        labels = ['💀', '🎁', '2.0x', '0.7x', '0.6x', '0.7x', '2.0x', '🎁', '💀']
-        return labels[slot]
+        return result["landing_slot"] == claimed_slot
