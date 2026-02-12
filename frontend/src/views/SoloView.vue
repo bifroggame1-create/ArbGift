@@ -39,23 +39,6 @@
         </div>
       </router-link>
 
-      <router-link to="/upgrade" class="game-card base-active-btn card-upgrade">
-        <div class="card-bg">
-          <div class="upgrade-visual">
-            <div class="upgrade-arrow">
-              <svg viewBox="0 0 48 48" fill="none">
-                <path d="M24 40V12M24 12L12 24M24 12L36 24" stroke="rgba(255,197,2,0.6)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div class="card-badge hot-badge">HOT</div>
-        <div class="card-content">
-          <h3 class="card-title">Gift Upgrade</h3>
-          <p class="card-subtitle">Upgrade your gifts</p>
-        </div>
-      </router-link>
-
       <router-link to="/rocket" class="game-card base-active-btn card-rocket game-card-wide rocket-banner">
         <div class="card-bg rocket-bg">
           <!-- Blurred light circles -->
@@ -93,7 +76,24 @@
         </div>
       </router-link>
 
-      <router-link to="/lucky" class="game-card base-active-btn card-lucky game-card-wide">
+      <router-link to="/upgrade" class="game-card base-active-btn card-upgrade">
+        <div class="card-bg">
+          <div class="upgrade-visual">
+            <div class="upgrade-arrow">
+              <svg viewBox="0 0 48 48" fill="none">
+                <path d="M24 40V12M24 12L12 24M24 12L36 24" stroke="rgba(255,197,2,0.6)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="card-badge hot-badge">HOT</div>
+        <div class="card-content">
+          <h3 class="card-title">Gift Upgrade</h3>
+          <p class="card-subtitle">Upgrade your gifts</p>
+        </div>
+      </router-link>
+
+      <router-link to="/lucky" class="game-card base-active-btn card-lucky">
         <div class="card-bg">
           <div class="lucky-visual">
             <div class="lucky-icon">🎡</div>
