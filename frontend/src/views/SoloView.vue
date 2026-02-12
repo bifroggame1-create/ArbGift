@@ -7,7 +7,7 @@
     <!-- Trading — full-width banner card -->
     <router-link to="/trading" class="banner-card base-active-btn">
       <div class="banner-bg">
-        <img src="/images/app-trading-bg-1.webp" class="banner-image" alt="" />
+        <img src="/images/trading-card-bg.webp" class="banner-image" alt="" />
       </div>
       <div class="banner-badge">NEW</div>
       <div class="banner-content">
@@ -22,6 +22,7 @@
         <div class="card-bg">
           <img src="/images/plinko-card-bg-1.webp" class="card-image" alt="" />
         </div>
+        <div class="card-badge mult-badge">x100</div>
         <div class="card-content">
           <h3 class="card-title">Gift Plinko</h3>
           <p class="card-subtitle">Plinko with gifts</p>
@@ -30,12 +31,7 @@
 
       <router-link to="/ball-escape" class="game-card base-active-btn card-ball-escape">
         <div class="card-bg">
-          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
-            <circle cx="70" cy="40" r="20" fill="rgba(139,92,246,0.2)"/>
-            <circle cx="40" cy="65" r="15" fill="rgba(168,85,247,0.15)"/>
-            <circle cx="85" cy="75" r="12" fill="rgba(139,92,246,0.25)"/>
-            <circle cx="55" cy="35" r="8" fill="rgba(168,85,247,0.3)"/>
-          </svg>
+          <img src="/images/escape-card-bg.webp" class="card-image" alt="" />
         </div>
         <div class="card-content">
           <h3 class="card-title">Ball Escape</h3>
@@ -45,12 +41,15 @@
 
       <router-link to="/upgrade" class="game-card base-active-btn card-upgrade">
         <div class="card-bg">
-          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
-            <path d="M60 20 L80 55 H68 L75 95 H45 L52 55 H40 Z" fill="rgba(255,197,2,0.25)"/>
-            <path d="M55 35 L68 58 H60 L65 85 H50 L55 58 H47 Z" fill="rgba(255,197,2,0.15)"/>
-          </svg>
+          <div class="upgrade-visual">
+            <div class="upgrade-arrow">
+              <svg viewBox="0 0 48 48" fill="none">
+                <path d="M24 40V12M24 12L12 24M24 12L36 24" stroke="rgba(255,197,2,0.6)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
         </div>
-        <div class="card-badge">HOT</div>
+        <div class="card-badge hot-badge">HOT</div>
         <div class="card-content">
           <h3 class="card-title">Gift Upgrade</h3>
           <p class="card-subtitle">Upgrade your gifts</p>
@@ -59,13 +58,9 @@
 
       <router-link to="/rocket" class="game-card base-active-btn card-rocket">
         <div class="card-bg">
-          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
-            <path d="M60 15 C60 15 80 40 80 70 C80 85 70 95 60 100 C50 95 40 85 40 70 C40 40 60 15 60 15Z" fill="rgba(239,68,68,0.15)" stroke="rgba(239,68,68,0.25)" stroke-width="1"/>
-            <circle cx="60" cy="55" r="8" fill="rgba(239,68,68,0.25)"/>
-            <path d="M50 85 L45 100" stroke="rgba(251,146,60,0.3)" stroke-width="2"/>
-            <path d="M60 90 L60 105" stroke="rgba(251,146,60,0.25)" stroke-width="2"/>
-            <path d="M70 85 L75 100" stroke="rgba(251,146,60,0.3)" stroke-width="2"/>
-          </svg>
+          <div class="rocket-visual">
+            <div class="rocket-icon">🚀</div>
+          </div>
         </div>
         <div class="card-content">
           <h3 class="card-title">Rocket</h3>
@@ -73,13 +68,13 @@
         </div>
       </router-link>
 
-      <router-link to="/lucky" class="game-card base-active-btn card-lucky">
+      <router-link to="/lucky" class="game-card base-active-btn card-lucky game-card-wide">
         <div class="card-bg">
-          <svg class="card-decoration" viewBox="0 0 120 120" fill="none">
-            <circle cx="60" cy="55" r="35" fill="rgba(0,255,98,0.06)" stroke="rgba(0,255,98,0.15)" stroke-width="1"/>
-            <path d="M60 30 L63 48 L80 42 L68 55 L85 60 L68 65 L80 78 L63 62 L60 80 L57 62 L40 78 L52 65 L35 60 L52 55 L40 42 L57 48 Z" fill="rgba(0,255,98,0.12)"/>
-          </svg>
+          <div class="lucky-visual">
+            <div class="lucky-icon">🎡</div>
+          </div>
         </div>
+        <div class="card-badge soon-badge">SOON</div>
         <div class="card-content">
           <h3 class="card-title">Lucky Wheel</h3>
           <p class="card-subtitle">Spin to win</p>
@@ -102,7 +97,7 @@
 /* ---------- Header ---------- */
 .page-header {
   text-align: center;
-  padding: 8px 0 20px;
+  padding: 8px 0 16px;
 }
 
 .page-title {
@@ -117,8 +112,8 @@
   display: block;
   position: relative;
   width: 100%;
-  height: 150px;
-  border-radius: var(--mb-radius-lg, 16px);
+  height: 140px;
+  border-radius: 16px;
   overflow: hidden;
   text-decoration: none;
   color: #fff;
@@ -146,7 +141,7 @@
   font-weight: 700;
   letter-spacing: 0.5px;
   background: rgba(0, 255, 98, 0.15);
-  color: var(--mb-green, #00FF62);
+  color: #00FF62;
   backdrop-filter: blur(4px);
 }
 
@@ -167,7 +162,7 @@
 
 .banner-subtitle {
   font-size: 13px;
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  color: rgba(255, 255, 255, 0.5);
   margin: 0;
 }
 
@@ -181,13 +176,18 @@
 .game-card {
   position: relative;
   aspect-ratio: 1 / 1;
-  border-radius: var(--mb-radius-lg, 16px);
+  border-radius: 16px;
   overflow: hidden;
   text-decoration: none;
   color: #fff;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+}
+
+.game-card-wide {
+  grid-column: 1 / -1;
+  aspect-ratio: 2.2 / 1;
 }
 
 /* Card backgrounds */
@@ -202,41 +202,87 @@
   object-fit: cover;
 }
 
-.card-ball-escape .card-bg {
-  background: linear-gradient(160deg, #2d1a5e 0%, #1a0f3a 60%, #100a24 100%);
-}
-
 .card-upgrade .card-bg {
   background: linear-gradient(160deg, #3a2d0a 0%, #2a1f05 60%, #1a1400 100%);
 }
 
 .card-rocket .card-bg {
-  background: linear-gradient(160deg, #3a1a1a 0%, #2a0e0e 60%, #1e0808 100%);
+  background: linear-gradient(160deg, #2a1030 0%, #1a0a20 60%, #0e0614 100%);
 }
 
 .card-lucky .card-bg {
-  background: linear-gradient(160deg, #0a3a1a 0%, #052a10 60%, #031e0a 100%);
+  background: linear-gradient(160deg, #0a2a3a 0%, #061a2a 60%, #03101e 100%);
 }
 
+/* Badges */
 .card-badge {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 10px;
+  top: 10px;
+  right: 10px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  background: rgba(255, 197, 2, 0.15);
-  color: var(--mb-gold, #FFC502);
   z-index: 2;
+  backdrop-filter: blur(4px);
 }
 
-.card-decoration {
+.mult-badge {
+  background: rgba(57, 26, 173, 0.4);
+  color: #A78BFA;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+.hot-badge {
+  background: rgba(255, 197, 2, 0.15);
+  color: #FFC502;
+}
+
+.soon-badge {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Card visuals */
+.upgrade-visual {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upgrade-arrow {
+  width: 60px;
+  height: 60px;
+  opacity: 0.6;
+}
+
+.rocket-visual {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rocket-icon {
+  font-size: 48px;
+  filter: drop-shadow(0 4px 12px rgba(239, 68, 68, 0.3));
+}
+
+.lucky-visual {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lucky-icon {
+  font-size: 52px;
+  filter: drop-shadow(0 4px 12px rgba(52, 211, 153, 0.3));
 }
 
 /* Card content overlay */
@@ -244,7 +290,7 @@
   position: relative;
   z-index: 1;
   padding: 14px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
 }
 
 .card-title {
@@ -255,7 +301,7 @@
 
 .card-subtitle {
   font-size: 12px;
-  color: var(--mb-text-secondary, rgba(255, 255, 255, 0.5));
+  color: rgba(255, 255, 255, 0.5);
   margin: 0;
 }
 </style>
