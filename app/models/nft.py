@@ -37,12 +37,15 @@ class NFT(Base):
     animation_url: Mapped[Optional[str]] = mapped_column(String(500))
     animation_cdn_url: Mapped[Optional[str]] = mapped_column(String(500))
 
+    # Gift type (base name without #number, e.g. "Snoop Dogg" from "Snoop Dogg #293737")
+    gift_type: Mapped[Optional[str]] = mapped_column(String(200), index=True)
+
     # Denormalized attributes for search
     rarity: Mapped[Optional[str]] = mapped_column(String(50), index=True)
-    backdrop: Mapped[Optional[str]] = mapped_column(String(100))
-    model: Mapped[Optional[str]] = mapped_column(String(100))
-    symbol: Mapped[Optional[str]] = mapped_column(String(100))
-    pattern: Mapped[Optional[str]] = mapped_column(String(100))
+    backdrop: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+    model: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+    symbol: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+    pattern: Mapped[Optional[str]] = mapped_column(String(100), index=True)
 
     # Full attributes
     attributes: Mapped[Optional[List[dict]]] = mapped_column(JSONB, default=[])

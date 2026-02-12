@@ -205,7 +205,7 @@ import SortDropdown from '../components/SortDropdown.vue'
 import ActiveFilterTags from '../components/ActiveFilterTags.vue'
 import { useTelegram } from '../composables/useTelegram'
 import { useMarketAggregator } from '../composables/useMarketAggregator'
-import { getGifts, searchGifts, getStats } from '../api/client'
+import { getGifts, getFilters, searchGifts, getStats } from '../api/client'
 
 const router = useRouter()
 const { hapticImpact } = useTelegram()
@@ -258,114 +258,20 @@ const filters = reactive<Filters>({
   giftId: null,
 })
 
-// Available filter options (populated from loaded gifts)
-const allLoadedGifts = ref<any[]>([])
+// Filter options from backend API (not computed from loaded gifts)
+const collectionOptions = ref<any[]>([])
+const modelOptions = ref<any[]>([])
+const backdropOptions = ref<any[]>([])
+const symbolOptions = ref<any[]>([])
 
-// Build filter options for modals
-const collectionOptions = computed(() => {
-  const map = new Map<string, { count: number; minPrice: number; imageUrl?: string }>()
-  allLoadedGifts.value.forEach((g: any) => {
-    if (!g.name) return
-    const existing = map.get(g.name)
-    const price = Number(g.lowest_price_ton || g.min_price_ton || g.price || 0)
-    if (existing) {
-      existing.count++
-      if (price > 0 && (existing.minPrice === 0 || price < existing.minPrice)) {
-        existing.minPrice = price
-      }
-      if (!existing.imageUrl && g.image_url) existing.imageUrl = g.image_url
-    } else {
-      map.set(g.name, { count: 1, minPrice: price, imageUrl: g.image_url })
-    }
-  })
-  return Array.from(map.entries())
-    .map(([name, data]) => ({
-      value: name,
-      label: name,
-      count: data.count,
-      floorPrice: data.minPrice > 0 ? data.minPrice : undefined,
-      imageUrl: data.imageUrl,
-    }))
-    .sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0))
-})
-
-const modelOptions = computed(() => {
-  const map = new Map<string, { count: number; minPrice: number; total: number }>()
-  allLoadedGifts.value.forEach((g: any) => {
-    if (!g.model) return
-    const existing = map.get(g.model)
-    const price = Number(g.lowest_price_ton || g.min_price_ton || g.price || 0)
-    if (existing) {
-      existing.count++
-      if (price > 0 && (existing.minPrice === 0 || price < existing.minPrice)) {
-        existing.minPrice = price
-      }
-    } else {
-      map.set(g.model, { count: 1, minPrice: price, total: allLoadedGifts.value.length })
-    }
-  })
-  return Array.from(map.entries())
-    .map(([model, data]) => ({
-      value: model,
-      label: model,
-      count: data.count,
-      floorPrice: data.minPrice > 0 ? data.minPrice : undefined,
-      rarity: allLoadedGifts.value.length > 0
-        ? (data.count / allLoadedGifts.value.length * 100).toFixed(1) + '%'
-        : undefined,
-    }))
-    .sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0))
-})
-
-const backdropOptions = computed(() => {
-  const map = new Map<string, { count: number; minPrice: number }>()
-  allLoadedGifts.value.forEach((g: any) => {
-    if (!g.backdrop) return
-    const existing = map.get(g.backdrop)
-    const price = Number(g.lowest_price_ton || g.min_price_ton || g.price || 0)
-    if (existing) {
-      existing.count++
-      if (price > 0 && (existing.minPrice === 0 || price < existing.minPrice)) {
-        existing.minPrice = price
-      }
-    } else {
-      map.set(g.backdrop, { count: 1, minPrice: price })
-    }
-  })
-  return Array.from(map.entries())
-    .map(([backdrop, data]) => ({
-      value: backdrop,
-      label: backdrop,
-      count: data.count,
-      floorPrice: data.minPrice > 0 ? data.minPrice : undefined,
-    }))
-    .sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0))
-})
-
-const symbolOptions = computed(() => {
-  const map = new Map<string, { count: number; minPrice: number }>()
-  allLoadedGifts.value.forEach((g: any) => {
-    if (!g.symbol) return
-    const existing = map.get(g.symbol)
-    const price = Number(g.lowest_price_ton || g.min_price_ton || g.price || 0)
-    if (existing) {
-      existing.count++
-      if (price > 0 && (existing.minPrice === 0 || price < existing.minPrice)) {
-        existing.minPrice = price
-      }
-    } else {
-      map.set(g.symbol, { count: 1, minPrice: price })
-    }
-  })
-  return Array.from(map.entries())
-    .map(([symbol, data]) => ({
-      value: symbol,
-      label: symbol,
-      count: data.count,
-      floorPrice: data.minPrice > 0 ? data.minPrice : undefined,
-    }))
-    .sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0))
-})
+const mapFilterOptions = (opts: any[]) =>
+  opts.map((o: any) => ({
+    value: o.value,
+    label: o.value,
+    count: o.count,
+    floorPrice: o.floor_price || undefined,
+    imageUrl: o.image_url || undefined,
+  })).sort((a: any, b: any) => (b.count || 0) - (a.count || 0))
 
 // Filter button config (Thermos-style: 7 buttons)
 const filterButtons = [
@@ -575,44 +481,24 @@ const fetchGifts = async () => {
     } else {
       const params: Record<string, any> = {
         is_on_sale: true,
-        sort: sortBy.value,
+        sort_by: sortBy.value,
         limit,
         offset,
       }
-      // Apply server-side filters (single value)
-      if (filters.models.length === 1) params.model = filters.models[0]
-      if (filters.backdrops.length === 1) params.backdrop = filters.backdrops[0]
-      if (filters.patterns.length === 1) params.pattern = filters.patterns[0]
-      if (filters.symbols.length === 1) params.symbol = filters.symbols[0]
-      if (filters.minPrice !== null) params.min_price = filters.minPrice
-      if (filters.maxPrice !== null) params.max_price = filters.maxPrice
+      // All filters sent server-side (multi-value as comma-separated)
+      if (filters.names.length > 0) params.gift_type = filters.names.join(',')
+      if (filters.models.length > 0) params.model = filters.models.join(',')
+      if (filters.backdrops.length > 0) params.backdrop = filters.backdrops.join(',')
+      if (filters.patterns.length > 0) params.pattern = filters.patterns.join(',')
+      if (filters.symbols.length > 0) params.symbol = filters.symbols.join(',')
+      if (filters.minPrice !== null) params.price_min = filters.minPrice
+      if (filters.maxPrice !== null) params.price_max = filters.maxPrice
+      if (filters.giftId !== null) params.search = `#${filters.giftId}`
 
       data = await getGifts(params)
     }
 
     let items = data.items || data || []
-
-    // Client-side filtering for multi-select and name filters
-    if (filters.names.length > 0) {
-      items = items.filter((g: any) => filters.names.includes(g.name))
-    }
-    if (filters.models.length > 1) {
-      items = items.filter((g: any) => filters.models.includes(g.model))
-    }
-    if (filters.backdrops.length > 1) {
-      items = items.filter((g: any) => filters.backdrops.includes(g.backdrop))
-    }
-    if (filters.symbols.length > 1) {
-      items = items.filter((g: any) => filters.symbols.includes(g.symbol))
-    }
-    if (filters.giftId !== null) {
-      items = items.filter((g: any) => g.tg_id === filters.giftId || g.id === filters.giftId || g.index === filters.giftId)
-    }
-
-    // Populate filter options from first page load
-    if (allLoadedGifts.value.length === 0 && items.length > 0) {
-      allLoadedGifts.value = items
-    }
 
     if (data.total) {
       totalPages.value = Math.ceil(data.total / limit)
@@ -649,13 +535,13 @@ const fetchGifts = async () => {
 
 const fetchFilterOptions = async () => {
   try {
-    const data = await getGifts({ is_on_sale: true, limit: 500 })
-    const items = data.items || data || []
-    if (items.length > 0) {
-      allLoadedGifts.value = items
-    }
+    const filtersData = await getFilters({ is_on_sale: true })
+    collectionOptions.value = mapFilterOptions(filtersData.gift_types || [])
+    modelOptions.value = mapFilterOptions(filtersData.models || [])
+    backdropOptions.value = mapFilterOptions(filtersData.backdrops || [])
+    symbolOptions.value = mapFilterOptions(filtersData.symbols || [])
   } catch {
-    // Use whatever is loaded
+    // Filters will remain empty
   }
 }
 

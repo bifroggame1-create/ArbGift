@@ -6,6 +6,7 @@
 """
 import asyncio
 import logging
+import re
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
@@ -21,6 +22,25 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 logger = logging.getLogger(__name__)
+
+
+def extract_gift_type(name: str) -> str:
+    """
+    Extract base gift type from name.
+    'Snoop Dogg #293737' -> 'Snoop Dogg'
+    'Ice Cream' -> 'Ice Cream'
+    'InstantRamen-130959' -> 'Instant Ramen'
+    """
+    if not name:
+        return name
+    # Remove '#number' suffix
+    cleaned = re.sub(r'\s*#\d+$', '', name).strip()
+    # Handle slug format: 'InstantRamen-130959' -> 'Instant Ramen'
+    if '-' in cleaned and not ' ' in cleaned:
+        cleaned = re.sub(r'-\d+$', '', cleaned)
+        # Split camelCase: 'InstantRamen' -> 'Instant Ramen'
+        cleaned = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', cleaned)
+    return cleaned
 
 
 class PortalsMarketLoader:
@@ -351,11 +371,14 @@ class SyncDataLoader:
                     )
                     nft = result.scalar_one_or_none()
 
+                    gift_type = extract_gift_type(name)
+
                     if not nft:
                         nft = NFT(
                             address=nft_address,
                             collection_id=collection.id,
                             name=name,
+                            gift_type=gift_type,
                             image_url=photo_url,
                             model=model,
                             backdrop=backdrop,
@@ -370,6 +393,8 @@ class SyncDataLoader:
                     else:
                         nft.is_on_sale = True
                         nft.lowest_price_ton = min(nft.lowest_price_ton or price, price)
+                        if gift_type and not nft.gift_type:
+                            nft.gift_type = gift_type
 
                     # Создаём или обновляем листинг
                     result = await session.execute(
@@ -454,6 +479,7 @@ class SyncDataLoader:
 
                     # Создаём или обновляем NFT
                     nft_address = f"major-{address}" if address else f"major-{slug}"
+                    gift_type = extract_gift_type(name)
 
                     result = await session.execute(
                         select(NFT).where(NFT.address == nft_address)
@@ -465,6 +491,7 @@ class SyncDataLoader:
                             address=nft_address,
                             collection_id=collection.id,
                             name=name,
+                            gift_type=gift_type,
                             image_url=image,
                             is_on_sale=True,
                             lowest_price_ton=min_bid,
@@ -476,6 +503,8 @@ class SyncDataLoader:
                         nft.is_on_sale = True
                         if min_bid > 0:
                             nft.lowest_price_ton = min(nft.lowest_price_ton or min_bid, min_bid)
+                        if gift_type and not nft.gift_type:
+                            nft.gift_type = gift_type
 
                     # Создаём или обновляем листинг
                     market_listing_id = address or slug
@@ -594,6 +623,8 @@ class SyncDataLoader:
                                     symbol = attr_value
 
                     # Создаём или обновляем NFT
+                    gift_type = extract_gift_type(name)
+
                     result = await session.execute(
                         select(NFT).where(NFT.address == nft_address)
                     )
@@ -606,6 +637,7 @@ class SyncDataLoader:
                             address=nft_address,
                             collection_id=collection.id,
                             name=name,
+                            gift_type=gift_type,
                             image_url=image_url or None,
                             model=model,
                             backdrop=backdrop,
@@ -629,6 +661,8 @@ class SyncDataLoader:
                             nft.model = model
                         if backdrop and not nft.backdrop:
                             nft.backdrop = backdrop
+                        if gift_type and not nft.gift_type:
+                            nft.gift_type = gift_type
 
                     # Создаём или обновляем листинг
                     market_listing_id = nl.market_listing_id or nft_address
@@ -798,12 +832,15 @@ class SyncDataLoader:
 
                             attributes_json = gift.attributes_raw or []
 
+                            gift_type_name = gift.title  # Already base name like "Snoop Dogg"
+
                             if not nft:
                                 nft = NFT(
                                     address=nft_address,
                                     collection_id=collection.id,
                                     index=gift.num,
                                     name=f"{gift.title} #{gift.num}",
+                                    gift_type=gift_type_name,
                                     image_url=f"https://t.me/nft/{gift.slug}",
                                     model=gift.model_name,
                                     backdrop=gift.backdrop_name,
@@ -830,6 +867,8 @@ class SyncDataLoader:
                                 nft.is_on_sale = True
                                 nft.owner_address = gift.owner_address or nft.owner_address
                                 nft.attributes = attributes_json
+                                if gift_type_name and not nft.gift_type:
+                                    nft.gift_type = gift_type_name
                                 if rarity:
                                     nft.rarity = rarity
                                 if gift.model_name:

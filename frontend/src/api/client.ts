@@ -78,19 +78,46 @@ export interface Listing {
 
 export const getGifts = async (params?: {
   collection_id?: number
+  gift_type?: string
   rarity?: string
   model?: string
   backdrop?: string
   pattern?: string
   symbol?: string
   is_on_sale?: boolean
-  min_price?: number
-  max_price?: number
-  sort?: string
+  price_min?: number
+  price_max?: number
+  sort_by?: string
   limit?: number
   offset?: number
+  search?: string
 }) => {
   const response = await api.get('/api/v1/gifts', { params })
+  return response.data
+}
+
+export interface FilterOption {
+  value: string
+  count: number
+  floor_price?: number
+  image_url?: string
+}
+
+export interface FiltersData {
+  gift_types: FilterOption[]
+  models: FilterOption[]
+  backdrops: FilterOption[]
+  symbols: FilterOption[]
+  patterns: FilterOption[]
+  rarities: FilterOption[]
+  price_range: { min: number; max: number }
+}
+
+export const getFilters = async (params?: {
+  gift_type?: string
+  is_on_sale?: boolean
+}): Promise<FiltersData> => {
+  const response = await api.get('/api/v1/gifts/filters', { params })
   return response.data
 }
 
