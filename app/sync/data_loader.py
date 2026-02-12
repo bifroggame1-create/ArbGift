@@ -220,6 +220,7 @@ class SyncDataLoader:
         self.portals_loader = PortalsMarketLoader()
         self.major_loader = MajorMarketLoader()
         self._adapters = []
+        self._telegram_indexer = None
 
     async def close(self):
         await self.portals_loader.close()
@@ -227,6 +228,11 @@ class SyncDataLoader:
         for adapter in self._adapters:
             try:
                 await adapter.close()
+            except Exception:
+                pass
+        if self._telegram_indexer:
+            try:
+                await self._telegram_indexer.disconnect()
             except Exception:
                 pass
 
@@ -701,6 +707,195 @@ class SyncDataLoader:
             max_items=max_items,
         )
 
+    async def sync_telegram_listings(self, max_items_per_type: int = 5000) -> int:
+        """
+        Синхронизировать листинги через Telegram MTProto API.
+
+        Это основной источник данных — видит ВСЕ гифты на ресейле,
+        т.к. ресейл происходит через сам Telegram.
+
+        Returns: количество добавленных/обновлённых записей
+        """
+        from app.indexer.telegram_gifts import TelegramGiftIndexer
+
+        logger.info("[SyncLoader] Начинаю синхронизацию с Telegram MTProto...")
+
+        indexer = TelegramGiftIndexer()
+        self._telegram_indexer = indexer
+
+        try:
+            await indexer.connect()
+        except Exception as e:
+            logger.error(f"[SyncLoader] Не удалось подключиться к Telegram: {e}")
+            return 0
+
+        count = 0
+
+        try:
+            catalog = await indexer.get_catalog()
+
+            async with get_async_session() as session:
+                # Маркет "telegram" — сам Telegram (ресейл через приложение)
+                market = await self.ensure_market_exists(
+                    session,
+                    slug="telegram",
+                    name="Telegram",
+                    url="https://t.me",
+                )
+
+                collection = await self.ensure_collection_exists(
+                    session,
+                    address="telegram-gifts",
+                    name="Telegram Gifts",
+                    slug="telegram-gifts",
+                )
+
+                for gift_type in catalog:
+                    type_count = 0
+                    logger.info(
+                        f"[SyncLoader] Telegram: {gift_type.title or gift_type.id} "
+                        f"({gift_type.availability_resale} on resale)"
+                    )
+
+                    async for gift in indexer.iter_resale_gifts(
+                        gift_type.id,
+                        max_pages=max_items_per_type // 100 + 1,
+                    ):
+                        try:
+                            # NFT address: используем slug (уникальный) или gift_address (TON)
+                            nft_address = gift.gift_address or f"tg-{gift.slug}"
+
+                            price_ton = gift.price_ton or Decimal("0")
+                            price_stars = gift.price_stars or 0
+
+                            # Определяем rarity
+                            rarity = None
+                            min_rarity = min(
+                                r for r in [
+                                    gift.model_rarity,
+                                    gift.pattern_rarity,
+                                    gift.backdrop_rarity,
+                                ] if r is not None
+                            ) if any(r is not None for r in [gift.model_rarity, gift.pattern_rarity, gift.backdrop_rarity]) else None
+
+                            if min_rarity is not None:
+                                if min_rarity <= 10:
+                                    rarity = "Legendary"
+                                elif min_rarity <= 50:
+                                    rarity = "Epic"
+                                elif min_rarity <= 150:
+                                    rarity = "Rare"
+                                elif min_rarity <= 350:
+                                    rarity = "Uncommon"
+                                else:
+                                    rarity = "Common"
+
+                            # Upsert NFT
+                            result = await session.execute(
+                                select(NFT).where(NFT.address == nft_address)
+                            )
+                            nft = result.scalar_one_or_none()
+
+                            attributes_json = gift.attributes_raw or []
+
+                            if not nft:
+                                nft = NFT(
+                                    address=nft_address,
+                                    collection_id=collection.id,
+                                    index=gift.num,
+                                    name=f"{gift.title} #{gift.num}",
+                                    image_url=f"https://t.me/nft/{gift.slug}",
+                                    model=gift.model_name,
+                                    backdrop=gift.backdrop_name,
+                                    pattern=gift.pattern_name,
+                                    rarity=rarity,
+                                    attributes=attributes_json,
+                                    owner_address=gift.owner_address,
+                                    is_on_sale=True,
+                                    lowest_price_ton=price_ton if price_ton > 0 else None,
+                                    lowest_price_market="telegram",
+                                    raw_metadata={
+                                        'unique_id': gift.unique_id,
+                                        'gift_id': gift.gift_id,
+                                        'slug': gift.slug,
+                                        'num': gift.num,
+                                        'price_stars': price_stars,
+                                        'availability_issued': gift.availability_issued,
+                                        'availability_total': gift.availability_total,
+                                    },
+                                )
+                                session.add(nft)
+                                await session.flush()
+                            else:
+                                nft.is_on_sale = True
+                                nft.owner_address = gift.owner_address or nft.owner_address
+                                nft.attributes = attributes_json
+                                if rarity:
+                                    nft.rarity = rarity
+                                if gift.model_name:
+                                    nft.model = gift.model_name
+                                if gift.backdrop_name:
+                                    nft.backdrop = gift.backdrop_name
+                                if gift.pattern_name:
+                                    nft.pattern = gift.pattern_name
+                                # Обновляем lowest_price
+                                if price_ton > 0 and (nft.lowest_price_ton is None or price_ton < nft.lowest_price_ton):
+                                    nft.lowest_price_ton = price_ton
+                                    nft.lowest_price_market = "telegram"
+
+                            # Upsert Listing
+                            market_listing_id = gift.slug
+
+                            result = await session.execute(
+                                select(Listing).where(
+                                    Listing.market_id == market.id,
+                                    Listing.market_listing_id == market_listing_id,
+                                )
+                            )
+                            listing = result.scalar_one_or_none()
+
+                            if not listing:
+                                listing = Listing(
+                                    nft_id=nft.id,
+                                    market_id=market.id,
+                                    market_listing_id=market_listing_id,
+                                    price_raw=Decimal(str(price_stars)),
+                                    currency="STARS",
+                                    price_ton=price_ton,
+                                    listing_url=f"https://t.me/nft/{gift.slug}",
+                                    is_active=True,
+                                    last_seen_at=datetime.utcnow(),
+                                )
+                                session.add(listing)
+                            else:
+                                listing.price_raw = Decimal(str(price_stars))
+                                listing.price_ton = price_ton
+                                listing.is_active = True
+                                listing.last_seen_at = datetime.utcnow()
+
+                            type_count += 1
+                            count += 1
+
+                            # Flush every 100 items
+                            if count % 100 == 0:
+                                await session.flush()
+
+                        except Exception as e:
+                            logger.error(f"[SyncLoader] Ошибка обработки Telegram gift {gift.slug}: {e}")
+                            continue
+
+                    logger.info(f"[SyncLoader] Telegram {gift_type.title}: {type_count} gifts synced")
+
+                await session.commit()
+
+        except Exception as e:
+            logger.error(f"[SyncLoader] Ошибка синхронизации Telegram: {e}")
+        finally:
+            await indexer.disconnect()
+
+        logger.info(f"[SyncLoader] Синхронизировано {count} листингов с Telegram")
+        return count
+
     async def sync_all(self) -> dict:
         """
         Синхронизировать данные со всех маркетов.
@@ -711,6 +906,7 @@ class SyncDataLoader:
 
         stats = {
             "started_at": datetime.utcnow().isoformat(),
+            "telegram": 0,
             "portals": 0,
             "major": 0,
             "getgems": 0,
@@ -718,6 +914,13 @@ class SyncDataLoader:
             "total": 0,
             "errors": [],
         }
+
+        # Telegram MTProto — основной источник
+        try:
+            stats["telegram"] = await self.sync_telegram_listings()
+        except Exception as e:
+            logger.error(f"[SyncLoader] Ошибка Telegram: {e}")
+            stats["errors"].append(f"telegram: {str(e)}")
 
         try:
             stats["portals"] = await self.sync_portals_listings()
@@ -743,7 +946,7 @@ class SyncDataLoader:
             logger.error(f"[SyncLoader] Ошибка Fragment: {e}")
             stats["errors"].append(f"fragment: {str(e)}")
 
-        stats["total"] = stats["portals"] + stats["major"] + stats["getgems"] + stats["fragment"]
+        stats["total"] = sum(v for k, v in stats.items() if isinstance(v, int) and k != "total")
         stats["finished_at"] = datetime.utcnow().isoformat()
 
         logger.info(f"[SyncLoader] ===== СИНХРОНИЗАЦИЯ ЗАВЕРШЕНА: {stats['total']} записей =====")

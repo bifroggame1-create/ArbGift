@@ -88,6 +88,14 @@ class Settings(BaseSettings):
     CDN_SECRET_KEY: Optional[str] = None
 
     # ============================================================
+    # TELEGRAM MTPROTO (Telethon)
+    # ============================================================
+    TELEGRAM_API_ID: int = 35905408
+    TELEGRAM_API_HASH: str = "b7da0a94afbba393d358f0a214b24779"
+    TELEGRAM_SESSION_NAME: str = "gift_indexer"
+    TELEGRAM_SYNC_DELAY: float = 0.5  # Delay between API calls (seconds)
+
+    # ============================================================
     # MARKET ADAPTERS
     # ============================================================
     # GetGems
