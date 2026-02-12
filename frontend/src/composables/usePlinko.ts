@@ -36,6 +36,11 @@ function demoGenerateDrop(
   const payout = Math.round(betAmount * multiplier * 100) / 100
   const profit = Math.round((payout - betAmount) * 100) / 100
 
+  // Generate pseudo-random hashes for demo display
+  const serverSeed = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
+  const clientSeed = Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
+  const nonce = Date.now() % 100000
+
   return {
     id: `demo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     path,
@@ -44,10 +49,10 @@ function demoGenerateDrop(
     bet_amount: betAmount,
     payout,
     profit,
-    server_seed_hash: 'demo',
-    server_seed: 'demo',
-    client_seed: 'demo',
-    nonce: 0,
+    server_seed_hash: Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
+    server_seed: serverSeed,
+    client_seed: clientSeed,
+    nonce,
     risk_level: riskLevel,
     row_count: rowCount,
     created_at: new Date().toISOString(),
@@ -73,6 +78,7 @@ export function usePlinko() {
   // Last result for win popup
   const lastDrops = ref<DropResult[]>([])
   const showWinPopup = ref(false)
+  const gameNumber = ref(0)
 
   // Default multiplier sets (used before config loads)
   const defaultMultiplierSets: Record<string, Record<string, number[]>> = {
@@ -175,6 +181,7 @@ export function usePlinko() {
     }
 
     lastDrops.value = drops
+    gameNumber.value++
 
     // Show win popup for significant wins
     const bestDrop = drops.reduce((best, d) => d.multiplier > best.multiplier ? d : best, drops[0])
@@ -211,6 +218,7 @@ export function usePlinko() {
     // Results
     lastDrops,
     showWinPopup,
+    gameNumber,
 
     // Actions
     play,

@@ -2,6 +2,16 @@
   <Transition name="plinko-popup">
     <div v-if="visible" class="win-popup-overlay" @click.self="close">
       <div class="win-popup">
+        <div class="popup-gift">
+          <video
+            class="popup-gift-video"
+            :src="`/gifts/gift-${giftIndex}.webm`"
+            autoplay
+            loop
+            muted
+            playsinline
+          />
+        </div>
         <h2 class="popup-title">ПОЗДРАВЛЯЕМ</h2>
         <p class="popup-subtitle">Ваш выигрыш</p>
 
@@ -28,6 +38,9 @@ defineProps<{
   multiplier: number
   payout: number
 }>()
+
+// Pick a random gift
+const giftIndex = Math.floor(Math.random() * 13) + 1
 
 const emit = defineEmits<{ close: [] }>()
 const { hapticNotification } = useTelegram()
@@ -70,6 +83,20 @@ function close() {
   width: 100%;
   max-width: 320px;
   box-shadow: 0 20px 60px rgba(57, 26, 173, 0.3);
+}
+
+.popup-gift {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.popup-gift-video {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 12px;
+  filter: drop-shadow(0 4px 20px rgba(107, 47, 190, 0.4));
 }
 
 .popup-title {

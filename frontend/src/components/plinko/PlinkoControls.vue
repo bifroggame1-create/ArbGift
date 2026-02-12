@@ -142,16 +142,15 @@ function onPlay() {
   background: var(--plinko-controls-bg, rgba(13, 8, 32, 0.95));
   backdrop-filter: blur(20px);
   border-top: 1px solid var(--plinko-card-border, rgba(62, 30, 84, 0.4));
-  padding: 14px 16px;
-  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  padding: 12px 16px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .controls-row {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .control-group {
@@ -292,9 +291,9 @@ function onPlay() {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 14px;
+  padding: 12px;
   border: none;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--plinko-btn-gradient);
   color: white;
   font-size: 16px;

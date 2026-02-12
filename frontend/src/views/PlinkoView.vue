@@ -33,6 +33,13 @@
       @play="handlePlay"
     />
 
+    <PlinkoFairness
+      :game-number="gameNumber"
+      :server-seed-hash="lastDrops[0]?.server_seed_hash || ''"
+      :client-seed="lastDrops[0]?.client_seed || ''"
+      :nonce="lastDrops[0]?.nonce || 0"
+    />
+
     <WinPopup
       v-if="showWinPopup && bestWinDrop"
       :multiplier="bestWinDrop.multiplier"
@@ -51,6 +58,7 @@ import PlinkoBoard from '@/components/plinko/PlinkoBoard.vue'
 import PlinkoControls from '@/components/plinko/PlinkoControls.vue'
 import PlinkoWinFeed from '@/components/plinko/PlinkoWinFeed.vue'
 import WinPopup from '@/components/plinko/WinPopup.vue'
+import PlinkoFairness from '@/components/plinko/PlinkoFairness.vue'
 
 import '@/styles/plinko-theme.css'
 
@@ -66,6 +74,7 @@ const {
   currentMultipliers,
   lastDrops,
   showWinPopup,
+  gameNumber,
   play,
   onAnimationComplete,
   fetchConfig,
@@ -123,14 +132,21 @@ onMounted(() => {
 .plinko-view {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  /* account for bottom nav ~60px */
+  padding-bottom: 60px;
 }
 
 .board-wrapper {
   flex: 1;
+  min-height: 0;
   position: relative;
   overflow: hidden;
   padding: 0 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 </style>
