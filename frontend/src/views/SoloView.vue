@@ -12,7 +12,7 @@
       <div class="banner-badge">NEW</div>
       <div class="banner-content">
         <h2 class="banner-title">Trading</h2>
-        <p class="banner-subtitle">Flip chart, earn TON</p>
+        <p class="banner-subtitle">Flip chart, earn <img src="/images/ton_symbol.svg" width="12" height="12" style="display:inline-block;vertical-align:middle" /></p>
       </div>
     </router-link>
 

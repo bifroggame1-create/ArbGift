@@ -23,7 +23,12 @@
           </div>
           <!-- Text -->
           <div class="overlay-title win-title">Победа!</div>
-          <div v-if="amount" class="overlay-amount win-amount">+{{ amount }} TON</div>
+          <div v-if="amount" class="overlay-amount win-amount">+{{ amount }}
+            <svg width="18" height="18" viewBox="0 0 56 56" fill="none" style="vertical-align:middle;margin-left:4px">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
+          </div>
           <div v-if="multiplier" class="overlay-multiplier">x{{ multiplier }}</div>
         </div>
 
@@ -42,7 +47,12 @@
           </div>
           <!-- Text -->
           <div class="overlay-title lose-title">Проигрыш</div>
-          <div v-if="amount" class="overlay-amount lose-amount">-{{ amount }} TON</div>
+          <div v-if="amount" class="overlay-amount lose-amount">-{{ amount }}
+            <svg width="18" height="18" viewBox="0 0 56 56" fill="none" style="vertical-align:middle;margin-left:4px">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
+          </div>
         </div>
 
         <!-- SPIN / Loading -->
@@ -69,7 +79,12 @@
             </svg>
           </div>
           <div class="overlay-title cashout-title">Кешаут!</div>
-          <div v-if="amount" class="overlay-amount cashout-amount">+{{ amount }} TON</div>
+          <div v-if="amount" class="overlay-amount cashout-amount">+{{ amount }}
+            <svg width="18" height="18" viewBox="0 0 56 56" fill="none" style="vertical-align:middle;margin-left:4px">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
+          </div>
           <div v-if="multiplier" class="overlay-multiplier cashout-mult">x{{ multiplier }}</div>
         </div>
       </div>

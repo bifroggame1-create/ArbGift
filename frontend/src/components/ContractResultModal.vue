@@ -33,20 +33,20 @@
 
         <div class="detail-row">
           <span class="detail-label">Input Value</span>
-          <span class="detail-value">{{ result.input_value.toFixed(2) }} TON</span>
+          <span class="detail-value"><img src="/images/ton_symbol.svg" width="12" height="12" style="display:inline-block;vertical-align:middle;margin-right:2px" />{{ result.input_value.toFixed(2) }}</span>
         </div>
 
         <div class="detail-row highlight" :class="result.won ? 'win' : 'loss'">
           <span class="detail-label">{{ result.won ? 'You Won' : 'You Lost' }}</span>
           <span class="detail-value payout">
-            {{ result.won ? '+' : '-' }}{{ result.input_value.toFixed(2) }} TON
+            {{ result.won ? '+' : '-' }}{{ result.input_value.toFixed(2) }} <img src="/images/ton_symbol.svg" width="12" height="12" style="display:inline-block;vertical-align:middle;margin-left:2px" />
           </span>
         </div>
 
         <div v-if="result.won" class="detail-row highlight win">
           <span class="detail-label">Total Payout</span>
           <span class="detail-value payout">
-            {{ result.payout_value.toFixed(2) }} TON
+            {{ result.payout_value.toFixed(2) }} <img src="/images/ton_symbol.svg" width="14" height="14" style="display:inline-block;vertical-align:middle;margin-left:2px" />
           </span>
         </div>
       </div>

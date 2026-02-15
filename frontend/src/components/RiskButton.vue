@@ -13,7 +13,7 @@
       <div class="risk-name">{{ risk.name }}</div>
       <div class="risk-multiplier">x{{ risk.multiplier }}</div>
       <div class="risk-chance">{{ (risk.probability * 100).toFixed(1) }}% chance</div>
-      <div class="risk-min">Min: {{ risk.minValue }} TON</div>
+      <div class="risk-min">Min: {{ risk.minValue }} <img src="/images/ton_symbol.svg" width="10" height="10" style="display:inline-block;vertical-align:middle" /></div>
     </div>
 
     <!-- Checkmark when selected -->

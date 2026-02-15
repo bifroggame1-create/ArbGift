@@ -12,11 +12,11 @@
       <div class="apy-stats-row">
         <div class="stat-item">
           <span class="stat-value">{{ formatNumber(totalStaked) }}</span>
-          <span class="stat-label">TON Staked</span>
+          <span class="stat-label"><TonIcon :size="12" /> Staked</span>
         </div>
         <div class="stat-item">
           <span class="stat-value">{{ formatNumber(totalRewards) }}</span>
-          <span class="stat-label">TON Paid</span>
+          <span class="stat-label"><TonIcon :size="12" /> Paid</span>
         </div>
         <div class="stat-item">
           <span class="stat-value">{{ activeStakers }}</span>
@@ -45,7 +45,7 @@
                 <span class="rarity-badge" :class="`rarity-${stake.gift.rarity}`">
                   {{ stake.gift.rarity }}
                 </span>
-                <span class="value-badge">{{ stake.gift_value_ton }} TON</span>
+                <span class="value-badge">{{ stake.gift_value_ton }} <TonIcon :size="10" /></span>
               </div>
             </div>
           </div>
@@ -63,7 +63,7 @@
           <div class="stake-rewards">
             <div class="reward-item">
               <span class="reward-label">Earned:</span>
-              <span class="reward-value earnings-counter">+{{ formatTON(stake.earned_rewards) }} TON</span>
+              <span class="reward-value earnings-counter">+{{ formatTON(stake.earned_rewards) }} <TonIcon :size="14" /></span>
             </div>
             <div class="reward-item">
               <span class="reward-label">APR:</span>
@@ -76,7 +76,7 @@
             class="action-btn"
             :class="{ 'unlocked': stake.is_unlockable }"
           >
-            <span v-if="stake.is_unlockable">Claim {{ formatTON(stake.total_at_unlock) }} TON</span>
+            <span v-if="stake.is_unlockable">Claim {{ formatTON(stake.total_at_unlock) }} <TonIcon :size="14" /></span>
             <span v-else>Unlock Early (-10% penalty)</span>
           </button>
         </div>
@@ -114,8 +114,8 @@
           </div>
 
           <div class="tier-example">
-            <span>100 TON stake →</span>
-            <span class="highlight">{{ tier.exampleReward }} TON profit</span>
+            <span>100 <TonIcon :size="10" /> stake →</span>
+            <span class="highlight">{{ tier.exampleReward }} <TonIcon :size="10" /> profit</span>
           </div>
         </div>
       </div>
@@ -159,7 +159,7 @@
               <h4>{{ gift.name }}</h4>
               <div class="gift-meta">
                 <span class="rarity" :class="`rarity-${gift.rarity}`">{{ gift.rarity }}</span>
-                <span class="value">{{ gift.floor_price }} TON</span>
+                <span class="value">{{ gift.floor_price }} <TonIcon :size="10" /></span>
               </div>
               <div class="potential-apr">
                 Earn up to <span class="highlight">{{ calculatePotentialAPR(gift) }}%</span> APR
@@ -218,7 +218,7 @@
             <span class="rarity-badge" :class="`rarity-${selectedGift?.rarity}`">
               {{ selectedGift?.rarity }}
             </span>
-            <span class="value-badge">{{ selectedGift?.floor_price }} TON</span>
+            <span class="value-badge">{{ selectedGift?.floor_price }} <TonIcon :size="10" /></span>
           </div>
         </div>
 
@@ -242,7 +242,7 @@
           <h3>Stake Preview</h3>
           <div class="preview-row">
             <span>Gift Value:</span>
-            <span>{{ stakePreview.gift_value_ton }} TON</span>
+            <span>{{ stakePreview.gift_value_ton }} <TonIcon :size="12" /></span>
           </div>
           <div class="preview-row">
             <span>Lock Period:</span>
@@ -263,11 +263,11 @@
           <div class="preview-divider"></div>
           <div class="preview-row reward">
             <span>Expected Reward:</span>
-            <span>+{{ stakePreview.expected_reward_ton }} TON</span>
+            <span>+{{ stakePreview.expected_reward_ton }} <TonIcon :size="14" /></span>
           </div>
           <div class="preview-row total">
             <span>Total at Unlock:</span>
-            <span class="big">{{ stakePreview.total_at_unlock_ton }} TON</span>
+            <span class="big">{{ stakePreview.total_at_unlock_ton }} <TonIcon :size="16" /></span>
           </div>
           <div class="preview-row roi">
             <span>ROI:</span>
@@ -293,6 +293,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTonConnect } from '@/composables/useTonConnect'
 import { api } from '@/api/client'
+import TonIcon from '@/components/TonIcon.vue'
 
 const router = useRouter()
 const { wallet, connect } = useTonConnect()

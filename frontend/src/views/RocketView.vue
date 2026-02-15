@@ -136,7 +136,13 @@
     <div class="players-bar">
       <div class="players-header-bar">
         <span>Игроки ({{ activeBets.length }})</span>
-        <span class="total-pool">{{ totalPool.toFixed(2) }} TON</span>
+        <span class="total-pool">
+          <svg width="10" height="10" viewBox="0 0 56 56" fill="none" style="vertical-align:middle;margin-right:2px">
+            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+          </svg>
+          {{ totalPool.toFixed(2) }}
+        </span>
       </div>
       <div class="players-list">
         <div v-for="bet in activeBets" :key="bet.id" class="player-row">

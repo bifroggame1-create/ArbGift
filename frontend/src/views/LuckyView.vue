@@ -80,7 +80,11 @@
       <div class="result-content">
         <span class="result-multiplier">{{ lastResult.multiplier }}x</span>
         <span class="result-amount" :class="{ win: lastResult.win > 0 }">
-          {{ lastResult.win > 0 ? '+' : '' }}{{ lastResult.win.toFixed(2) }} TON
+          {{ lastResult.win > 0 ? '+' : '' }}{{ lastResult.win.toFixed(2) }}
+          <svg width="12" height="12" viewBox="0 0 56 56" fill="none" style="vertical-align:middle;margin-left:2px">
+            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+          </svg>
         </span>
       </div>
     </div>
@@ -133,7 +137,12 @@
             class="bet-input"
             :disabled="isSpinning"
           />
-          <span class="input-suffix">TON</span>
+          <span class="input-suffix">
+            <svg width="14" height="14" viewBox="0 0 56 56" fill="none" style="vertical-align:middle">
+              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+            </svg>
+          </span>
         </div>
       </div>
 
@@ -144,7 +153,12 @@
         @click="spin"
       >
         <span v-if="isSpinning" class="spinner"></span>
-        <span v-else>🎰 Крутить за {{ effectiveBet }} TON</span>
+        <span v-else>🎰 Крутить за {{ effectiveBet }}
+          <svg width="12" height="12" viewBox="0 0 56 56" fill="none" style="vertical-align:middle;margin-left:2px">
+            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+          </svg>
+        </span>
       </button>
     </div>
 
@@ -156,7 +170,13 @@
       </div>
       <div class="stat-box">
         <span class="stat-label">Выиграно</span>
-        <span class="stat-value win">{{ totalWon.toFixed(2) }} TON</span>
+        <span class="stat-value win">
+          <svg width="10" height="10" viewBox="0 0 56 56" fill="none" style="vertical-align:middle;margin-right:2px">
+            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
+            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
+          </svg>
+          {{ totalWon.toFixed(2) }}
+        </span>
       </div>
       <div class="stat-box">
         <span class="stat-label">Удача</span>

@@ -144,7 +144,7 @@
               <div class="progress-bar__fill" :style="{ width: arenaProgress + '%' }"></div>
             </div>
           </div>
-          <div class="module-card__subtitle">{{ arenaCurrentTon }} / {{ arenaNextLvlTon }} TON next LvL</div>
+          <div class="module-card__subtitle">{{ arenaCurrentTon }} / {{ arenaNextLvlTon }} <img src="/images/ton_symbol.svg" width="10" height="10" style="display:inline-block;vertical-align:middle" /> next LvL</div>
         </div>
 
         <!-- Ball Race module -->

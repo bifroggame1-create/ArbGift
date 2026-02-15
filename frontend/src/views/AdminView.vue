@@ -30,11 +30,11 @@
       <div class="stats-grid">
         <div class="stat-card green">
           <div class="stat-label">Today Profit</div>
-          <div class="stat-value">{{ stats.today?.profit?.toFixed(2) || '0.00' }} TON</div>
+          <div class="stat-value"><img src="/images/ton_symbol.svg" width="12" height="12" style="display:inline-block;vertical-align:middle;margin-right:2px" /> {{ stats.today?.profit?.toFixed(2) || '0.00' }}</div>
         </div>
         <div class="stat-card blue">
           <div class="stat-label">Today Volume</div>
-          <div class="stat-value">{{ stats.today?.volume?.toFixed(2) || '0.00' }} TON</div>
+          <div class="stat-value"><img src="/images/ton_symbol.svg" width="12" height="12" style="display:inline-block;vertical-align:middle;margin-right:2px" /> {{ stats.today?.volume?.toFixed(2) || '0.00' }}</div>
         </div>
         <div class="stat-card yellow">
           <div class="stat-label">Today Bets</div>
@@ -42,7 +42,7 @@
         </div>
         <div class="stat-card red">
           <div class="stat-label">Week Profit</div>
-          <div class="stat-value">{{ stats.week?.profit?.toFixed(2) || '0.00' }} TON</div>
+          <div class="stat-value"><img src="/images/ton_symbol.svg" width="12" height="12" style="display:inline-block;vertical-align:middle;margin-right:2px" /> {{ stats.week?.profit?.toFixed(2) || '0.00' }}</div>
         </div>
       </div>
 

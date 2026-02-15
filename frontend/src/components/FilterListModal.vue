@@ -64,7 +64,7 @@
                 <span v-if="showRarity && option.rarity" class="filter-modal-rarity">({{ option.rarity }})</span>
               </div>
               <div v-if="option.floorPrice !== undefined" class="filter-modal-price">
-                ~{{ option.floorPrice.toFixed(2) }} TON floor
+                <img src="/images/ton_symbol.svg" width="10" height="10" style="display:inline-block;vertical-align:middle;margin-right:2px" />~{{ option.floorPrice.toFixed(2) }} floor
               </div>
             </div>
 
