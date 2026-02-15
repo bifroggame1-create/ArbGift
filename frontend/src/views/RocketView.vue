@@ -60,13 +60,13 @@
           />
         </svg>
 
-        <!-- Rocket emoji -->
+        <!-- Rocket model -->
         <div
           v-if="gameState === 'flying'"
           class="rocket-sprite"
           :style="rocketStyle"
         >
-          🚀
+          <TgsPlayer :src="rocketModelSrc" :size="64" :loop="true" />
         </div>
 
         <!-- Explosion -->
@@ -75,7 +75,7 @@
           class="explosion"
           :style="explosionStyle"
         >
-          💥
+          <TgsPlayer :src="rocketModelSrc" :size="72" :loop="false" :autoplay="false" />
         </div>
 
         <!-- Multiplier display -->
@@ -160,9 +160,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import CurrencySwitcher from '../components/CurrencySwitcher.vue'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
+import TgsPlayer from '../components/TgsPlayer.vue'
 import { useCurrency } from '../composables/useCurrency'
 
 const { selectedCurrency, formatAmount } = useCurrency()
+
+const ROCKET_MODELS_COUNT = 50
+const rocketModelIndex = ref(0)
+const rocketModelSrc = computed(() => `/images/rocket-models/${rocketModelIndex.value}.tgs`)
 
 interface ActiveBet {
   id: number
@@ -317,6 +322,7 @@ function startGameCycle() {
   trailProgress.value = 0
   hasCashedOut.value = false
   countdown.value = 5
+  rocketModelIndex.value = (rocketModelIndex.value + 1) % ROCKET_MODELS_COUNT
   activeBets.value = generateFakeBets()
 
   if (hasBet.value) {
@@ -437,16 +443,18 @@ onUnmounted(() => {
 .trail-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 .rocket-sprite {
-  position: absolute; font-size: 28px; transform: translate(-50%, 50%) rotate(-45deg);
-  z-index: 5; filter: drop-shadow(0 0 8px rgba(249,115,22,0.5));
+  position: absolute; transform: translate(-50%, 50%) rotate(-45deg);
+  z-index: 5; filter: drop-shadow(0 0 12px rgba(249,115,22,0.6));
+  width: 64px; height: 64px;
 }
 .explosion {
-  position: absolute; font-size: 48px; transform: translate(-50%, 50%);
+  position: absolute; transform: translate(-50%, 50%);
   z-index: 5; animation: explode 0.5s ease-out;
+  width: 72px; height: 72px; opacity: 0.5;
 }
 @keyframes explode {
   0% { transform: translate(-50%, 50%) scale(0); opacity: 1; }
-  100% { transform: translate(-50%, 50%) scale(2); opacity: 0.5; }
+  100% { transform: translate(-50%, 50%) scale(2); opacity: 0.3; }
 }
 
 .multiplier-display {
