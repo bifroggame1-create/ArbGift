@@ -19,6 +19,10 @@
       <PlinkoWinFeed :history="history" />
     </div>
 
+    <div style="padding: 0 16px 8px;">
+      <CurrencySwitcher />
+    </div>
+
     <PlinkoControls
       :bet="betAmount"
       :risk="riskLevel"
@@ -53,6 +57,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { usePlinko } from '@/composables/usePlinko'
 import { useTelegram } from '@/composables/useTelegram'
+import CurrencySwitcher from '@/components/CurrencySwitcher.vue'
 import PlinkoHeader from '@/components/plinko/PlinkoHeader.vue'
 import PlinkoBoard from '@/components/plinko/PlinkoBoard.vue'
 import PlinkoControls from '@/components/plinko/PlinkoControls.vue'

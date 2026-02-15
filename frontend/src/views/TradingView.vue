@@ -12,11 +12,8 @@
         <span class="title-badge" style="background:#ef4444">CRASH</span>
       </div>
       <div class="header-balance">
-        <svg width="16" height="16" viewBox="0 0 56 56" fill="none">
-          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-        </svg>
-        <span class="balance-val">{{ balance.toFixed(2) }}</span>
+        <CurrencyIcon :currency="selectedCurrency" :size="16" />
+        <span class="balance-val">{{ formatAmount(balance) }}</span>
         <button class="balance-plus">+</button>
       </div>
     </header>
@@ -128,11 +125,8 @@
             <span class="trader-name">@{{ trader.name }}</span>
           </div>
           <div class="trader-bet">
-            <svg width="10" height="10" viewBox="0 0 56 56" fill="none" style="vertical-align:middle;margin-right:2px">
-              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-            </svg>
-            {{ trader.bet.toFixed(2) }}
+            <CurrencyIcon :currency="selectedCurrency" :size="10" />
+            {{ formatAmount(trader.bet) }}
           </div>
           <div class="trader-status">
             <template v-if="trader.exited">
@@ -148,6 +142,11 @@
       </div>
     </div>
 
+    <!-- Currency Switcher -->
+    <div class="currency-bar">
+      <CurrencySwitcher />
+    </div>
+
     <!-- Bet Controls -->
     <div class="bet-controls">
       <!-- Bet Amount Pills -->
@@ -159,10 +158,7 @@
           :class="{ active: selectedBet === amount }"
           @click="selectedBet = amount"
         >
-          <svg class="pill-diamond" width="12" height="12" viewBox="0 0 56 56" fill="currentColor">
-            <path d="M28 56C43.464 56 56 43.464 56 28C56 12.536 43.464 0 28 0C12.536 0 0 12.536 0 28C0 43.464 12.536 56 28 56Z" opacity="0.3"/>
-            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z"/>
-          </svg>
+          <CurrencyIcon :currency="selectedCurrency" :size="12" />
           {{ amount }}
         </button>
         <button class="bet-pill max-pill" @click="selectedBet = Math.floor(balance * 10) / 10">Max</button>
@@ -175,15 +171,9 @@
         :disabled="!canBuy"
         @click="placeBet"
       >
-        <svg class="btn-diamond" width="18" height="18" viewBox="0 0 56 56" fill="currentColor">
-          <path d="M28 56C43.464 56 56 43.464 56 28C56 12.536 43.464 0 28 0C12.536 0 0 12.536 0 28C0 43.464 12.536 56 28 56Z" opacity="0.3"/>
-          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z"/>
-        </svg>
-        <span class="btn-label">Buy {{ selectedBet.toFixed(1) }}
-          <svg width="12" height="12" viewBox="0 0 56 56" fill="none" style="vertical-align:middle;margin-left:2px">
-            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-          </svg>
+        <CurrencyIcon :currency="selectedCurrency" :size="18" />
+        <span class="btn-label">Buy {{ formatAmount(selectedBet) }}
+          <CurrencyIcon :currency="selectedCurrency" :size="12" />
         </span>
       </button>
       <button
@@ -204,6 +194,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi, ColorType } from 'lightweight-charts'
+import CurrencySwitcher from '../components/CurrencySwitcher.vue'
+import CurrencyIcon from '../components/CurrencyIcon.vue'
+import { useCurrency } from '../composables/useCurrency'
+
+const { selectedCurrency, formatAmount } = useCurrency()
 
 // ======= Types =======
 interface Candle {
@@ -1029,6 +1024,11 @@ onUnmounted(() => {
 .status-active { font-size: 13px; font-weight: 600; color: #34CDEF; }
 .trader-profit { font-size: 13px; font-weight: 600; color: #E23535; }
 .trader-profit.positive { color: #00FF62; }
+
+/* ====== Currency Bar ====== */
+.currency-bar {
+  margin-bottom: 12px;
+}
 
 /* ====== Bet Controls ====== */
 .bet-controls {

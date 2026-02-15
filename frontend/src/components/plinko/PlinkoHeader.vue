@@ -11,10 +11,7 @@
 
     <div class="header-right">
       <div class="plinko-balance-pill">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="12" fill="#FFB800"/>
-          <path d="M12 5l2.5 5 5.5.8-4 3.8 1 5.4-5-2.6-5 2.6 1-5.4-4-3.8 5.5-.8z" fill="white"/>
-        </svg>
+        <CurrencyIcon :currency="selectedCurrency" :size="16" />
         <span class="balance-amount">{{ formatBalance(balance) }}</span>
         <button class="plus-btn" @click="$emit('topUp')">+</button>
       </div>
@@ -37,6 +34,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useTelegram } from '@/composables/useTelegram'
+import CurrencyIcon from '@/components/CurrencyIcon.vue'
+import { useCurrency } from '@/composables/useCurrency'
+
+const { selectedCurrency } = useCurrency()
 
 defineProps<{
   balance: number

@@ -5,10 +5,7 @@
       <div class="control-group">
         <label class="control-label">СУММА СТАВКИ</label>
         <div class="input-with-icon">
-          <svg class="star-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="12" fill="#FFB800"/>
-            <path d="M12 5l2.5 5 5.5.8-4 3.8 1 5.4-5-2.6-5 2.6 1-5.4-4-3.8 5.5-.8z" fill="white"/>
-          </svg>
+          <CurrencyIcon :currency="selectedCurrency" :size="16" />
           <input
             type="number"
             class="bet-input"
@@ -82,6 +79,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useTelegram } from '@/composables/useTelegram'
+import CurrencyIcon from '@/components/CurrencyIcon.vue'
+import { useCurrency } from '@/composables/useCurrency'
+
+const { selectedCurrency } = useCurrency()
 
 const props = defineProps<{
   bet: number

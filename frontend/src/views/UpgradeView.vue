@@ -16,6 +16,11 @@
       <p class="text-gray-400 text-sm">Transform one gift into another • Spin the wheel</p>
     </div>
 
+    <!-- Переключатель валюты -->
+    <div class="mx-4 mt-4">
+      <CurrencySwitcher />
+    </div>
+
     <!-- Gift Selection -->
     <div class="mx-4 mt-6">
       <h2 class="text-lg font-semibold text-white mb-4">Select Gifts</h2>
@@ -88,22 +93,16 @@
           <div class="comparison-item">
             <div class="comparison-label">Input Value</div>
             <div class="comparison-value">
-              <svg width="12" height="12" viewBox="0 0 56 56" fill="none" style="display:inline-block;vertical-align:middle;margin-right:2px">
-                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-              </svg>
-              {{ inputValue.toFixed(2) }}
+              <CurrencyIcon :currency="selectedCurrency" :size="12" />
+              {{ formatAmount(inputValue) }}
             </div>
           </div>
           <div class="comparison-arrow">→</div>
           <div class="comparison-item">
             <div class="comparison-label">Target Value</div>
             <div class="comparison-value highlight">
-              <svg width="12" height="12" viewBox="0 0 56 56" fill="none" style="display:inline-block;vertical-align:middle;margin-right:2px">
-                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-              </svg>
-              {{ targetValue.toFixed(2) }}
+              <CurrencyIcon :currency="selectedCurrency" :size="12" />
+              {{ formatAmount(targetValue) }}
             </div>
           </div>
         </div>
@@ -157,6 +156,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTelegram } from '../composables/useTelegram'
+import CurrencySwitcher from '../components/CurrencySwitcher.vue'
+import CurrencyIcon from '../components/CurrencyIcon.vue'
+import { useCurrency } from '../composables/useCurrency'
 import TelegramGiftCard from '../components/TelegramGiftCard.vue'
 import ProbabilityWheel from '../components/ProbabilityWheel.vue'
 import GiftSelectionModal from '../components/GiftSelectionModal.vue'
@@ -165,6 +167,7 @@ import type { Gift } from '../api/client'
 
 const router = useRouter()
 const { hapticImpact } = useTelegram()
+const { selectedCurrency, formatAmount } = useCurrency()
 
 // State
 const inputGift = ref<Gift | null>(null)

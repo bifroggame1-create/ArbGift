@@ -44,10 +44,7 @@
         </div>
         <div class="stat-right">
           <div class="stat-amount">
-            <svg class="stat-ton-icon" width="12" height="12" viewBox="0 0 56 56" fill="none">
-              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-            </svg>
+            <CurrencyIcon :currency="selectedCurrency" :size="12" />
             +{{ prevGame.amount }}
           </div>
           <div class="stat-chance">ШАНС {{ prevGame.chance }}%</div>
@@ -64,10 +61,7 @@
         </div>
         <div class="stat-right">
           <div class="stat-amount">
-            <svg class="stat-ton-icon" width="12" height="12" viewBox="0 0 56 56" fill="none">
-              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-            </svg>
+            <CurrencyIcon :currency="selectedCurrency" :size="12" />
             +{{ topGame.amount }}
           </div>
           <div class="stat-chance">ШАНС {{ topGame.chance }}%</div>
@@ -85,10 +79,7 @@
       <div class="pool-total">
         <span class="pool-label">ВСЕГО</span>
         <span class="pool-value">
-          <svg class="pool-ton-icon" width="14" height="14" viewBox="0 0 56 56" fill="none">
-            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-          </svg>
+          <CurrencyIcon :currency="selectedCurrency" :size="14" />
           {{ totalPool }}
         </span>
       </div>
@@ -190,10 +181,7 @@
           <div class="player-stats">
             <span class="player-chance">{{ player.chance }}%</span>
             <span class="player-bet">
-              <svg class="player-ton-icon" width="10" height="10" viewBox="0 0 56 56" fill="none">
-                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-              </svg>
+              <CurrencyIcon :currency="selectedCurrency" :size="10" />
               {{ player.bet }}
             </span>
           </div>
@@ -215,23 +203,22 @@
       <div class="filter-btns">
         <button class="filter-btn red"><span>🎲</span></button>
         <button class="filter-btn blue">
-          <svg width="14" height="14" viewBox="0 0 56 56" fill="none">
-            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-          </svg>
+          <CurrencyIcon :currency="'ton'" :size="14" />
         </button>
         <button class="filter-btn yellow">
           <img src="/icons/stars.png" alt="Stars" width="14" height="14" />
         </button>
       </div>
       <div class="balance-pill">
-        <svg class="balance-icon-svg" width="16" height="16" viewBox="0 0 56 56" fill="none">
-          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-        </svg>
+        <CurrencyIcon :currency="selectedCurrency" :size="16" />
         <span class="balance-value">{{ userBalance }}</span>
         <button class="balance-add">+</button>
       </div>
+    </div>
+
+    <!-- Переключатель валюты -->
+    <div style="padding: 0 16px; margin-bottom: 8px; position: relative; z-index: 10;">
+      <CurrencySwitcher />
     </div>
 
     <!-- Action Buttons -->
@@ -241,10 +228,7 @@
       </button>
       <button class="btn-pool">
         <span>👑</span>
-        <svg class="btn-ton-icon" width="14" height="14" viewBox="0 0 56 56" fill="none">
-          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-        </svg>
+        <CurrencyIcon :currency="selectedCurrency" :size="14" />
         <span>{{ totalPool }}</span>
       </button>
     </div>
@@ -271,10 +255,7 @@
 
           <div class="modal-tabs">
             <button :class="['tab', { active: giftTab === 'ton' }]" @click="giftTab = 'ton'">
-              <svg class="tab-icon" width="14" height="14" viewBox="0 0 56 56" fill="none">
-                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-              </svg>
+              <CurrencyIcon :currency="'ton'" :size="14" />
               TON Гифты
             </button>
             <button :class="['tab', { active: giftTab === 'stars' }]" @click="giftTab = 'stars'">
@@ -303,7 +284,7 @@
                 <img :src="gift.image" :alt="gift.name" class="gift-img" />
                 <span class="gift-name">{{ gift.name }}</span>
                 <span class="gift-price">
-                  <svg v-if="giftTab === 'ton'" class="price-icon" width="10" height="10" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="28" fill="#0098EA"/><path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/></svg><img v-else src="/icons/stars.png" alt="Stars" class="price-icon-img" width="10" height="10" /> {{ gift.price }} {{ giftTab === 'ton' ? 'TON' : 'Stars' }}
+                  <CurrencyIcon :currency="giftTab === 'ton' ? 'ton' : 'stars'" :size="10" /> {{ gift.price }} {{ giftTab === 'ton' ? 'TON' : 'Stars' }}
                 </span>
               </div>
             </div>
@@ -322,7 +303,7 @@
                 <img :src="gift.image" :alt="gift.name" class="gift-img" />
                 <span class="gift-name">{{ gift.name }}</span>
                 <span class="gift-price">
-                  <svg v-if="giftTab === 'ton'" class="price-icon" width="10" height="10" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="28" fill="#0098EA"/><path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/></svg><img v-else src="/icons/stars.png" alt="Stars" class="price-icon-img" width="10" height="10" /> {{ gift.price }} {{ giftTab === 'ton' ? 'TON' : 'Stars' }}
+                  <CurrencyIcon :currency="giftTab === 'ton' ? 'ton' : 'stars'" :size="10" /> {{ gift.price }} {{ giftTab === 'ton' ? 'TON' : 'Stars' }}
                 </span>
               </div>
             </div>
@@ -355,10 +336,7 @@
             <div class="winner-prize">
               <span class="prize-amount">
                 Выиграл
-                <svg class="prize-ton-icon" width="14" height="14" viewBox="0 0 56 56" fill="none">
-                  <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-                  <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-                </svg>
+                <CurrencyIcon :currency="selectedCurrency" :size="14" />
                 {{ winAmount }} TON
               </span>
               <span class="prize-chance">{{ winner?.chance }}%</span>
@@ -366,16 +344,10 @@
           </div>
           <div class="winner-gift">
             <div class="gift-won">
-              <svg class="gift-icon-svg" width="24" height="24" viewBox="0 0 56 56" fill="none">
-                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-              </svg>
+              <CurrencyIcon :currency="selectedCurrency" :size="24" />
             </div>
             <span class="gift-value">
-              <svg class="gift-ton-icon" width="14" height="14" viewBox="0 0 56 56" fill="none">
-                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-              </svg>
+              <CurrencyIcon :currency="selectedCurrency" :size="14" />
               {{ winAmount }} TON
             </span>
           </div>
@@ -392,6 +364,11 @@ import { useRoute } from 'vue-router'
 import { usePvP } from '@/composables/usePvP'
 import { useTonConnect } from '@/composables/useTonConnect'
 import { useTelegram } from '@/composables/useTelegram'
+import CurrencySwitcher from '@/components/CurrencySwitcher.vue'
+import CurrencyIcon from '@/components/CurrencyIcon.vue'
+import { useCurrency } from '@/composables/useCurrency'
+
+const { selectedCurrency } = useCurrency()
 
 interface Player {
   id: number

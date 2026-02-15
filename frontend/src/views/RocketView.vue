@@ -17,11 +17,8 @@
         <span class="title-badge" style="background:#f59e0b">x100</span>
       </div>
       <div class="header-balance">
-        <svg width="16" height="16" viewBox="0 0 56 56" fill="none">
-          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-        </svg>
-        <span class="balance-val">{{ balance.toFixed(2) }}</span>
+        <CurrencyIcon :currency="selectedCurrency" :size="16" />
+        <span class="balance-val">{{ formatAmount(balance) }}</span>
         <button class="balance-plus">+</button>
       </div>
     </header>
@@ -98,6 +95,11 @@
       </div>
     </div>
 
+    <!-- Currency Switcher -->
+    <div style="padding: 0 16px; margin-bottom: 12px; position: relative; z-index: 10;">
+      <CurrencySwitcher />
+    </div>
+
     <!-- Bet Panel -->
     <div class="bet-panel">
       <div class="bet-row">
@@ -137,11 +139,8 @@
       <div class="players-header-bar">
         <span>Игроки ({{ activeBets.length }})</span>
         <span class="total-pool">
-          <svg width="10" height="10" viewBox="0 0 56 56" fill="none" style="vertical-align:middle;margin-right:2px">
-            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-          </svg>
-          {{ totalPool.toFixed(2) }}
+          <CurrencyIcon :currency="selectedCurrency" :size="10" />
+          {{ formatAmount(totalPool) }}
         </span>
       </div>
       <div class="players-list">
@@ -159,6 +158,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import CurrencySwitcher from '../components/CurrencySwitcher.vue'
+import CurrencyIcon from '../components/CurrencyIcon.vue'
+import { useCurrency } from '../composables/useCurrency'
+
+const { selectedCurrency, formatAmount } = useCurrency()
 
 interface ActiveBet {
   id: number
@@ -239,15 +243,15 @@ const actionBtnClass = computed(() => {
 
 const actionBtnText = computed(() => {
   if (gameState.value === 'waiting') {
-    return hasBet.value ? 'Отменить ставку' : `Поставить ${betAmount.value.toFixed(2)} TON`
+    return hasBet.value ? 'Отменить ставку' : `Поставить ${formatAmount(betAmount.value)}`
   }
   if (gameState.value === 'flying') {
     if (hasBet.value && !hasCashedOut.value) {
-      return `Забрать ${(betAmount.value * currentMultiplier.value).toFixed(2)} TON`
+      return `Забрать ${formatAmount(betAmount.value * currentMultiplier.value)}`
     }
     return 'Ожидайте...'
   }
-  return `Поставить ${betAmount.value.toFixed(2)} TON`
+  return `Поставить ${formatAmount(betAmount.value)}`
 })
 
 const actionDisabled = computed(() => {
