@@ -36,6 +36,18 @@ api.interceptors.response.use(
   }
 )
 
+// === USER BALANCE ===
+
+export interface UserBalance {
+  balance_ton: number
+  balance_stars: number
+}
+
+export const getUserBalance = async (): Promise<UserBalance> => {
+  const response = await api.get('/api/v1/user/balance')
+  return response.data
+}
+
 // === GIFTS ===
 
 export interface Gift {

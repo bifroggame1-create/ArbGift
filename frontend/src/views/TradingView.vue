@@ -13,7 +13,7 @@
       </div>
       <div class="header-balance">
         <CurrencyIcon :currency="selectedCurrency" :size="16" />
-        <span class="balance-val">{{ formatAmount(balance) }}</span>
+        <span class="balance-val">{{ formatAmount(currentBalance) }}</span>
         <button class="balance-plus">+</button>
       </div>
     </header>
@@ -161,7 +161,7 @@
           <CurrencyIcon :currency="selectedCurrency" :size="12" />
           {{ amount }}
         </button>
-        <button class="bet-pill max-pill" @click="selectedBet = Math.floor(balance * 10) / 10">Max</button>
+        <button class="bet-pill max-pill" @click="selectedBet = Math.floor(currentBalance * 10) / 10">Max</button>
       </div>
 
       <!-- Main Action Button -->
@@ -198,7 +198,7 @@ import CurrencySwitcher from '../components/CurrencySwitcher.vue'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
 import { useCurrency } from '../composables/useCurrency'
 
-const { selectedCurrency, formatAmount } = useCurrency()
+const { selectedCurrency, currentBalance, deductBalance, addBalance, formatAmount } = useCurrency()
 
 // ======= Types =======
 interface Candle {
@@ -235,9 +235,9 @@ let candleSeries: ISeriesApi<'Candlestick'> | null = null
 const gameState = ref<GameState>('waiting')
 const currentMultiplier = ref(1.0)
 const waitingCountdown = ref(5.0)
-const gameNumber = ref(30772)
-const gameHash = ref('2b2c...c667')
-const ping = ref(73)
+const gameNumber = ref(0)
+const gameHash = ref('---')
+const ping = ref(0)
 
 // Result of current round (pre-determined)
 const lastResult = ref<'win' | 'lose'>('lose')
@@ -252,7 +252,7 @@ let tickInCandle = 0
 let currentCandleData: Candle | null = null
 
 // ======= Player state =======
-const balance = ref(3.66)
+// Balance from useCurrency (no local ref)
 const selectedBet = ref(0.5)
 const playerBet = ref<number | null>(null)
 const betAmounts = [0.5, 1, 5, 10]
@@ -303,7 +303,7 @@ const waitingTimerText = computed(() => {
 const currentPLPercent = computed(() => (currentMultiplier.value - 1) * 100)
 
 const canBuy = computed(() => {
-  return gameState.value === 'running' && !playerBet.value && balance.value >= selectedBet.value
+  return gameState.value === 'running' && !playerBet.value && currentBalance.value >= selectedBet.value
 })
 
 // Price line Y position & multiplier position (track chart coordinate)
@@ -629,7 +629,7 @@ function endGameWin() {
   // Player payout
   if (playerBet.value) {
     const payout = playerBet.value * winMultTarget
-    balance.value += payout
+    addBalance(payout)
     const me = traders.value.find(t => t.name === 'you')
     if (me) {
       me.exited = true
@@ -685,7 +685,7 @@ function endGameLose() {
 function placeBet() {
   if (!canBuy.value) return
   playerBet.value = selectedBet.value
-  balance.value -= selectedBet.value
+  deductBalance(selectedBet.value)
 
   traders.value.push({
     id: Date.now(),
@@ -702,7 +702,7 @@ function cashOut() {
 
   const payout = playerBet.value * currentMultiplier.value
   const profit = payout - playerBet.value
-  balance.value += payout
+  addBalance(payout)
 
   const me = traders.value.find(t => t.name === 'you')
   if (me) {

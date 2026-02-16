@@ -273,7 +273,7 @@ import { stakingGetStats, stakingGetUserStakes } from '../api/client'
 const { user, initWebApp, hapticImpact } = useTelegram()
 
 // --- Farming pool & timer ---
-const farmingPool = ref(3441.017)
+const farmingPool = ref(0)
 
 // Countdown: target = end of current season (stub: 3 days from now)
 const targetTime = ref(Date.now() + 3 * 24 * 60 * 60 * 1000)
@@ -323,9 +323,9 @@ const stakingProgress = ref(0)
 const stakingEarned = ref(0)
 
 const arenaLevel = ref(0)
-const arenaProgress = ref(50)
-const arenaCurrentTon = ref(0.5)
-const arenaNextLvlTon = ref(1)
+const arenaProgress = ref(0)
+const arenaCurrentTon = ref(0)
+const arenaNextLvlTon = ref(0)
 
 const ballRaceLevel = ref(0)
 const ballRaceRate = ref(0)

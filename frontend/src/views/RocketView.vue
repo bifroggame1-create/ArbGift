@@ -18,7 +18,7 @@
       </div>
       <div class="header-balance">
         <CurrencyIcon :currency="selectedCurrency" :size="16" />
-        <span class="balance-val">{{ formatAmount(balance) }}</span>
+        <span class="balance-val">{{ formatAmount(currentBalance) }}</span>
         <button class="balance-plus">+</button>
       </div>
     </header>
@@ -163,7 +163,7 @@ import CurrencyIcon from '../components/CurrencyIcon.vue'
 import TgsPlayer from '../components/TgsPlayer.vue'
 import { useCurrency } from '../composables/useCurrency'
 
-const { selectedCurrency, formatAmount } = useCurrency()
+const { selectedCurrency, currentBalance, formatAmount } = useCurrency()
 
 const ROCKET_MODELS_COUNT = 50
 const rocketModelIndex = ref(0)
@@ -178,7 +178,6 @@ interface ActiveBet {
 }
 
 // State
-const balance = ref(5.00)
 const gameState = ref<'waiting' | 'flying' | 'crashed'>('waiting')
 const currentMultiplier = ref(1.00)
 const crashPoint = ref(0)
@@ -187,9 +186,9 @@ const autoCashout = ref<number | null>(null)
 const hasBet = ref(false)
 const hasCashedOut = ref(false)
 const countdown = ref(5)
-const onlineCount = ref(147)
+const onlineCount = ref(0)
 const totalPool = ref(0)
-const history = ref<number[]>([2.41, 1.23, 5.67, 1.08, 3.12, 1.92, 7.84, 1.45, 2.33, 1.11])
+const history = ref<number[]>([])
 const trailProgress = ref(0)
 const lastRocketX = ref(150)
 const lastRocketY = ref(280)

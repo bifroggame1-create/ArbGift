@@ -13,7 +13,7 @@
       </div>
       <div class="header-balance">
         <CurrencyIcon :currency="selectedCurrency" :size="16" />
-        <span class="balance-val">{{ balance.toFixed(2) }}</span>
+        <span class="balance-val">{{ formatAmount(currentBalance) }}</span>
         <button class="balance-plus">+</button>
       </div>
     </header>
@@ -66,7 +66,7 @@
       <button
         class="play-btn"
         :class="{ playing: gameState === 'playing' }"
-        :disabled="gameState === 'playing' || balance < selectedBet"
+        :disabled="gameState === 'playing' || currentBalance < selectedBet"
         @click="startGame"
       >
         <span v-if="gameState === 'idle'">Play {{ selectedBet }} <CurrencyIcon :currency="selectedCurrency" :size="14" /></span>
@@ -84,7 +84,7 @@ import CurrencySwitcher from '../components/CurrencySwitcher.vue'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
 import { useCurrency } from '../composables/useCurrency'
 
-const { selectedCurrency } = useCurrency()
+const { selectedCurrency, currentBalance, deductBalance, addBalance, formatAmount } = useCurrency()
 
 // Canvas
 const gameCanvas = ref<HTMLCanvasElement | null>(null)
@@ -92,7 +92,6 @@ const canvasWidth = 340
 const canvasHeight = 460 // Taller for floor area + preview
 
 // Game state
-const balance = ref(10.0)
 const betAmounts = [0.5, 1, 3, 5, 10]
 const selectedBet = ref(1)
 const gameState = ref<'idle' | 'playing' | 'won' | 'lost'>('idle')
@@ -182,14 +181,14 @@ function selectBet(amount: number) {
 }
 
 async function startGame() {
-  if (gameState.value === 'playing' || balance.value < selectedBet.value) return
+  if (gameState.value === 'playing' || currentBalance.value < selectedBet.value) return
 
   stopIdleAnimation()
 
   // Pick random ring color for this round (like MyBalls)
   currentRingColor = RING_COLORS[Math.floor(Math.random() * RING_COLORS.length)]
 
-  balance.value -= selectedBet.value
+  deductBalance(selectedBet.value)
   gameState.value = 'playing'
   multiplier.value = 1.0
   gameId.value = Math.floor(Math.random() * 900000) + 100000
@@ -492,7 +491,7 @@ function endGame(escaped: boolean) {
 
   if (escaped) {
     gameState.value = 'won'
-    balance.value += selectedBet.value * targetMultiplier
+    addBalance(selectedBet.value * targetMultiplier)
   } else {
     gameState.value = 'lost'
   }

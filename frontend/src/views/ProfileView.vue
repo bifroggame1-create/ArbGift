@@ -209,6 +209,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useTelegram } from '../composables/useTelegram'
 import { useTonConnect } from '../composables/useTonConnect'
+import { useCurrency } from '../composables/useCurrency'
 import { stakingGetStats } from '../api/client'
 import TonIcon from '../components/TonIcon.vue'
 
@@ -222,8 +223,8 @@ const userInitial = computed(() => username.value.charAt(0).toUpperCase())
 
 const avatarGradient = 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
 
-// Balance
-const tonBalance = ref(0)
+// Balance from useCurrency
+const { balanceTon: tonBalance, fetchBalance } = useCurrency()
 
 // Stats
 const stats = ref({
@@ -285,6 +286,7 @@ const shareReferralLink = () => {
 
 onMounted(async () => {
   initWebApp()
+  fetchBalance()
   await tonConnect.init('giftmarket_bot')
 
   // Load staking stats if user is available

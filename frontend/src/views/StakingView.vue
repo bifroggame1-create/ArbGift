@@ -300,9 +300,9 @@ const { wallet, connect } = useTonConnect()
 
 // State
 const currentMaxAPY = ref(600)
-const totalStaked = ref(125000)
-const totalRewards = ref(45000)
-const activeStakers = ref(1250)
+const totalStaked = ref(0)
+const totalRewards = ref(0)
+const activeStakers = ref(0)
 
 const userStakes = ref<any[]>([])
 const availableGifts = ref<any[]>([])

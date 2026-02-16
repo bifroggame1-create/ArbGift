@@ -18,7 +18,7 @@
       </div>
       <div class="header-balance">
         <CurrencyIcon :currency="selectedCurrency" :size="16" />
-        <span class="balance-value">{{ formatAmount(balance) }}</span>
+        <span class="balance-value">{{ formatAmount(currentBalance) }}</span>
         <button class="balance-add">+</button>
       </div>
     </header>
@@ -145,7 +145,7 @@
       <!-- Play Button -->
       <button
         class="btn-play"
-        :disabled="!selectedColor || isSpinning || balance < effectiveBet"
+        :disabled="!selectedColor || isSpinning || currentBalance < effectiveBet"
         @click="spin"
       >
         <span v-if="isSpinning" class="spinner"></span>
@@ -182,7 +182,7 @@ import CurrencySwitcher from '../components/CurrencySwitcher.vue'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
 import { useCurrency } from '../composables/useCurrency'
 
-const { selectedCurrency, formatAmount } = useCurrency()
+const { selectedCurrency, currentBalance, deductBalance, addBalance, formatAmount } = useCurrency()
 
 interface Segment {
   color: string
@@ -222,9 +222,8 @@ const colors = [
 ]
 
 // State
-const balance = ref(4.16)
-const gameNumber = ref(89432)
-const onlineCount = ref(156)
+const gameNumber = ref(0)
+const onlineCount = ref(0)
 const currentHash = ref('a7d2...8f1c')
 const isSpinning = ref(false)
 const wheelRotation = ref(0)
@@ -245,8 +244,8 @@ const history = ref<HistoryItem[]>([
 ])
 
 const lastResult = ref({ multiplier: 0, win: 0, color: '' })
-const totalBets = ref(24)
-const totalWon = ref(12.5)
+const totalBets = ref(0)
+const totalWon = ref(0)
 
 const effectiveBet = computed(() => customBet.value || selectedBet.value)
 
@@ -294,11 +293,11 @@ const getColorClass = (color: string) => color
 
 // Spin logic
 const spin = async () => {
-  if (!selectedColor.value || isSpinning.value || balance.value < effectiveBet.value) return
+  if (!selectedColor.value || isSpinning.value || currentBalance.value < effectiveBet.value) return
 
   isSpinning.value = true
   showResult.value = false
-  balance.value -= effectiveBet.value
+  deductBalance(effectiveBet.value)
   gameNumber.value++
   totalBets.value++
 
@@ -345,7 +344,7 @@ const spin = async () => {
   const winAmount = isWin ? effectiveBet.value * winningMultiplier - effectiveBet.value : -effectiveBet.value
 
   if (isWin) {
-    balance.value += effectiveBet.value * winningMultiplier
+    addBalance(effectiveBet.value * winningMultiplier)
     totalWon.value += winAmount
   }
 
