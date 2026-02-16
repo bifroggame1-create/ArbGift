@@ -12,10 +12,7 @@
         <span class="title-badge" style="background:#8b5cf6">x50</span>
       </div>
       <div class="header-balance">
-        <svg width="16" height="16" viewBox="0 0 56 56" fill="none">
-          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-        </svg>
+        <CurrencyIcon :currency="selectedCurrency" :size="16" />
         <span class="balance-val">{{ balance.toFixed(2) }}</span>
         <button class="balance-plus">+</button>
       </div>
@@ -46,6 +43,10 @@
       <span class="hash-value">{{ serverHash }}</span>
     </div>
 
+    <div style="padding: 0 16px 8px;">
+      <CurrencySwitcher />
+    </div>
+
     <!-- Bet buttons -->
     <div class="bet-row">
       <button
@@ -56,7 +57,7 @@
         @click="selectBet(amount)"
         :disabled="gameState === 'playing'"
       >
-        {{ amount }} ◇
+        {{ amount }} <CurrencyIcon :currency="selectedCurrency" :size="12" />
       </button>
     </div>
 
@@ -68,7 +69,7 @@
         :disabled="gameState === 'playing' || balance < selectedBet"
         @click="startGame"
       >
-        <span v-if="gameState === 'idle'">Play {{ selectedBet }} ◇</span>
+        <span v-if="gameState === 'idle'">Play {{ selectedBet }} <CurrencyIcon :currency="selectedCurrency" :size="14" /></span>
         <span v-else-if="gameState === 'playing'">{{ multiplier.toFixed(2) }}x</span>
         <span v-else>Play Again</span>
       </button>
@@ -79,6 +80,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { escapePlay } from '../api/client'
+import CurrencySwitcher from '../components/CurrencySwitcher.vue'
+import CurrencyIcon from '../components/CurrencyIcon.vue'
+import { useCurrency } from '../composables/useCurrency'
+
+const { selectedCurrency } = useCurrency()
 
 // Canvas
 const gameCanvas = ref<HTMLCanvasElement | null>(null)

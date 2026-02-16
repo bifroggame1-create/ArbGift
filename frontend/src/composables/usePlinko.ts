@@ -71,7 +71,7 @@ export function usePlinko() {
   const riskLevel = ref<'low' | 'medium' | 'high'>('medium')
   const rowCount = ref<8 | 12 | 16>(12)
   const ballCount = ref(1)
-  const isDemoMode = ref(true)
+  const isDemoMode = ref(false)
   const isPlaying = ref(false)
   const history = ref<PlinkoHistoryItem[]>([])
 

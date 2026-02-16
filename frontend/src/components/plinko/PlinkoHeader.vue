@@ -20,15 +20,6 @@
       </div>
     </div>
   </header>
-
-  <div class="demo-toggle-row">
-    <label class="demo-toggle" @click="$emit('toggleDemo')">
-      <span class="toggle-track" :class="{ active: isDemo }">
-        <span class="toggle-thumb" />
-      </span>
-      <span class="toggle-label">DEMO</span>
-    </label>
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -41,12 +32,10 @@ const { selectedCurrency } = useCurrency()
 
 defineProps<{
   balance: number
-  isDemo: boolean
 }>()
 
 defineEmits<{
   topUp: []
-  toggleDemo: []
 }>()
 
 const { user } = useTelegram()
@@ -116,49 +105,4 @@ function formatBalance(n: number): string {
   object-fit: cover;
 }
 
-.demo-toggle-row {
-  padding: 0 16px 8px;
-}
-
-.demo-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.toggle-track {
-  width: 36px;
-  height: 20px;
-  border-radius: 10px;
-  background: var(--plinko-purple);
-  position: relative;
-  transition: background 0.2s;
-}
-
-.toggle-track.active {
-  background: var(--plinko-blue);
-}
-
-.toggle-thumb {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--plinko-white);
-  top: 2px;
-  left: 2px;
-  transition: transform 0.2s var(--plinko-ease, ease);
-}
-
-.toggle-track.active .toggle-thumb {
-  transform: translateX(16px);
-}
-
-.toggle-label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  color: var(--plinko-text-secondary);
-}
 </style>

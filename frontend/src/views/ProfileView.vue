@@ -8,10 +8,7 @@
       <span class="mb-balance-label">Play Balance</span>
       <div class="mb-balance-row">
         <span class="mb-balance-value">{{ tonBalance.toFixed(2) }}</span>
-        <svg class="mb-ton-icon" width="28" height="28" viewBox="0 0 56 56" fill="none">
-          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-        </svg>
+        <TonIcon :size="28" />
       </div>
     </div>
 
@@ -27,10 +24,7 @@
       </router-link>
       <button class="mb-action-item" @click="openDepositModal">
         <div class="mb-action-circle">
-          <svg width="24" height="24" viewBox="0 0 56 56" fill="none">
-            <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-            <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-          </svg>
+          <TonIcon :size="24" />
         </div>
         <span class="mb-action-label">Top Up TON</span>
       </button>
@@ -73,10 +67,7 @@
           <span class="mb-inventory-count">{{ stats.totalGifts }} Items</span>
           <span class="mb-inventory-value">
             {{ stats.totalWon.toFixed(1) }}
-            <svg width="12" height="12" viewBox="0 0 56 56" fill="none" style="vertical-align: middle; margin-left: 2px;">
-              <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-              <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-            </svg>
+            <TonIcon :size="12" />
           </span>
         </div>
       </div>
@@ -143,10 +134,7 @@
     <!-- Claim Section -->
     <div class="mb-card mb-claim-card">
       <div class="mb-claim-header">
-        <svg class="mb-claim-ton-icon" width="32" height="32" viewBox="0 0 56 56" fill="none">
-          <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-          <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-        </svg>
+        <TonIcon :size="32" />
         <div class="mb-claim-amounts">
           <span class="mb-claim-value">{{ referrals.earned.toFixed(2) }}</span>
           <span class="mb-claim-label">Claimable amount</span>
@@ -176,10 +164,7 @@
         <div class="mb-modal-content">
           <div class="mb-modal-header">
             <h3 class="mb-modal-title">
-              <svg width="18" height="18" viewBox="0 0 56 56" fill="none">
-                <circle cx="28" cy="28" r="28" fill="#0098EA"/>
-                <path d="M37.5603 15.6277H18.4386C14.9228 15.6277 12.6944 19.4202 14.4632 22.4861L26.2644 42.9409C27.0345 44.2765 28.9644 44.2765 29.7345 42.9409L41.5765 22.4861C43.3045 19.4202 41.0761 15.6277 37.5603 15.6277Z" fill="white"/>
-              </svg>
+              <TonIcon :size="18" />
               Top Up TON
             </h3>
             <button class="mb-modal-close" @click="closeDepositModal">
@@ -225,6 +210,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useTelegram } from '../composables/useTelegram'
 import { useTonConnect } from '../composables/useTonConnect'
 import { stakingGetStats } from '../api/client'
+import TonIcon from '../components/TonIcon.vue'
 
 
 const { user, initWebApp } = useTelegram()
