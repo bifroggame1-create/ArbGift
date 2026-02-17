@@ -146,9 +146,11 @@ async def play_plinko(
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 f"{plinko_url}/api/v1/play",
-                json={
+                params={
                     "user_id": str(user.telegram_id),
-                    "bet_amount": request.bet_amount_stars,
+                },
+                json={
+                    "bet_amount_stars": request.bet_amount_stars,
                     "risk_level": request.risk_level,
                     "row_count": request.row_count,
                     "ball_count": request.ball_count,
