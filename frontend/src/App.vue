@@ -42,9 +42,6 @@ onMounted(() => {
 
     // Expand to full height
     try { tg.expand() } catch {}
-
-    // Disable vertical swipes (prevents accidental close)
-    try { (tg as any).disableVerticalSwipes() } catch {}
   }
 
   // Prevent overscroll/bounce effect on iOS
