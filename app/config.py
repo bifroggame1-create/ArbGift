@@ -134,6 +134,14 @@ class Settings(BaseSettings):
     STARS_TO_TON_RATE: float = 0.013  # 1 STAR = 0.013 TON (default, updated dynamically)
     GAS_FEE_TON: float = 0.05  # Estimated gas fee
 
+    # ============================================================
+    # MICROSERVICES
+    # ============================================================
+    PLINKO_SERVICE_URL: str = "http://localhost:8001"
+    SOLO_GAMES_SERVICE_URL: str = "http://localhost:8002"
+    TRADING_SERVICE_URL: str = "http://localhost:8003"
+    PVP_SERVICE_URL: str = "http://localhost:8004"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

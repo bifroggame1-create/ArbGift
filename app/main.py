@@ -19,6 +19,7 @@ from app.api.v1.staking import router as staking_router
 from app.api.v1.referrals import router as referrals_router
 from app.api.v1.quests import router as quests_router
 from app.api.v1.leaderboards import router as leaderboards_router
+from app.api.v1.games import router as games_router
 
 # Optional dependencies: search (Meilisearch) and websocket (Redis)
 try:
@@ -181,6 +182,12 @@ app.include_router(
     leaderboards_router,
     prefix="/api/v1/leaderboards",
     tags=["Leaderboards"],
+)
+
+app.include_router(
+    games_router,
+    prefix="/api/v1",
+    tags=["Games"],
 )
 
 if search_router:
