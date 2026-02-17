@@ -43,7 +43,7 @@ const hideNav = computed(() => {
 })
 
 // Account for bottom nav (56px) + safe area inset
-const navPadding = computed(() => hideNav.value ? '0px' : '100px')
+const navPadding = computed(() => hideNav.value ? '0px' : '80px')
 
 onMounted(() => {
   initWebApp()
@@ -99,6 +99,7 @@ onMounted(() => {
 /* Desktop platform: natural flow */
 .app-content {
   position: relative;
+  padding-top: env(safe-area-inset-top, 20px);
 }
 
 /* Fade transition */
