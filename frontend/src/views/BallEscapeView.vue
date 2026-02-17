@@ -55,7 +55,8 @@
           @click="selectBet(amount)"
           :disabled="gameState === 'playing'"
         >
-          {{ amount }} {{ currencySymbol }}
+          <span>{{ amount }}</span>
+          <CurrencyIcon :currency="selectedCurrency" :size="12" />
         </button>
         <button class="bet-pill max-pill" @click="selectedBet = Math.floor(currentBalance * 10) / 10" :disabled="gameState === 'playing'">Макс</button>
       </div>
@@ -81,7 +82,10 @@
           <span class="btn-text-main" v-if="gameState === 'idle'">Играть</span>
           <span class="btn-text-main" v-else-if="gameState === 'playing'">{{ multiplier.toFixed(2) }}x</span>
           <span class="btn-text-main" v-else>Снова</span>
-          <span class="btn-text-sub">{{ currencySymbol }} {{ formatAmount(selectedBet) }}</span>
+          <span class="btn-text-sub">
+            <CurrencyIcon :currency="selectedCurrency" :size="13" />
+            {{ formatAmount(selectedBet) }}
+          </span>
         </button>
 
         <button class="icon-btn" @click="handleDeposit">
@@ -119,10 +123,6 @@ const betAmounts = computed(() => {
   return selectedCurrency.value === 'stars'
     ? [150, 500, 1000, 5000, 10000]
     : [1, 3, 10, 30, 50]
-})
-
-const currencySymbol = computed(() => {
-  return selectedCurrency.value === 'stars' ? '★' : '▽'
 })
 
 const currencyClass = computed(() => {

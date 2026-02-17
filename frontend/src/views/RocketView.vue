@@ -107,7 +107,8 @@
           @click="betAmount = amount"
           :disabled="gameState === 'flying'"
         >
-          {{ amount }} {{ currencySymbol }}
+          <span>{{ amount }}</span>
+          <CurrencyIcon :currency="selectedCurrency" :size="12" />
         </button>
         <button class="bet-pill max-pill" @click="betAmount = Math.floor(currentBalance * 10) / 10" :disabled="gameState === 'flying'">Макс</button>
       </div>
@@ -138,7 +139,19 @@
           :disabled="actionDisabled"
         >
           <span class="btn-text-main">{{ actionBtnTextMain }}</span>
-          <span class="btn-text-sub">{{ actionBtnTextSub }}</span>
+          <span class="btn-text-sub" v-if="gameState === 'waiting' && !hasBet">
+            <CurrencyIcon :currency="selectedCurrency" :size="13" />
+            {{ formatAmount(betAmount) }}
+          </span>
+          <span class="btn-text-sub" v-else-if="gameState === 'flying' && hasBet && !hasCashedOut">
+            <CurrencyIcon :currency="selectedCurrency" :size="13" />
+            {{ formatAmount(betAmount * currentMultiplier) }}
+          </span>
+          <span class="btn-text-sub" v-else-if="gameState === 'flying'">...</span>
+          <span class="btn-text-sub" v-else-if="gameState === 'crashed'">
+            <CurrencyIcon :currency="selectedCurrency" :size="13" />
+            {{ formatAmount(betAmount) }}
+          </span>
         </button>
 
         <button class="icon-btn" @click="handleDeposit">
@@ -207,10 +220,6 @@ const betAmounts = computed(() => {
   return selectedCurrency.value === 'stars'
     ? [150, 500, 1000, 5000, 10000]
     : [1, 3, 10, 30, 50]
-})
-
-const currencySymbol = computed(() => {
-  return selectedCurrency.value === 'stars' ? '★' : '▽'
 })
 
 const currencyClass = computed(() => {
@@ -292,19 +301,6 @@ const actionBtnTextMain = computed(() => {
     return 'Ожидайте'
   }
   return 'Играть'
-})
-
-const actionBtnTextSub = computed(() => {
-  if (gameState.value === 'waiting') {
-    return hasBet.value ? '' : `${currencySymbol.value} ${formatAmount(betAmount.value)}`
-  }
-  if (gameState.value === 'flying') {
-    if (hasBet.value && !hasCashedOut.value) {
-      return `${currencySymbol.value} ${formatAmount(betAmount.value * currentMultiplier.value)}`
-    }
-    return '...'
-  }
-  return `${currencySymbol.value} ${formatAmount(betAmount.value)}`
 })
 
 const actionDisabled = computed(() => {
