@@ -287,7 +287,6 @@ onMounted(() => {
   border: 2px solid #191919;
   border-radius: 32px;
   overflow: hidden;
-  touch-action: pan-y;
 }
 
 /* Currency Bar */

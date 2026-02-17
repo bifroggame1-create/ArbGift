@@ -846,7 +846,6 @@ onUnmounted(() => {
 
 .game-canvas {
   border-radius: 24px;
-  touch-action: pan-y;
 }
 
 .multiplier-overlay {
