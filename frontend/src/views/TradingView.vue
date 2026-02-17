@@ -798,14 +798,11 @@ onUnmounted(() => {
 /* === Trading View — myballs.io style === */
 
 .trading-view {
-  min-height: 100vh;
   background: #0C0C0C;
   color: #fff;
   font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 15px;
   padding-bottom: 100px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* Header */

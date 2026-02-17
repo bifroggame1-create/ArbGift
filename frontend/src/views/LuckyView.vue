@@ -388,13 +388,10 @@ onUnmounted(() => {
 
 <style scoped>
 .lucky-view {
-  min-height: 100vh;
   background: #000;
   color: #fff;
   position: relative;
   overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   padding-bottom: 90px;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
 }
