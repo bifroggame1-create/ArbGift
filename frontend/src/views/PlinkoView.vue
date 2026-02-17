@@ -52,7 +52,7 @@
           <CurrencyIcon :currency="selectedCurrency" :size="12" />
           {{ amount }}
         </button>
-        <button class="bet-pill max-pill" @click="betAmount = Math.floor(currentBalance * 10) / 10">Max</button>
+        <button class="bet-pill max-pill" @click="betAmount = Math.floor(currentBalance * 10) / 10">Макс</button>
       </div>
 
       <!-- Main Action Button -->
@@ -61,8 +61,8 @@
         :disabled="isPlaying || currentBalance < betAmount"
         @click="handlePlay"
       >
-        <CurrencyIcon :currency="selectedCurrency" :size="18" />
-        <span class="btn-label">{{ isPlaying ? 'Playing...' : `Play ${formatAmount(betAmount)}` }}</span>
+        <span class="btn-label">{{ isPlaying ? 'Играем...' : `Купить ${formatAmount(betAmount)}` }}</span>
+        <CurrencyIcon :currency="selectedCurrency" :size="16" />
       </button>
     </div>
 
@@ -328,13 +328,19 @@ onMounted(() => {
 }
 
 .play-btn {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  color: #fff;
+  background: #00FF62;
+  color: #000;
+}
+
+.play-btn:not(:disabled):active {
+  background: #00e056;
 }
 
 .btn-label {
   display: flex;
   align-items: center;
   gap: 4px;
+  font-size: 17px;
+  font-weight: 600;
 }
 </style>

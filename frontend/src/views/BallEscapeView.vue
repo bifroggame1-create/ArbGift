@@ -69,9 +69,9 @@
         :disabled="gameState === 'playing' || currentBalance < selectedBet"
         @click="startGame"
       >
-        <span v-if="gameState === 'idle'">Play {{ selectedBet }} <CurrencyIcon :currency="selectedCurrency" :size="14" /></span>
+        <span v-if="gameState === 'idle'">Купить {{ selectedBet }} <CurrencyIcon :currency="selectedCurrency" :size="14" /></span>
         <span v-else-if="gameState === 'playing'">{{ multiplier.toFixed(2) }}x</span>
-        <span v-else>Play Again</span>
+        <span v-else>Играть снова</span>
       </button>
     </div>
   </div>
@@ -899,10 +899,10 @@ onUnmounted(() => {
 .play-btn {
   width: 100%;
   padding: 16px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  background: #00FF62;
   border: none;
   border-radius: 16px;
-  color: #fff;
+  color: #000;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
@@ -916,10 +916,15 @@ onUnmounted(() => {
 
 .play-btn.playing {
   background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+  color: #fff;
 }
 
 .play-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 255, 98, 0.4);
+}
+
+.play-btn:not(:disabled):not(.playing):active {
+  background: #00e056;
 }
 </style>

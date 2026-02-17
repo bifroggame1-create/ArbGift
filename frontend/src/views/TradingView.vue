@@ -92,6 +92,51 @@
       </div>
     </div>
 
+    <!-- Currency Switcher -->
+    <div class="currency-bar">
+      <CurrencySwitcher />
+    </div>
+
+    <!-- Bet Controls -->
+    <div class="bet-controls">
+      <!-- Bet Amount Pills -->
+      <div class="bet-amounts">
+        <button
+          v-for="amount in betAmounts"
+          :key="amount"
+          class="bet-pill"
+          :class="{ active: selectedBet === amount }"
+          @click="selectedBet = amount"
+        >
+          <CurrencyIcon :currency="selectedCurrency" :size="12" />
+          {{ amount }}
+        </button>
+        <button class="bet-pill max-pill" @click="selectedBet = Math.floor(currentBalance * 10) / 10">Макс</button>
+      </div>
+
+      <!-- Main Action Button -->
+      <button
+        v-if="!playerBet"
+        class="main-btn buy-btn"
+        :disabled="!canBuy"
+        @click="placeBet"
+      >
+        <span class="btn-label">Купить {{ formatAmount(selectedBet) }}</span>
+        <CurrencyIcon :currency="selectedCurrency" :size="16" />
+      </button>
+      <button
+        v-else
+        class="main-btn sell-btn"
+        :disabled="gameState !== 'running'"
+        @click="cashOut"
+      >
+        <span class="btn-label">Продать</span>
+        <span class="btn-percent" :class="currentPLPercent >= 0 ? 'positive' : 'negative'">
+          {{ currentPLPercent >= 0 ? '+' : '' }}{{ currentPLPercent.toFixed(0) }}%
+        </span>
+      </button>
+    </div>
+
     <!-- Traders Panel -->
     <div class="traders-panel">
       <div class="traders-header">
@@ -119,8 +164,9 @@
       <div class="traders-list" v-if="traders.length > 0">
         <div v-for="trader in traders" :key="trader.id" class="trader-row" :class="{ exited: trader.exited }">
           <div class="trader-info">
-            <div class="trader-avatar" :style="{ background: trader.color }">
-              {{ trader.name.charAt(0).toUpperCase() }}
+            <div class="trader-avatar" :style="{ background: trader.photoUrl ? 'transparent' : trader.color }">
+              <img v-if="trader.photoUrl" :src="trader.photoUrl" alt="" class="trader-avatar-img" />
+              <span v-else>{{ trader.name.charAt(0).toUpperCase() }}</span>
             </div>
             <span class="trader-name">@{{ trader.name }}</span>
           </div>
@@ -141,53 +187,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Currency Switcher -->
-    <div class="currency-bar">
-      <CurrencySwitcher />
-    </div>
-
-    <!-- Bet Controls -->
-    <div class="bet-controls">
-      <!-- Bet Amount Pills -->
-      <div class="bet-amounts">
-        <button
-          v-for="amount in betAmounts"
-          :key="amount"
-          class="bet-pill"
-          :class="{ active: selectedBet === amount }"
-          @click="selectedBet = amount"
-        >
-          <CurrencyIcon :currency="selectedCurrency" :size="12" />
-          {{ amount }}
-        </button>
-        <button class="bet-pill max-pill" @click="selectedBet = Math.floor(currentBalance * 10) / 10">Max</button>
-      </div>
-
-      <!-- Main Action Button -->
-      <button
-        v-if="!playerBet"
-        class="main-btn buy-btn"
-        :disabled="!canBuy"
-        @click="placeBet"
-      >
-        <CurrencyIcon :currency="selectedCurrency" :size="18" />
-        <span class="btn-label">Buy {{ formatAmount(selectedBet) }}
-          <CurrencyIcon :currency="selectedCurrency" :size="12" />
-        </span>
-      </button>
-      <button
-        v-else
-        class="main-btn sell-btn"
-        :disabled="gameState !== 'running'"
-        @click="cashOut"
-      >
-        <span class="btn-label">Sell</span>
-        <span class="btn-percent" :class="currentPLPercent >= 0 ? 'positive' : 'negative'">
-          {{ currentPLPercent >= 0 ? '+' : '' }}{{ currentPLPercent.toFixed(0) }}%
-        </span>
-      </button>
-    </div>
   </div>
 </template>
 
@@ -197,8 +196,10 @@ import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi, ColorT
 import CurrencySwitcher from '../components/CurrencySwitcher.vue'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
 import { useCurrency } from '../composables/useCurrency'
+import { useTelegram } from '../composables/useTelegram'
 
 const { selectedCurrency, currentBalance, deductBalance, addBalance, formatAmount } = useCurrency()
+const { user } = useTelegram()
 
 // ======= Types =======
 interface Candle {
@@ -216,6 +217,7 @@ interface Trader {
   color: string
   exited: boolean
   profit: number
+  photoUrl?: string
 }
 
 interface RecentGame {
@@ -694,6 +696,7 @@ function placeBet() {
     color: '#34CDEF',
     exited: false,
     profit: 0,
+    photoUrl: user.value?.photo_url || '',
   })
 }
 
@@ -1017,6 +1020,18 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: 600;
   color: #000;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.trader-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trader-avatar span {
+  display: block;
 }
 .trader-name { font-size: 13px; }
 .trader-bet { font-size: 13px; color: rgba(255, 255, 255, 0.4); }
@@ -1084,7 +1099,7 @@ onUnmounted(() => {
   -webkit-tap-highlight-color: transparent;
 }
 .buy-btn {
-  background: #34CDEF;
+  background: #00FF62;
   color: #000;
 }
 .buy-btn:disabled {
@@ -1093,9 +1108,8 @@ onUnmounted(() => {
 }
 .buy-btn:not(:disabled):active {
   transform: scale(0.97);
-  background: #2ab8d6;
+  background: #00e056;
 }
-.btn-diamond { color: #000; }
 .btn-label {
   font-size: 17px;
   font-weight: 600;

@@ -76,8 +76,9 @@
     <!-- User Section -->
     <div class="mb-user-section">
       <div class="mb-user-row">
-        <div class="mb-user-avatar" :style="{ background: avatarGradient }">
-          <span>{{ userInitial }}</span>
+        <div class="mb-user-avatar" :style="avatarStyle">
+          <img v-if="userPhotoUrl" :src="userPhotoUrl" alt="Avatar" class="avatar-img" />
+          <span v-else>{{ userInitial }}</span>
         </div>
         <div class="mb-user-info">
           <span class="mb-username">@{{ username }}</span>
@@ -274,8 +275,15 @@ const tonConnect = useTonConnect()
 // User data from Telegram
 const username = computed(() => user.value?.username || user.value?.first_name || 'Player')
 const userInitial = computed(() => username.value.charAt(0).toUpperCase())
+const userPhotoUrl = computed(() => user.value?.photo_url || '')
 
 const avatarGradient = 'linear-gradient(135deg, #3b82f6, #8b5cf6)'
+const avatarStyle = computed(() => {
+  if (userPhotoUrl.value) {
+    return { background: 'transparent' }
+  }
+  return { background: avatarGradient }
+})
 
 // Balance from useCurrency
 const { balanceTon: tonBalance, fetchBalance } = useCurrency()
@@ -562,6 +570,13 @@ onMounted(async () => {
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .mb-user-info {
