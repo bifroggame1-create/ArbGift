@@ -33,11 +33,6 @@
       <PlinkoWinFeed :history="history" />
     </div>
 
-    <!-- Currency Switcher -->
-    <div class="currency-bar">
-      <CurrencySwitcher />
-    </div>
-
     <!-- Bet Controls -->
     <div class="bet-controls">
       <!-- Bet Amount Pills -->
@@ -108,7 +103,6 @@ import { useTelegram } from '@/composables/useTelegram'
 import PlinkoBoard from '@/components/plinko/PlinkoBoard.vue'
 import PlinkoWinFeed from '@/components/plinko/PlinkoWinFeed.vue'
 import WinPopup from '@/components/plinko/WinPopup.vue'
-import CurrencySwitcher from '@/components/CurrencySwitcher.vue'
 import CurrencyIcon from '@/components/CurrencyIcon.vue'
 
 import '@/styles/plinko-theme.css'

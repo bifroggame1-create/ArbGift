@@ -43,10 +43,6 @@
       <span class="hash-value">{{ serverHash }}</span>
     </div>
 
-    <div style="padding: 0 16px 8px;">
-      <CurrencySwitcher />
-    </div>
-
     <!-- Bet Controls -->
     <div class="bet-controls">
       <!-- Bet Amount Pills -->
@@ -108,7 +104,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { escapePlay } from '../api/client'
-import CurrencySwitcher from '../components/CurrencySwitcher.vue'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
 import { useCurrency } from '../composables/useCurrency'
 

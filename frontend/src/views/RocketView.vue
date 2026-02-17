@@ -95,11 +95,6 @@
       </div>
     </div>
 
-    <!-- Currency Switcher -->
-    <div style="padding: 0 16px; margin-bottom: 12px; position: relative; z-index: 10;">
-      <CurrencySwitcher />
-    </div>
-
     <!-- Bet Panel -->
     <div class="bet-panel">
       <!-- Bet Amount Pills -->
@@ -185,7 +180,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import CurrencySwitcher from '../components/CurrencySwitcher.vue'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
 import TgsPlayer from '../components/TgsPlayer.vue'
 import { useCurrency } from '../composables/useCurrency'
