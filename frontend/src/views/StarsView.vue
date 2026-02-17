@@ -267,7 +267,6 @@ const handlePurchase = async () => {
 
 <style scoped>
 .stars-view {
-  min-height: 100vh;
   background: #000;
   color: #fff;
   padding-bottom: 100px;
