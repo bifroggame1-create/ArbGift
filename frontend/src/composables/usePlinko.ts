@@ -67,20 +67,43 @@ export function usePlinko() {
   }
 
   async function play(): Promise<DropResult[]> {
-    if (isPlaying.value) return []
+    console.log('🎲 [usePlinko] play() called')
+    console.log('🎲 [usePlinko] isPlaying:', isPlaying.value)
 
-    const totalCost = betAmount.value * ballCount.value
-    if (currentBalance.value < totalCost) {
-      console.log('Insufficient balance:', currentBalance.value, 'needed:', totalCost)
+    if (isPlaying.value) {
+      console.log('❌ [usePlinko] Already playing, aborting')
       return []
     }
 
+    const totalCost = betAmount.value * ballCount.value
+    console.log('🎲 [usePlinko] Balance check:', {
+      currentBalance: currentBalance.value,
+      betAmount: betAmount.value,
+      ballCount: ballCount.value,
+      totalCost,
+      hasEnough: currentBalance.value >= totalCost
+    })
+
+    if (currentBalance.value < totalCost) {
+      console.log('❌ [usePlinko] Insufficient balance:', currentBalance.value, 'needed:', totalCost)
+      return []
+    }
+
+    console.log('✅ [usePlinko] Balance check passed, setting isPlaying = true')
     isPlaying.value = true
 
     let drops: DropResult[]
 
     // Server-side play
     const userId = String(user.value?.id || '0')
+    console.log('🎲 [usePlinko] Calling API with:', {
+      userId,
+      betAmountStars: betAmount.value,
+      riskLevel: riskLevel.value,
+      rowCount: rowCount.value,
+      ballCount: ballCount.value,
+    })
+
     try {
       const response = await plinkoPlay({
         userId,
@@ -89,19 +112,24 @@ export function usePlinko() {
         rowCount: rowCount.value,
         ballCount: ballCount.value,
       })
+      console.log('✅ [usePlinko] API response:', response)
       drops = response.drops
 
       // Update balance from server response
       if (response.new_balance_stars > 0) {
         // Deduct the cost and add the payout
         const totalPayout = drops.reduce((sum, d) => sum + d.payout, 0)
+        console.log('💰 [usePlinko] Updating balance:', {
+          deducting: totalCost,
+          adding: totalPayout
+        })
         deductBalance(totalCost)
         if (totalPayout > 0) {
           deductBalance(-totalPayout) // Add payout (negative deduction)
         }
       }
     } catch (error) {
-      console.error('Plinko play error:', error)
+      console.error('❌ [usePlinko] Plinko play error:', error)
       isPlaying.value = false
       return []
     }

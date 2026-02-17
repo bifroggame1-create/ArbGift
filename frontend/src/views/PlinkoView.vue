@@ -153,14 +153,26 @@ const bestWinDrop = computed(() => {
 let landedCount = 0
 
 async function handlePlay() {
+  console.log('🎮 [PlinkoView] handlePlay called')
+  console.log('🎮 [PlinkoView] Current balance:', currentBalance.value)
+  console.log('🎮 [PlinkoView] Bet amount:', betAmount.value)
+  console.log('🎮 [PlinkoView] isPlaying:', isPlaying.value)
+  console.log('🎮 [PlinkoView] boardRef:', boardRef.value)
+
   const drops = await play()
-  if (!drops.length) return
+  console.log('🎮 [PlinkoView] Drops received:', drops)
+
+  if (!drops.length) {
+    console.log('❌ [PlinkoView] No drops returned, aborting')
+    return
+  }
 
   landedCount = 0
 
   // Stagger ball drops
   for (let i = 0; i < drops.length; i++) {
     setTimeout(() => {
+      console.log('🎯 [PlinkoView] Dropping ball', i, 'with path:', drops[i].path)
       boardRef.value?.dropBall(drops[i].path, i)
     }, i * 400) // 400ms between each ball
   }
