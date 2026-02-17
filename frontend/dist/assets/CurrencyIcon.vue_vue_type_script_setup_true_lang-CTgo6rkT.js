@@ -1,1 +1,0 @@
-import{T as r}from"./TonIcon-DgNL57wd.js";import{S as c}from"./StarIcon-Dsu5Wwvh.js";import{d as t,a as n,o}from"./vue-zmqNZZe6.js";const l=t({__name:"CurrencyIcon",props:{currency:{default:"ton"},size:{default:14}},setup(e){return(s,a)=>e.currency==="ton"?(o(),n(r,{key:0,size:e.size},null,8,["size"])):(o(),n(c,{key:1,size:e.size},null,8,["size"]))}});export{l as _};

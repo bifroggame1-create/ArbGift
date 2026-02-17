@@ -18,8 +18,10 @@
       </div>
     </header>
 
-    <!-- Chart Container -->
-    <div class="chart-wrapper">
+    <!-- Game Section: Chart + Controls -->
+    <div class="game-section">
+      <!-- Chart Container -->
+      <div class="chart-wrapper">
       <div class="chart-container" ref="chartContainerRef">
         <!-- Ping Indicator -->
         <div class="ping-indicator">
@@ -160,6 +162,7 @@
           <span class="icon-label">Пополнить</span>
         </button>
       </div>
+    </div>
     </div>
 
     <!-- Traders Panel -->
@@ -814,6 +817,11 @@ onUnmounted(() => {
 .header-balance { display: flex; align-items: center; gap: 6px; background: #1c1c1e; padding: 8px 12px; border-radius: 12px; }
 .balance-val { font-size: 14px; font-weight: 600; }
 .balance-plus { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #4b5563; background: transparent; color: #fff; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+/* Game Section */
+.game-section {
+  margin-bottom: 16px;
+}
 
 /* ====== Chart ====== */
 .chart-wrapper {
