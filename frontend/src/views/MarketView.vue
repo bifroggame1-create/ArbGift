@@ -585,7 +585,6 @@ onMounted(() => {
 
 <style scoped>
 .market-view {
-  min-height: 100vh;
   background: #0C0C0C;
   color: #fff;
   padding-bottom: 80px;

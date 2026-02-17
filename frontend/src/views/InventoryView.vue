@@ -336,7 +336,6 @@ const refreshInventory = () => {
 
 <style scoped>
 .inventory-view {
-  min-height: 100vh;
   background: #000;
   color: #fff;
   position: relative;

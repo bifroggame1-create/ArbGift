@@ -431,7 +431,6 @@ onUnmounted(() => {
   --mb-radius-sm: 8px;
   --mb-radius-pill: 100px;
 
-  min-height: 100vh;
   background-color: var(--mb-bg);
   color: var(--mb-text-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;

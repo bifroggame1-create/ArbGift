@@ -438,7 +438,6 @@ onMounted(async () => {
 }
 
 .mb-profile {
-  min-height: 100vh;
   background: var(--mb-bg);
   color: #fff;
   position: relative;

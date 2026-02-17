@@ -476,7 +476,6 @@ onMounted(async () => {
 
 <style scoped>
 .admin-panel {
-  min-height: 100vh;
   background: #000;
   color: #fff;
   padding: 0 0 80px;
