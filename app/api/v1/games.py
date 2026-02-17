@@ -4,7 +4,9 @@ Games API endpoints.
 Handles game plays with user balance management.
 """
 import logging
-import httpx
+import hashlib
+import secrets
+import uuid
 from decimal import Decimal
 from typing import List, Optional
 from datetime import datetime
@@ -15,10 +17,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
 from app.models.user import User
-from app.config import settings
+from app.services.plinko_engine import PlinkoEngine
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Initialize Plinko engine
+plinko_engine = PlinkoEngine()
+
+# Nonce tracking per user (in-memory, should be Redis in production)
+user_nonces: dict = {}
 
 
 # ============================================================
@@ -37,7 +45,7 @@ class PlinkoPlayRequest(BaseModel):
 class DropResult(BaseModel):
     """Single ball drop result."""
     id: str
-    path: List[List[int]]
+    path: List[List[float]]
     landing_slot: int
     multiplier: float
     bet_amount: int
@@ -113,11 +121,11 @@ async def play_plinko(
     session: AsyncSession = Depends(get_db_session),
 ):
     """
-    Play Plinko game.
+    Play Plinko game - integrated version (no external service).
 
     1. Validates user and balance
     2. Deducts bet amount
-    3. Calls Plinko service for game logic
+    3. Generates drops using local Plinko engine
     4. Updates user balance with payout
     5. Updates user stats
     """
@@ -139,37 +147,63 @@ async def play_plinko(
     # Deduct bet amount
     user.balance_stars -= total_cost
 
-    # Call Plinko service
-    plinko_url = getattr(settings, 'PLINKO_SERVICE_URL', 'http://localhost:8001')
+    # Generate drops using local engine
+    client_seed = request.client_seed or secrets.token_hex(16)
+    user_id = str(user.telegram_id)
+
+    # Get/increment nonce
+    if user_id not in user_nonces:
+        user_nonces[user_id] = 0
+
+    drops: List[DropResult] = []
+    total_payout = 0
+    total_profit = 0
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{plinko_url}/api/v1/play",
-                params={
-                    "user_id": str(user.telegram_id),
-                },
-                json={
-                    "bet_amount_stars": request.bet_amount_stars,
-                    "risk_level": request.risk_level,
-                    "row_count": request.row_count,
-                    "ball_count": request.ball_count,
-                    "client_seed": request.client_seed or "",
-                }
+        for i in range(request.ball_count):
+            nonce = user_nonces[user_id]
+            user_nonces[user_id] += 1
+
+            server_seed = secrets.token_hex(32)
+            server_seed_hash = hashlib.sha256(server_seed.encode()).hexdigest()
+
+            result = plinko_engine.generate_drop(
+                server_seed=server_seed,
+                client_seed=client_seed,
+                nonce=nonce,
+                bet_amount=float(request.bet_amount_stars),
+                risk_level=request.risk_level,
+                row_count=request.row_count,
             )
-            response.raise_for_status()
-            plinko_result = response.json()
-    except httpx.HTTPError as e:
+
+            drop_id = str(uuid.uuid4())
+
+            drop_result = DropResult(
+                id=drop_id,
+                path=result["path"],
+                landing_slot=result["landing_slot"],
+                multiplier=result["multiplier"],
+                bet_amount=request.bet_amount_stars,
+                payout=int(result["payout"]),
+                profit=int(result["profit"]),
+                server_seed_hash=server_seed_hash,
+                server_seed=server_seed,
+                client_seed=client_seed,
+                nonce=nonce,
+                risk_level=request.risk_level,
+                row_count=request.row_count,
+                created_at=datetime.utcnow().isoformat(),
+            )
+            drops.append(drop_result)
+            total_payout += int(result["payout"])
+            total_profit += int(result["profit"])
+
+    except Exception as e:
         # Refund on error
         user.balance_stars += total_cost
         await session.commit()
-        logger.error(f"Plinko service error: {e}")
-        raise HTTPException(status_code=503, detail="Game service unavailable")
-
-    # Parse drops
-    drops = plinko_result.get("drops", [])
-    total_payout = sum(drop.get("payout", 0) for drop in drops)
-    total_profit = total_payout - total_cost
+        logger.error(f"Plinko engine error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Game engine error: {str(e)}")
 
     # Add payout to balance
     user.balance_stars += total_payout
@@ -203,7 +237,7 @@ async def play_plinko(
     )
 
     return PlinkoPlayResponse(
-        drops=[DropResult(**drop) for drop in drops],
+        drops=drops,
         new_balance_stars=user.balance_stars,
         total_payout=total_payout,
         total_profit=total_profit,
