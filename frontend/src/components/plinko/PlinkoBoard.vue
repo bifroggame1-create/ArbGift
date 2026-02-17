@@ -50,11 +50,11 @@ const containerRef = ref<HTMLDivElement | null>(null)
 const pixiRef = ref<HTMLDivElement | null>(null)
 
 // ===== CONSTANTS =====
-const BALL_RADIUS = 6
-const PEG_RADIUS = 5.5
-const BOARD_PADDING_X = 20
-const TOP_PADDING = 20
-const BOTTOM_PADDING = 8
+const BALL_RADIUS = 8
+const PEG_RADIUS = 6
+const BOARD_PADDING_X = 30
+const TOP_PADDING = 40
+const BOTTOM_PADDING = 20
 
 // ===== STATE =====
 let boardWidth = 360
@@ -64,6 +64,7 @@ let pegSpacingY = 26
 
 let app: PIXI.Application | null = null
 let pegGraphics: PIXI.Graphics[] = []
+let backgroundGraphics: PIXI.Graphics | null = null
 let mEngine: Matter.Engine | null = null
 let pegBodies: Matter.Body[] = []
 let pegPositions: { x: number; y: number }[] = []
@@ -138,6 +139,12 @@ async function initPixi() {
   computeLayoutFromCanvas()
   computePegPositions()
 
+  // Draw background elements
+  drawBackground()
+
+  // Draw drop zone gradient at top
+  drawDropZone()
+
   // Create physics bodies now that we have positions
   createPhysicsBodies()
 
@@ -157,12 +164,12 @@ function computeLayoutFromCanvas() {
   pegSpacingX = (boardWidth - BOARD_PADDING_X * 2) / (bottomPegs - 1)
 
   // Compute vertical spacing based on available height
-  // Reserve space for multipliers and gifts at bottom (80px total)
-  const availableHeight = boardHeight - TOP_PADDING - BOTTOM_PADDING - 80
+  // Reserve space for multipliers and gifts at bottom (100px total)
+  const availableHeight = boardHeight - TOP_PADDING - BOTTOM_PADDING - 100
   pegSpacingY = availableHeight / (rows - 1)
 
   // Clamp spacing to reasonable values
-  pegSpacingY = Math.max(18, Math.min(pegSpacingY, 35))
+  pegSpacingY = Math.max(20, Math.min(pegSpacingY, 40))
 
   console.log('📐 [PlinkoBoard] Layout from canvas:', {
     boardWidth,
@@ -181,27 +188,93 @@ function drawPegs() {
 
   for (const { x, y } of pegPositions) {
     const g = new PIXI.Graphics()
-    // Outer glow ring
-    g.circle(0, 0, PEG_RADIUS + 2)
-    g.fill({ color: 0x6B2FBE, alpha: 0.15 })
-    // Main peg
+    // Outer glow ring (bright cyan)
+    g.circle(0, 0, PEG_RADIUS + 3)
+    g.fill({ color: 0x00D9FF, alpha: 0.3 })
+    // Main peg (bright cyan/blue)
     g.circle(0, 0, PEG_RADIUS)
-    g.fill({ color: 0x5A2D7A })
-    // Inner highlight
-    g.circle(-1, -1, PEG_RADIUS * 0.4)
-    g.fill({ color: 0x8B5CF6, alpha: 0.3 })
+    g.fill({ color: 0x00C3FF })
+    // Inner highlight (white)
+    g.circle(-1.5, -1.5, PEG_RADIUS * 0.4)
+    g.fill({ color: 0xFFFFFF, alpha: 0.7 })
     g.position.set(x, y)
     app.stage.addChild(g)
     pegGraphics.push(g)
   }
 }
 
+function drawDropZone() {
+  if (!app) return
+
+  // Create drop zone gradient rectangle at top
+  const dropZone = new PIXI.Graphics()
+
+  // Draw gradient background (top to transparent)
+  const gradient = dropZone.rect(0, 0, boardWidth, TOP_PADDING + 20)
+
+  // Create gradient fill (cyan to transparent)
+  gradient.fill({
+    color: 0x00D9FF,
+    alpha: 0.15,
+  })
+
+  // Add border line at bottom
+  dropZone.moveTo(0, TOP_PADDING + 20)
+  dropZone.lineTo(boardWidth, TOP_PADDING + 20)
+  dropZone.stroke({ color: 0x00D9FF, width: 2, alpha: 0.3 })
+
+  app.stage.addChildAt(dropZone, 0) // Add to back
+}
+
+function drawBackground() {
+  if (!app) return
+
+  // Clean up old background
+  if (backgroundGraphics) {
+    backgroundGraphics.destroy()
+  }
+
+  backgroundGraphics = new PIXI.Graphics()
+
+  // Draw subtle grid pattern
+  const gridSpacing = 30
+  for (let x = 0; x < boardWidth; x += gridSpacing) {
+    backgroundGraphics.moveTo(x, 0)
+    backgroundGraphics.lineTo(x, boardHeight)
+    backgroundGraphics.stroke({ color: 0x00D9FF, width: 0.5, alpha: 0.05 })
+  }
+
+  for (let y = 0; y < boardHeight; y += gridSpacing) {
+    backgroundGraphics.moveTo(0, y)
+    backgroundGraphics.lineTo(boardWidth, y)
+    backgroundGraphics.stroke({ color: 0x00D9FF, width: 0.5, alpha: 0.05 })
+  }
+
+  // Add subtle vignette effect at edges
+  const vignette = new PIXI.Graphics()
+
+  // Left edge
+  vignette.rect(0, 0, 30, boardHeight)
+  vignette.fill({ color: 0x000000, alpha: 0.1 })
+
+  // Right edge
+  vignette.rect(boardWidth - 30, 0, 30, boardHeight)
+  vignette.fill({ color: 0x000000, alpha: 0.1 })
+
+  backgroundGraphics.addChild(vignette)
+  app.stage.addChildAt(backgroundGraphics, 0)
+}
+
 // ===== MATTER.JS SETUP =====
 
 function initMatter() {
   mEngine = Matter.Engine.create({
-    gravity: { x: 0, y: 1.2, scale: 0.001 },
+    gravity: { x: 0, y: 1, scale: 0.001 },
   })
+
+  // Enable better collision detection
+  mEngine.positionIterations = 10
+  mEngine.velocityIterations = 8
 
   console.log('⚙️ [PlinkoBoard] Matter.js initialized')
 }
@@ -212,13 +285,14 @@ function createPhysicsBodies() {
   // Clear existing bodies
   Matter.Composite.clear(mEngine.world, false)
 
-  // Peg bodies (static circles, slightly larger than visual for reliable bouncing)
+  // Peg bodies (static circles)
   pegBodies = []
   for (const { x, y } of pegPositions) {
-    const peg = Matter.Bodies.circle(x, y, PEG_RADIUS * 0.75, {
+    const peg = Matter.Bodies.circle(x, y, PEG_RADIUS, {
       isStatic: true,
-      restitution: 0.6,
-      friction: 0.05,
+      restitution: 0.8,
+      friction: 0.01,
+      frictionStatic: 0.01,
       label: 'peg',
     })
     pegBodies.push(peg)
@@ -277,31 +351,32 @@ function dropBall(path: number[][], dropIndex: number) {
   }
 
   // Drop from top center with slight random offset
-  const startX = boardWidth / 2 + (Math.random() - 0.5) * 4
-  const startY = 5
+  const startX = boardWidth / 2 + (Math.random() - 0.5) * 8
+  const startY = 10
 
-  const body = Matter.Bodies.circle(startX, startY, BALL_RADIUS * 0.65, {
-    restitution: 0.5,
-    friction: 0.02,
-    density: 0.003,
-    frictionAir: 0.015,
+  const body = Matter.Bodies.circle(startX, startY, BALL_RADIUS, {
+    restitution: 0.75,
+    friction: 0.01,
+    frictionStatic: 0.01,
+    density: 0.001,
+    frictionAir: 0.01,
     label: 'ball',
   })
 
-  // Small initial downward velocity
-  Matter.Body.setVelocity(body, { x: 0, y: 1 })
+  // Initial downward velocity for immediate drop
+  Matter.Body.setVelocity(body, { x: 0, y: 2 })
   Matter.Composite.add(mEngine.world, body)
 
   const graphic = new PIXI.Graphics()
-  // Ball glow
-  graphic.circle(0, 0, BALL_RADIUS + 4)
-  graphic.fill({ color: 0x6B2FBE, alpha: 0.2 })
-  // Ball body
+  // Ball glow (cyan)
+  graphic.circle(0, 0, BALL_RADIUS + 5)
+  graphic.fill({ color: 0x00D9FF, alpha: 0.3 })
+  // Ball body (white/yellow)
   graphic.circle(0, 0, BALL_RADIUS)
-  graphic.fill({ color: 0xFDFDFD })
+  graphic.fill({ color: 0xFFEB3B })
   // Inner highlight
-  graphic.circle(-1.5, -1.5, BALL_RADIUS * 0.35)
-  graphic.fill({ color: 0xFFFFFF, alpha: 0.6 })
+  graphic.circle(-2, -2, BALL_RADIUS * 0.4)
+  graphic.fill({ color: 0xFFFFFF, alpha: 0.8 })
   graphic.position.set(startX, startY)
   app.stage.addChild(graphic)
 
@@ -324,8 +399,8 @@ function dropBall(path: number[][], dropIndex: number) {
 function renderLoop() {
   if (!mEngine) return
 
-  // Step physics (run 2 sub-steps for stability)
-  Matter.Engine.update(mEngine, 1000 / 60)
+  // Step physics with fixed timestep for consistent behavior
+  Matter.Engine.update(mEngine, 16.666)
 
   // Update peg glow
   updatePegGlow()
@@ -340,31 +415,34 @@ function renderLoop() {
     // Sync PixiJS to Matter.js position
     ball.graphic.position.set(ball.body.position.x, ball.body.position.y)
 
-    // Gentle steering toward target slot (only in lower half)
+    // Very gentle steering toward target slot (only in bottom third)
     const progress = ball.body.position.y / boardHeight
-    if (progress > 0.5) {
+    if (progress > 0.65 && ball.targetSlot >= 0) {
       const numSlots = props.rowCount + 1
-      const bottomRowWidth = (numSlots) * pegSpacingX
+      const bottomRowWidth = numSlots * pegSpacingX
       const slotStartX = (boardWidth - bottomRowWidth) / 2
       const targetX = slotStartX + (ball.targetSlot + 0.5) * (bottomRowWidth / numSlots)
 
       const dx = targetX - ball.body.position.x
-      const strength = 0.00004 * (progress - 0.5) * 2 // ramp up gently
+      // Very subtle force - just a gentle nudge
+      const strength = 0.00002 * (progress - 0.65) * 3
       Matter.Body.applyForce(ball.body, ball.body.position, { x: dx * strength, y: 0 })
     }
 
-    // Speed limiter — prevent ball from going too fast horizontally
+    // Speed limiter — prevent unrealistic speeds
     const vel = ball.body.velocity
-    const maxVx = 4
-    if (Math.abs(vel.x) > maxVx) {
-      Matter.Body.setVelocity(ball.body, { x: Math.sign(vel.x) * maxVx, y: vel.y })
+    const maxSpeed = 8
+    const speed = Math.sqrt(vel.x * vel.x + vel.y * vel.y)
+    if (speed > maxSpeed) {
+      const scale = maxSpeed / speed
+      Matter.Body.setVelocity(ball.body, { x: vel.x * scale, y: vel.y * scale })
     }
 
-    // Trail particles (sparse)
+    // Trail particles (cyan)
     if (app && Math.random() > 0.7) {
       const trail = new PIXI.Graphics()
-      trail.circle(0, 0, 1.5 + Math.random() * 1.5)
-      trail.fill({ color: 0x6B2FBE, alpha: 0.4 })
+      trail.circle(0, 0, 2 + Math.random() * 2)
+      trail.fill({ color: 0x00D9FF, alpha: 0.5 })
       trail.position.set(ball.body.position.x, ball.body.position.y)
       app.stage.addChild(trail)
       ball.trail.push(trail)
@@ -380,20 +458,12 @@ function renderLoop() {
       }
     }
 
-    // Check if ball reached bottom (or timeout after 10s = 600 frames)
-    if (ball.body.position.y >= boardHeight - 5 || ball.frameCount > 600) {
+    // Check if ball reached bottom (or timeout after 15s = 900 frames)
+    if (ball.body.position.y >= boardHeight - 30 || ball.frameCount > 900) {
       ball.landed = true
 
-      // Determine actual landing slot from X position
-      const numSlots = props.rowCount + 1
-      const bottomRowWidth = numSlots * pegSpacingX
-      const slotStartX = (boardWidth - bottomRowWidth) / 2
-      const relX = ball.body.position.x - slotStartX
-      let slotIndex = Math.floor(relX / (bottomRowWidth / numSlots))
-      slotIndex = Math.max(0, Math.min(numSlots - 1, slotIndex))
-
-      // Prefer server-determined slot
-      const finalSlot = ball.targetSlot
+      // Use server-determined slot for consistency with payout
+      const finalSlot = ball.targetSlot >= 0 ? ball.targetSlot : 0
       emit('landed', finalSlot, ball.dropIndex)
 
       spawnBurst(ball.body.position.x, ball.body.position.y)
@@ -432,45 +502,46 @@ function updatePegGlow() {
     if (frames > 0) {
       const t = frames / 10
       g.clear()
-      // Animated glow ring
-      g.circle(0, 0, PEG_RADIUS + 3 * t)
-      g.fill({ color: 0x8B5CF6, alpha: 0.3 * t })
-      // Core peg (lit up)
+      // Animated glow ring (bright cyan)
+      g.circle(0, 0, PEG_RADIUS + 5 * t)
+      g.fill({ color: 0x00FFFF, alpha: 0.5 * t })
+      // Core peg (lit up bright)
       g.circle(0, 0, PEG_RADIUS)
-      g.fill({ color: lerpColor(0x5A2D7A, 0xA78BFA, t) })
+      g.fill({ color: lerpColor(0x00C3FF, 0x00FFFF, t) })
       // Inner highlight
-      g.circle(-1, -1, PEG_RADIUS * 0.4)
-      g.fill({ color: 0xC4B5FD, alpha: 0.4 * t })
+      g.circle(-1.5, -1.5, PEG_RADIUS * 0.4)
+      g.fill({ color: 0xFFFFFF, alpha: 0.9 * t })
       pegGlowTimers.set(idx, frames - 1)
     } else {
       pegGlowTimers.delete(idx)
       g.clear()
-      g.circle(0, 0, PEG_RADIUS + 2)
-      g.fill({ color: 0x6B2FBE, alpha: 0.15 })
+      g.circle(0, 0, PEG_RADIUS + 3)
+      g.fill({ color: 0x00D9FF, alpha: 0.3 })
       g.circle(0, 0, PEG_RADIUS)
-      g.fill({ color: 0x5A2D7A })
-      g.circle(-1, -1, PEG_RADIUS * 0.4)
-      g.fill({ color: 0x8B5CF6, alpha: 0.3 })
+      g.fill({ color: 0x00C3FF })
+      g.circle(-1.5, -1.5, PEG_RADIUS * 0.4)
+      g.fill({ color: 0xFFFFFF, alpha: 0.7 })
     }
   }
 }
 
 function spawnBurst(x: number, y: number) {
   if (!app) return
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 8; i++) {
     const p = new PIXI.Graphics()
-    p.circle(0, 0, 2 + Math.random() * 2)
-    p.fill({ color: 0x6B2FBE, alpha: 0.7 })
+    p.circle(0, 0, 2 + Math.random() * 3)
+    p.fill({ color: 0xFFEB3B, alpha: 0.8 })
     p.position.set(x, y)
     app.stage.addChild(p)
 
-    const vx = (Math.random() - 0.5) * 5
-    const vy = -Math.random() * 3 - 1
-    let life = 15
+    const angle = (Math.PI * 2 * i) / 8
+    const vx = Math.cos(angle) * (3 + Math.random() * 2)
+    const vy = Math.sin(angle) * (3 + Math.random() * 2) - 2
+    let life = 20
     const anim = () => {
       p.position.x += vx
-      p.position.y += vy + (15 - life) * 0.15
-      p.alpha -= 0.06
+      p.position.y += vy + (20 - life) * 0.1
+      p.alpha -= 0.05
       life--
       if (life <= 0 || p.alpha <= 0) p.destroy()
       else requestAnimationFrame(anim)
@@ -523,6 +594,7 @@ function cleanup() {
     for (const t of ball.trail) t.destroy()
   }
   activeBalls = []
+  if (backgroundGraphics) { backgroundGraphics.destroy(); backgroundGraphics = null }
   if (app) { app.destroy(true, { children: true }); app = null }
   pegGraphics = []
   if (mEngine) { Matter.Engine.clear(mEngine); mEngine = null }
