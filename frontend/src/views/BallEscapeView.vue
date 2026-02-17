@@ -107,7 +107,7 @@ import { escapePlay } from '../api/client'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
 import { useCurrency } from '../composables/useCurrency'
 
-const { selectedCurrency, currentBalance, deductBalance, addBalance, formatAmount } = useCurrency()
+const { selectedCurrency, currentBalance, deductBalance, addBalance, formatAmount, toggleCurrency } = useCurrency()
 
 // Canvas
 const gameCanvas = ref<HTMLCanvasElement | null>(null)
@@ -217,7 +217,7 @@ function selectBet(amount: number) {
 }
 
 function handleSwap() {
-  // Currency switching is handled by CurrencySwitcher component
+  toggleCurrency()
 }
 
 function handleDeposit() {

@@ -107,7 +107,7 @@ import CurrencyIcon from '@/components/CurrencyIcon.vue'
 
 import '@/styles/plinko-theme.css'
 
-const { selectedCurrency, currentBalance, formatAmount } = useCurrency()
+const { selectedCurrency, currentBalance, formatAmount, toggleCurrency } = useCurrency()
 
 const {
   betAmount,
@@ -178,7 +178,7 @@ function onAllLanded() {
 }
 
 function handleSwap() {
-  // Currency switching is handled by CurrencySwitcher component
+  toggleCurrency()
   hapticImpact?.('light')
 }
 

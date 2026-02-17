@@ -184,7 +184,7 @@ import CurrencyIcon from '../components/CurrencyIcon.vue'
 import TgsPlayer from '../components/TgsPlayer.vue'
 import { useCurrency } from '../composables/useCurrency'
 
-const { selectedCurrency, currentBalance, formatAmount } = useCurrency()
+const { selectedCurrency, currentBalance, formatAmount, toggleCurrency } = useCurrency()
 
 const ROCKET_MODELS_COUNT = 50
 const rocketModelIndex = ref(0)
@@ -312,7 +312,7 @@ const actionDisabled = computed(() => {
 })
 
 function handleSwap() {
-  // Currency switching is handled by CurrencySwitcher component
+  toggleCurrency()
 }
 
 function handleDeposit() {
