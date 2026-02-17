@@ -34,4 +34,24 @@ services:
         value: "5"
       - key: DATABASE_MAX_OVERFLOW
         value: "3"
+      - key: PLINKO_SERVICE_URL
+        value: "https://plinko-service.onrender.com"
+    healthCheckPath: /health
+
+  # Plinko Game Service
+  - type: web
+    name: plinko-service
+    runtime: docker
+    dockerfilePath: ./services/plinko/Dockerfile
+    dockerContext: ./services/plinko
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ton-gifts-db
+          property: connectionString
+      - key: DEBUG
+        value: "true"
+      - key: LOG_LEVEL
+        value: "DEBUG"
     healthCheckPath: /health
