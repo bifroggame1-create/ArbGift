@@ -12,7 +12,7 @@ export interface PlinkoHistoryItem {
 
 export function usePlinko() {
   const { user } = useTelegram()
-  const { balanceStars } = useCurrency()
+  const { currentBalance, deductBalance } = useCurrency()
 
   // Config (fetched from server)
   const config: Ref<PlinkoConfig | null> = ref(null)
@@ -70,7 +70,10 @@ export function usePlinko() {
     if (isPlaying.value) return []
 
     const totalCost = betAmount.value * ballCount.value
-    if (balanceStars.value < totalCost) return []
+    if (currentBalance.value < totalCost) {
+      console.log('Insufficient balance:', currentBalance.value, 'needed:', totalCost)
+      return []
+    }
 
     isPlaying.value = true
 
@@ -87,10 +90,18 @@ export function usePlinko() {
         ballCount: ballCount.value,
       })
       drops = response.drops
+
+      // Update balance from server response
       if (response.new_balance_stars > 0) {
-        balanceStars.value = response.new_balance_stars
+        // Deduct the cost and add the payout
+        const totalPayout = drops.reduce((sum, d) => sum + d.payout, 0)
+        deductBalance(totalCost)
+        if (totalPayout > 0) {
+          deductBalance(-totalPayout) // Add payout (negative deduction)
+        }
       }
-    } catch {
+    } catch (error) {
+      console.error('Plinko play error:', error)
       isPlaying.value = false
       return []
     }
@@ -135,7 +146,7 @@ export function usePlinko() {
     fetchConfig,
 
     // State
-    balanceStars,
+    currentBalance,
     betAmount,
     riskLevel,
     rowCount,
