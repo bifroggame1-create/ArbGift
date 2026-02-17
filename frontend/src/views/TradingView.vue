@@ -1041,8 +1041,7 @@ onUnmounted(() => {
   cursor: pointer;
 }
 .traders-list {
-  max-height: 140px;
-  overflow-y: auto;
+  /* Remove max-height and overflow - let parent viewport handle scrolling */
 }
 .trader-row {
   display: flex;

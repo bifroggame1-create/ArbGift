@@ -53,13 +53,6 @@ onMounted(() => {
   if (tg) {
     try { tg.setBackgroundColor('#0C0C0C') } catch {}
     try { tg.expand() } catch {}
-
-    // Disable vertical swipes to prevent accidental closure (if available)
-    try {
-      if (typeof (tg as any).disableVerticalSwipes === 'function') {
-        (tg as any).disableVerticalSwipes()
-      }
-    } catch {}
   }
 
   // Prevent overscroll/bounce effect on iOS
