@@ -477,6 +477,7 @@ function cleanup() {
 }
 
 onMounted(async () => {
+  await nextTick() // Wait for DOM to render with padding
   computeLayout()
   computePegPositions()
   initMatter()
