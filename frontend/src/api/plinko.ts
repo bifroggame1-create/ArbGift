@@ -72,9 +72,8 @@ export interface VerifyResponse {
 // API functions
 
 export async function plinkoGetConfig(): Promise<PlinkoConfig> {
-  // Config still from plinko service directly (read-only)
-  const PLINKO_BASE = import.meta.env.VITE_PLINKO_URL || 'http://localhost:8001'
-  const { data } = await axios.get(`${PLINKO_BASE}/api/v1/config`)
+  // Use main API config endpoint
+  const { data } = await plinkoApi.get('/api/v1/games/plinko/config')
   return data
 }
 
