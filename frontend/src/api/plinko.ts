@@ -1,10 +1,19 @@
 import axios from 'axios'
 
-const PLINKO_BASE = import.meta.env.VITE_PLINKO_URL || ''
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const plinkoApi = axios.create({
-  baseURL: PLINKO_BASE,
-  timeout: 10000,
+  baseURL: API_BASE,
+  timeout: 30000,
+})
+
+// Add Telegram initData to all requests
+plinkoApi.interceptors.request.use((config) => {
+  const tg = (window as any).Telegram?.WebApp
+  if (tg?.initData) {
+    config.headers['X-Telegram-Init-Data'] = tg.initData
+  }
+  return config
 })
 
 // Types
@@ -63,7 +72,9 @@ export interface VerifyResponse {
 // API functions
 
 export async function plinkoGetConfig(): Promise<PlinkoConfig> {
-  const { data } = await plinkoApi.get('/api/v1/config')
+  // Config still from plinko service directly (read-only)
+  const PLINKO_BASE = import.meta.env.VITE_PLINKO_URL || 'http://localhost:8001'
+  const { data } = await axios.get(`${PLINKO_BASE}/api/v1/config`)
   return data
 }
 
@@ -75,14 +86,13 @@ export async function plinkoPlay(params: {
   ballCount: number
   clientSeed?: string
 }): Promise<PlayResponse> {
-  const { data } = await plinkoApi.post('/api/v1/play', {
+  // Use main API orchestration endpoint
+  const { data } = await plinkoApi.post('/api/v1/games/plinko/play', {
     bet_amount_stars: params.betAmountStars,
     risk_level: params.riskLevel,
     row_count: params.rowCount,
     ball_count: params.ballCount,
     client_seed: params.clientSeed,
-  }, {
-    params: { user_id: params.userId },
   })
   return data
 }
@@ -95,7 +105,9 @@ export async function plinkoVerify(params: {
   riskLevel: string
   rowCount: number
 }): Promise<VerifyResponse> {
-  const { data } = await plinkoApi.post('/api/v1/verify', {
+  // Verify still from plinko service directly (stateless verification)
+  const PLINKO_BASE = import.meta.env.VITE_PLINKO_URL || 'http://localhost:8001'
+  const { data } = await axios.post(`${PLINKO_BASE}/api/v1/verify`, {
     server_seed: params.serverSeed,
     client_seed: params.clientSeed,
     nonce: params.nonce,
@@ -107,14 +119,18 @@ export async function plinkoVerify(params: {
 }
 
 export async function plinkoGetHistory(userId: string, limit = 50): Promise<HistoryItem[]> {
-  const { data } = await plinkoApi.get('/api/v1/history', {
+  // History still from plinko service directly (read-only)
+  const PLINKO_BASE = import.meta.env.VITE_PLINKO_URL || 'http://localhost:8001'
+  const { data } = await axios.get(`${PLINKO_BASE}/api/v1/history`, {
     params: { user_id: userId, limit },
   })
   return data
 }
 
 export async function plinkoGetStats(userId: string) {
-  const { data } = await plinkoApi.get('/api/v1/stats', {
+  // Stats still from plinko service directly (read-only)
+  const PLINKO_BASE = import.meta.env.VITE_PLINKO_URL || 'http://localhost:8001'
+  const { data } = await axios.get(`${PLINKO_BASE}/api/v1/stats`, {
     params: { user_id: userId },
   })
   return data
