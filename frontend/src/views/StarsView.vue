@@ -8,7 +8,7 @@
         </svg>
       </button>
       <div class="header-title">
-        <img src="/icons/stars.png" alt="Stars" class="header-icon" width="24" height="24" />
+        <StarIcon :size="24" />
         Покупка Stars
       </div>
       <div class="header-spacer"></div>
@@ -82,6 +82,7 @@
             :class="['quick-btn', { active: starsAmount === amount }]"
             @click="setAmount(amount)"
           >
+            <StarIcon :size="14" />
             {{ amount.toLocaleString() }}
           </button>
         </div>
@@ -155,6 +156,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTelegram } from '../composables/useTelegram'
+import StarIcon from '../components/StarIcon.vue'
 
 const router = useRouter()
 const { user, hapticImpact } = useTelegram()
