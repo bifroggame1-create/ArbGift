@@ -108,33 +108,59 @@
           :class="{ active: selectedBet === amount }"
           @click="selectedBet = amount"
         >
-          <CurrencyIcon :currency="selectedCurrency" :size="12" />
           {{ amount }}
+          <svg width="8" height="8" viewBox="0 0 12 12" fill="currentColor" style="margin-left: 2px;">
+            <path d="M6 8L2 4h8z"/>
+          </svg>
         </button>
         <button class="bet-pill max-pill" @click="selectedBet = Math.floor(currentBalance * 10) / 10">Макс</button>
       </div>
 
-      <!-- Main Action Button -->
-      <button
-        v-if="!playerBet"
-        class="main-btn buy-btn"
-        :disabled="!canBuy"
-        @click="placeBet"
-      >
-        <span class="btn-label">Купить {{ formatAmount(selectedBet) }}</span>
-        <CurrencyIcon :currency="selectedCurrency" :size="16" />
-      </button>
-      <button
-        v-else
-        class="main-btn sell-btn"
-        :disabled="gameState !== 'running'"
-        @click="cashOut"
-      >
-        <span class="btn-label">Продать</span>
-        <span class="btn-percent" :class="currentPLPercent >= 0 ? 'positive' : 'negative'">
-          {{ currentPLPercent >= 0 ? '+' : '' }}{{ currentPLPercent.toFixed(0) }}%
-        </span>
-      </button>
+      <!-- Action Row -->
+      <div class="action-row">
+        <!-- Left Icon Button -->
+        <button class="icon-btn">
+          <div class="icon-circle">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34CDEF" stroke-width="2">
+              <polygon points="12,2 2,22 22,22"/>
+            </svg>
+          </div>
+          <span class="icon-label">Сменить ★</span>
+        </button>
+
+        <!-- Main Action Button -->
+        <button
+          v-if="!playerBet"
+          class="main-btn buy-btn"
+          :disabled="!canBuy"
+          @click="placeBet"
+        >
+          <span class="btn-text-main">Купить</span>
+          <span class="btn-text-sub">{{ formatAmount(selectedBet) }} {{ currencyLabel }}</span>
+        </button>
+        <button
+          v-else
+          class="main-btn sell-btn"
+          :disabled="gameState !== 'running'"
+          @click="cashOut"
+        >
+          <span class="btn-label">Продать</span>
+          <span class="btn-percent" :class="currentPLPercent >= 0 ? 'positive' : 'negative'">
+            {{ currentPLPercent >= 0 ? '+' : '' }}{{ currentPLPercent.toFixed(0) }}%
+          </span>
+        </button>
+
+        <!-- Right Icon Button -->
+        <button class="icon-btn">
+          <div class="icon-circle">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </div>
+          <span class="icon-label">Отправить</span>
+        </button>
+      </div>
     </div>
 
     <!-- Traders Panel -->
@@ -200,6 +226,8 @@ import { useTelegram } from '../composables/useTelegram'
 
 const { selectedCurrency, currentBalance, deductBalance, addBalance, formatAmount } = useCurrency()
 const { user } = useTelegram()
+
+const currencyLabel = computed(() => selectedCurrency.value === 'ton' ? 'TON' : 'Stars')
 
 // ======= Types =======
 interface Candle {
@@ -1048,88 +1076,164 @@ onUnmounted(() => {
 /* ====== Bet Controls ====== */
 .bet-controls {
   margin-bottom: 12px;
+  padding: 0 16px;
 }
+
 .bet-amounts {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
-  justify-content: center;
+  margin-bottom: 16px;
+  justify-content: space-between;
 }
+
 .bet-pill {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  justify-content: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.06);
   border: none;
-  border-radius: 16px;
-  padding: 10px 14px;
-  color: #fff;
+  border-radius: 20px;
+  padding: 11px 12px;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.16s ease;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.05);
 }
-.bet-pill.active {
-  background: #34CDEF;
-  color: #000;
-}
-.bet-pill:hover:not(.active) {
-  background: rgba(255, 255, 255, 0.12);
-}
-.pill-diamond { width: 14px; height: 14px; color: #34CDEF; }
-.bet-pill.active .pill-diamond { color: #000; }
-.max-pill { background: rgba(255, 255, 255, 0.08); }
 
-/* Main Action Button — DOMINANT */
-.main-btn {
+.bet-pill.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.bet-pill:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.max-pill {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Action Row */
+.action-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.icon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 56px;
+  color: rgba(255, 255, 255, 0.5);
+  transition: background 0.2s;
+}
+
+.icon-btn:active .icon-circle {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.icon-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Main Action Button */
+.main-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
   border: none;
-  border-radius: 20px;
+  border-radius: 32px;
   font-family: "SF Pro Text", -apple-system, sans-serif;
-  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.18s ease;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
 }
+
 .buy-btn {
-  background: #00FF62;
+  background: linear-gradient(90deg, #00FF62 0%, #00E056 100%);
   color: #000;
+  box-shadow: 0 0 24px rgba(0, 255, 98, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
 }
+
 .buy-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
 .buy-btn:not(:disabled):active {
   transform: scale(0.97);
-  background: #00e056;
+  box-shadow: 0 0 20px rgba(0, 255, 98, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
-.btn-label {
-  font-size: 17px;
+
+.btn-text-main {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.btn-text-sub {
+  font-size: 13px;
   font-weight: 600;
+  opacity: 0.8;
+  margin-top: 2px;
 }
+
 .sell-btn {
   background: linear-gradient(135deg, #E23535 0%, #FF6B6B 100%);
   color: #fff;
+  flex-direction: row;
+  gap: 8px;
 }
+
 .sell-btn:not(:disabled):active {
   transform: scale(0.97);
 }
+
 .sell-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.btn-label {
+  font-size: 17px;
+  font-weight: 600;
+}
+
 .btn-percent {
   font-size: 15px;
-  margin-left: 4px;
   font-weight: 700;
 }
+
 .btn-percent.positive { color: #a7f3d0; }
 .btn-percent.negative { color: #fca5a5; }
 </style>
