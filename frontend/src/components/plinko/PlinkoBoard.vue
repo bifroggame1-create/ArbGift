@@ -110,7 +110,15 @@ function computePegPositions() {
 // ===== PIXI SETUP =====
 
 async function initPixi() {
-  if (!pixiRef.value || !containerRef.value) return
+  if (!pixiRef.value || !containerRef.value) {
+    console.error('❌ [PlinkoBoard] Cannot init PixiJS - refs not available', {
+      pixiRef: !!pixiRef.value,
+      containerRef: !!containerRef.value
+    })
+    return
+  }
+
+  console.log('🎨 [PlinkoBoard] Starting PixiJS initialization...')
 
   // Use PixiJS resizeTo for automatic canvas sizing
   app = new PIXI.Application()
@@ -132,7 +140,8 @@ async function initPixi() {
     screenWidth: app.screen.width,
     screenHeight: app.screen.height,
     boardWidth,
-    boardHeight
+    boardHeight,
+    canvasElement: !!app.canvas
   })
 
   // Now compute layout and positions based on ACTUAL canvas size
@@ -276,7 +285,11 @@ function initMatter() {
   mEngine.positionIterations = 10
   mEngine.velocityIterations = 8
 
-  console.log('⚙️ [PlinkoBoard] Matter.js initialized')
+  console.log('⚙️ [PlinkoBoard] Matter.js initialized', {
+    gravity: mEngine.gravity,
+    positionIterations: mEngine.positionIterations,
+    velocityIterations: mEngine.velocityIterations
+  })
 }
 
 function createPhysicsBodies() {
@@ -339,7 +352,12 @@ function createPhysicsBodies() {
 // ===== BALL DROP =====
 
 function dropBall(path: number[][], dropIndex: number) {
-  if (!app || !mEngine) return
+  if (!app || !mEngine) {
+    console.error('❌ [PlinkoBoard] Cannot drop ball - app or engine not initialized', { app: !!app, mEngine: !!mEngine })
+    return
+  }
+
+  console.log('🎯 [PlinkoBoard] dropBall called', { dropIndex, pathLength: path.length, boardWidth, boardHeight })
 
   // Determine target slot from path endpoint
   const numSlots = props.rowCount + 1
@@ -354,6 +372,8 @@ function dropBall(path: number[][], dropIndex: number) {
   const startX = boardWidth / 2 + (Math.random() - 0.5) * 8
   const startY = 10
 
+  console.log('🎯 [PlinkoBoard] Creating ball at', { startX, startY, targetSlot })
+
   const body = Matter.Bodies.circle(startX, startY, BALL_RADIUS, {
     restitution: 0.75,
     friction: 0.01,
@@ -366,6 +386,12 @@ function dropBall(path: number[][], dropIndex: number) {
   // Initial downward velocity for immediate drop
   Matter.Body.setVelocity(body, { x: 0, y: 2 })
   Matter.Composite.add(mEngine.world, body)
+
+  console.log('✅ [PlinkoBoard] Ball added to physics world', {
+    bodyId: body.id,
+    position: body.position,
+    velocity: body.velocity
+  })
 
   const graphic = new PIXI.Graphics()
   // Ball glow (cyan)
@@ -392,6 +418,10 @@ function dropBall(path: number[][], dropIndex: number) {
     targetSlot,
     frameCount: 0,
   })
+
+  console.log('✅ [PlinkoBoard] Ball added to activeBalls', {
+    totalActiveBalls: activeBalls.length
+  })
 }
 
 // ===== RENDER LOOP =====
@@ -411,6 +441,18 @@ function renderLoop() {
     if (ball.landed) continue
     anyActive = true
     ball.frameCount++
+
+    // Log ball position every 30 frames (half second)
+    if (ball.frameCount % 30 === 0) {
+      console.log('🏐 [PlinkoBoard] Ball update', {
+        dropIndex: ball.dropIndex,
+        frameCount: ball.frameCount,
+        position: { x: Math.round(ball.body.position.x), y: Math.round(ball.body.position.y) },
+        velocity: { x: ball.body.velocity.x.toFixed(2), y: ball.body.velocity.y.toFixed(2) },
+        boardHeight,
+        progress: (ball.body.position.y / boardHeight * 100).toFixed(1) + '%'
+      })
+    }
 
     // Sync PixiJS to Matter.js position
     ball.graphic.position.set(ball.body.position.x, ball.body.position.y)
