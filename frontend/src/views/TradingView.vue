@@ -830,6 +830,7 @@ onUnmounted(() => {
   border: 2px solid #191919;
   border-radius: 32px;
   overflow: hidden;
+  touch-action: pan-y;
 }
 
 /* Ping */

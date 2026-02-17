@@ -487,6 +487,7 @@ onUnmounted(() => {
 .rocket-canvas {
   position: relative; width: 100%; aspect-ratio: 1; max-height: 280px;
   background: #0a0a0a; border-radius: 16px; border: 1px solid #1c1c1e; overflow: hidden;
+  touch-action: pan-y;
 }
 .trail-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 

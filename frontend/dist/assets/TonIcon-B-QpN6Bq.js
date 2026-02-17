@@ -1,1 +1,0 @@
-import{_ as e}from"./ton_symbol-CfLG12-S.js";import{f as t,a as s,n,o as a}from"./vue-BWZhed2S.js";import{a as c}from"./index-unVUQsey.js";const r=t({__name:"TonIcon",props:{size:{default:14}},setup(o){return(i,m)=>(a(),s("img",{src:e,alt:"TON",class:"ton-icon",style:n({width:o.size+"px",height:o.size+"px"})},null,4))}}),f=c(r,[["__scopeId","data-v-4f9c7613"]]);export{f as T};
