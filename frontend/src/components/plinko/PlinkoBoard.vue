@@ -278,7 +278,7 @@ function drawBackground() {
 
 function initMatter() {
   mEngine = Matter.Engine.create({
-    gravity: { x: 0, y: 1, scale: 0.001 },
+    gravity: { x: 0, y: 1, scale: 0.005 },
   })
 
   // Enable better collision detection
@@ -378,13 +378,13 @@ function dropBall(path: number[][], dropIndex: number) {
     restitution: 0.75,
     friction: 0.01,
     frictionStatic: 0.01,
-    density: 0.001,
+    density: 0.005,
     frictionAir: 0.01,
     label: 'ball',
   })
 
   // Initial downward velocity for immediate drop
-  Matter.Body.setVelocity(body, { x: 0, y: 2 })
+  Matter.Body.setVelocity(body, { x: 0, y: 5 })
   Matter.Composite.add(mEngine.world, body)
 
   console.log('✅ [PlinkoBoard] Ball added to physics world', {
