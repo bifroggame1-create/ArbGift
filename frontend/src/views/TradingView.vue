@@ -804,6 +804,8 @@ onUnmounted(() => {
   font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 15px;
   padding-bottom: 100px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Header */
