@@ -22,7 +22,6 @@ import { markRaw } from 'vue'
 import IconMarket from './icons/IconMarket.vue'
 import IconPvP from './icons/IconPvP.vue'
 import IconSolo from './icons/IconSolo.vue'
-import IconEarn from './icons/IconEarn.vue'
 import IconProfile from './icons/IconProfile.vue'
 
 const route = useRoute()
@@ -45,12 +44,6 @@ const tabs = [
     label: 'Solo',
     icon: markRaw(IconSolo),
     matchPaths: ['/solo', '/trading', '/plinko', '/gonka', '/escape', '/ball-escape'],
-  },
-  {
-    path: '/earn',
-    label: 'Earn',
-    icon: markRaw(IconEarn),
-    matchPaths: ['/earn', '/farming', '/staking'],
   },
   {
     path: '/profile',
