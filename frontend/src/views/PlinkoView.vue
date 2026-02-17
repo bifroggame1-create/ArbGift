@@ -91,17 +91,14 @@ import '@/styles/plinko-theme.css'
 const { selectedCurrency, currentBalance, formatAmount } = useCurrency()
 
 const {
-  balanceStars,
   betAmount,
   riskLevel,
   rowCount,
-  ballCount,
   isPlaying,
   history,
   currentMultipliers,
   lastDrops,
   showWinPopup,
-  gameNumber,
   play,
   onAnimationComplete,
   fetchConfig,
