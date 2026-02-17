@@ -56,17 +56,15 @@ onMounted(() => {
 .app-container {
   max-width: 440px;
   margin: 0 auto;
-  min-height: 100vh;
-  min-height: 100dvh;
   background-color: var(--mb-bg, #0C0C0C);
   color: #fff;
   position: relative;
   overflow-x: hidden;
-  overflow-y: auto;
+  /* Safe area padding for Telegram header */
+  padding-top: env(safe-area-inset-top, 20px);
 }
 
 .app-content {
-  min-height: 100vh;
-  min-height: 100dvh;
+  /* Natural content flow for Telegram Mini Apps */
 }
 </style>
