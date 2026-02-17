@@ -562,6 +562,7 @@ defineExpose({ dropBall })
 <style scoped>
 .plinko-board-container {
   width: 100%;
+  height: 100%;
   position: relative;
   flex-shrink: 1;
 }
