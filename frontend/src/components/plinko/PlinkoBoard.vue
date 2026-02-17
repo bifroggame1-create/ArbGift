@@ -162,6 +162,10 @@ async function initPixi() {
 
   // Start render loop
   app.ticker.add(renderLoop)
+  console.log('✅ [PlinkoBoard] Render loop started, ticker running:', app.ticker.started)
+  console.log('✅ [PlinkoBoard] Ticker FPS:', app.ticker.FPS)
+  console.log('✅ [PlinkoBoard] Matter engine exists:', !!mEngine)
+  console.log('✅ [PlinkoBoard] Physics bodies in world:', mEngine?.world.bodies.length)
 }
 
 function computeLayoutFromCanvas() {
@@ -426,8 +430,21 @@ function dropBall(path: number[][], dropIndex: number) {
 
 // ===== RENDER LOOP =====
 
+let frameCounter = 0
 function renderLoop() {
   if (!mEngine) return
+
+  frameCounter++
+
+  // Log every 60 frames (once per second at 60fps)
+  if (frameCounter % 60 === 0) {
+    console.log('🔄 [PlinkoBoard] Render loop running', {
+      frame: frameCounter,
+      activeBalls: activeBalls.length,
+      worldBodies: mEngine.world.bodies.length,
+      gravity: mEngine.gravity
+    })
+  }
 
   // Step physics with fixed timestep for consistent behavior
   Matter.Engine.update(mEngine, 16.666)
