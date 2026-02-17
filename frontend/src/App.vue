@@ -44,7 +44,7 @@ onMounted(() => {
     try { tg.expand() } catch {}
 
     // Disable vertical swipes (prevents accidental close)
-    try { tg.disableVerticalSwipes() } catch {}
+    try { (tg as any).disableVerticalSwipes() } catch {}
   }
 
   // Prevent overscroll/bounce effect on iOS
