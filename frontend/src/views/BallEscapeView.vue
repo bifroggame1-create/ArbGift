@@ -825,6 +825,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding-bottom: 100px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .game-header-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
