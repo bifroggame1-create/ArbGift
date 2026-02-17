@@ -87,18 +87,6 @@ let activeBalls: ActiveBall[] = []
 // Pegs in odd rows offset by half spacing horizontally
 // Number of slots at bottom = rowCount + 1
 
-function computeLayout() {
-  if (!containerRef.value) return
-  boardWidth = containerRef.value.clientWidth
-  const rows = props.rowCount
-
-  // Compute spacing based on board width and bottom row (widest)
-  const bottomPegs = rows + 2
-  pegSpacingX = (boardWidth - BOARD_PADDING_X * 2) / (bottomPegs - 1)
-  pegSpacingY = Math.min(pegSpacingX * 0.85, 28) // compact vertical spacing
-  boardHeight = TOP_PADDING + (rows - 1) * pegSpacingY + BOTTOM_PADDING + 16
-}
-
 function computePegPositions() {
   pegPositions = []
   const rows = props.rowCount
@@ -121,12 +109,12 @@ function computePegPositions() {
 // ===== PIXI SETUP =====
 
 async function initPixi() {
-  if (!pixiRef.value) return
+  if (!pixiRef.value || !containerRef.value) return
 
+  // Use PixiJS resizeTo for automatic canvas sizing
   app = new PIXI.Application()
   await app.init({
-    width: boardWidth,
-    height: boardHeight,
+    resizeTo: containerRef.value,
     backgroundAlpha: 0,
     antialias: true,
     resolution: Math.min(window.devicePixelRatio, 2),
@@ -134,8 +122,56 @@ async function initPixi() {
   })
 
   pixiRef.value.appendChild(app.canvas as HTMLCanvasElement)
+
+  // CRITICAL: Update board dimensions from actual canvas size
+  boardWidth = app.screen.width
+  boardHeight = app.screen.height
+
+  console.log('🎨 [PlinkoBoard] PixiJS initialized:', {
+    screenWidth: app.screen.width,
+    screenHeight: app.screen.height,
+    boardWidth,
+    boardHeight
+  })
+
+  // Now compute layout and positions based on ACTUAL canvas size
+  computeLayoutFromCanvas()
+  computePegPositions()
+
+  // Create physics bodies now that we have positions
+  createPhysicsBodies()
+
+  // Draw pegs
   drawPegs()
+
+  // Start render loop
   app.ticker.add(renderLoop)
+}
+
+function computeLayoutFromCanvas() {
+  // Canvas size is already set by PixiJS, now compute peg spacing
+  const rows = props.rowCount
+
+  // Compute horizontal spacing based on board width
+  const bottomPegs = rows + 2
+  pegSpacingX = (boardWidth - BOARD_PADDING_X * 2) / (bottomPegs - 1)
+
+  // Compute vertical spacing based on available height
+  // Reserve space for multipliers and gifts at bottom (80px total)
+  const availableHeight = boardHeight - TOP_PADDING - BOTTOM_PADDING - 80
+  pegSpacingY = availableHeight / (rows - 1)
+
+  // Clamp spacing to reasonable values
+  pegSpacingY = Math.max(18, Math.min(pegSpacingY, 35))
+
+  console.log('📐 [PlinkoBoard] Layout from canvas:', {
+    boardWidth,
+    boardHeight,
+    pegSpacingX,
+    pegSpacingY,
+    rows,
+    availableHeight
+  })
 }
 
 function drawPegs() {
@@ -167,6 +203,15 @@ function initMatter() {
     gravity: { x: 0, y: 1.2, scale: 0.001 },
   })
 
+  console.log('⚙️ [PlinkoBoard] Matter.js initialized')
+}
+
+function createPhysicsBodies() {
+  if (!mEngine) return
+
+  // Clear existing bodies
+  Matter.Composite.clear(mEngine.world, false)
+
   // Peg bodies (static circles, slightly larger than visual for reliable bouncing)
   pegBodies = []
   for (const { x, y } of pegPositions) {
@@ -197,6 +242,12 @@ function initMatter() {
   )
 
   Matter.Composite.add(mEngine.world, [...pegBodies, leftWall, rightWall, floor])
+
+  console.log('🎯 [PlinkoBoard] Physics bodies created:', {
+    pegs: pegBodies.length,
+    boardWidth,
+    boardHeight
+  })
 
   // Peg glow on collision
   Matter.Events.on(mEngine, 'collisionStart', (event) => {
@@ -455,11 +506,14 @@ function formatMult(mult: number): string {
 // ===== LIFECYCLE =====
 
 async function rebuild() {
+  console.log('🔄 [PlinkoBoard] Rebuilding...')
   cleanup()
   await nextTick()
-  computeLayout()
-  computePegPositions()
+
+  // Initialize Matter.js first
   initMatter()
+
+  // Initialize PixiJS - this will compute layout and positions
   await initPixi()
 }
 
@@ -477,11 +531,15 @@ function cleanup() {
 }
 
 onMounted(async () => {
-  await nextTick() // Wait for DOM to render with padding
-  computeLayout()
-  computePegPositions()
+  await nextTick() // Wait for DOM to render
+  console.log('🚀 [PlinkoBoard] Mounted, initializing...')
+
+  // Initialize Matter.js physics first (doesn't need exact dimensions yet)
   initMatter()
+
+  // Initialize PixiJS - this will set boardWidth/boardHeight and compute layout
   await initPixi()
+
   window.addEventListener('resize', handleResize)
 })
 
