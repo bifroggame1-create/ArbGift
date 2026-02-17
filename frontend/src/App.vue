@@ -29,7 +29,8 @@ const hideNav = computed(() => {
   return fullScreenPaths.some(p => route.path.startsWith(p))
 })
 
-const navPadding = computed(() => hideNav.value ? '0px' : '76px')
+// Account for bottom nav (56px) + safe area inset (~34px on iPhone 15 Pro Max)
+const navPadding = computed(() => hideNav.value ? '0px' : '100px')
 
 onMounted(() => {
   initWebApp()
