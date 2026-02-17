@@ -1,12 +1,14 @@
 <template>
-  <div id="app" class="app-container">
-    <main class="app-content" :style="{ paddingBottom: navPadding }">
-      <router-view v-slot="{ Component }">
-        <Transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </Transition>
-      </router-view>
-    </main>
+  <div id="app" :class="['app-body', { 'mobile-body': isMobilePlatform }]">
+    <div :class="['app-wrap', { 'mobile-wrap': isMobilePlatform }]">
+      <div :class="['app-content', { 'mobile-content': isMobilePlatform }]" :style="{ paddingBottom: navPadding }">
+        <router-view v-slot="{ Component }">
+          <Transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </Transition>
+        </router-view>
+      </div>
+    </div>
 
     <BottomNavigation />
     <ToastContainer />
@@ -23,26 +25,41 @@ import ToastContainer from './components/ToastContainer.vue'
 const route = useRoute()
 const { initWebApp, setHeaderColor, ready } = useTelegram()
 
+// Detect mobile platforms that need special scrolling structure
+const isMobilePlatform = computed(() => {
+  const tg = window.Telegram?.WebApp
+  if (!tg) return false
+
+  const platform = tg.platform || ''
+  // Desktop platforms don't need the mobile wrapper structure
+  const desktopPlatforms = ['macos', 'tdesktop', 'weba', 'web', 'webk']
+  return !desktopPlatforms.includes(platform)
+})
+
 // Hide bottom nav on full-screen game pages
 const hideNav = computed(() => {
   const fullScreenPaths = ['/plinko', '/trading', '/escape', '/gonka', '/pvp/ice', '/pvp/race']
   return fullScreenPaths.some(p => route.path.startsWith(p))
 })
 
-// Account for bottom nav (56px) + safe area inset (~34px on iPhone 15 Pro Max)
+// Account for bottom nav (56px) + safe area inset
 const navPadding = computed(() => hideNav.value ? '0px' : '100px')
 
 onMounted(() => {
   initWebApp()
   setHeaderColor('#0C0C0C')
 
-  // Also set background color
   const tg = window.Telegram?.WebApp
   if (tg) {
     try { tg.setBackgroundColor('#0C0C0C') } catch {}
-
-    // Expand to full height
     try { tg.expand() } catch {}
+
+    // Disable vertical swipes to prevent accidental closure (if available)
+    try {
+      if (typeof (tg as any).disableVerticalSwipes === 'function') {
+        (tg as any).disableVerticalSwipes()
+      }
+    } catch {}
   }
 
   // Prevent overscroll/bounce effect on iOS
@@ -54,18 +71,51 @@ onMounted(() => {
 </script>
 
 <style>
-.app-container {
+/* Base app container */
+.app-body {
   max-width: 440px;
   margin: 0 auto;
   background-color: var(--mb-bg, #0C0C0C);
   color: #fff;
-  position: relative;
-  overflow-x: hidden;
-  /* Safe area padding for Telegram header */
-  padding-top: env(safe-area-inset-top, 20px);
 }
 
+/* Mobile platform: prevent swipe-down closure */
+.mobile-body {
+  overflow: hidden;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Mobile platform: scrollable wrapper */
+.mobile-wrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile platform: content slightly taller than viewport */
+.mobile-content {
+  min-height: calc(100% + 1px);
+}
+
+/* Desktop platform: natural flow */
 .app-content {
-  /* Natural content flow for Telegram Mini Apps */
+  position: relative;
+}
+
+/* Fade transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
