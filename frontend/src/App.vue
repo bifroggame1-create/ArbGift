@@ -9,6 +9,7 @@
     </main>
 
     <BottomNavigation />
+    <ToastContainer />
   </div>
 </template>
 
@@ -17,6 +18,7 @@ import { onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTelegram } from './composables/useTelegram'
 import BottomNavigation from './components/BottomNavigation.vue'
+import ToastContainer from './components/ToastContainer.vue'
 
 const route = useRoute()
 const { initWebApp, setHeaderColor, ready } = useTelegram()
@@ -37,7 +39,17 @@ onMounted(() => {
   const tg = window.Telegram?.WebApp
   if (tg) {
     try { tg.setBackgroundColor('#0C0C0C') } catch {}
+
+    // Expand to full height
+    try { tg.expand() } catch {}
+
+    // Disable vertical swipes (prevents accidental close)
+    try { tg.disableVerticalSwipes() } catch {}
   }
+
+  // Prevent overscroll/bounce effect on iOS
+  document.body.style.overscrollBehavior = 'none'
+  document.documentElement.style.overscrollBehavior = 'none'
 
   ready()
 })

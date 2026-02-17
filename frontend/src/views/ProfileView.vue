@@ -18,23 +18,27 @@
       </template>
       <!-- Connected -->
       <template v-else>
-        <button class="mb-wallet-pill" @click="showWalletMenu = !showWalletMenu">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="6" width="20" height="14" rx="3"/>
-            <path d="M2 10h20"/>
-          </svg>
-          <span class="wallet-address">{{ tonConnect.shortAddress.value }}</span>
-        </button>
-        <!-- Wallet dropdown -->
-        <div v-if="showWalletMenu" class="mb-wallet-dropdown">
-          <button class="mb-wallet-dropdown-item" @click="disconnectWallet">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
+        <div class="mb-wallet-container">
+          <button class="mb-wallet-pill" @click="showWalletMenu = !showWalletMenu">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="6" width="20" height="14" rx="3"/>
+              <path d="M2 10h20"/>
             </svg>
-            Disconnect
+            <span class="wallet-address">{{ tonConnect.shortAddress.value }}</span>
           </button>
+          <!-- Wallet dropdown backdrop -->
+          <div v-if="showWalletMenu" class="mb-wallet-backdrop" @click="showWalletMenu = false"></div>
+          <!-- Wallet dropdown -->
+          <div v-if="showWalletMenu" class="mb-wallet-dropdown">
+            <button class="mb-wallet-dropdown-item" @click="disconnectWallet">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Отключить
+            </button>
+          </div>
         </div>
         <span class="mb-balance-label">Play Balance</span>
         <div class="mb-balance-row">
@@ -243,14 +247,12 @@
                 @click="handleDeposit"
               >
                 <template v-if="depositLoading">
-                  <span class="mb-spinner"></span> Sending...
+                  <span class="mb-spinner"></span> Отправка...
                 </template>
                 <template v-else>
-                  Deposit {{ depositAmount || 0 }} TON
+                  Депозит {{ depositAmount || 0 }} TON
                 </template>
               </button>
-              <!-- Status -->
-              <p v-if="depositStatus" class="mb-deposit-status" :class="depositStatusClass">{{ depositStatus }}</p>
             </div>
           </div>
         </div>
@@ -265,12 +267,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useTelegram } from '../composables/useTelegram'
 import { useTonConnect } from '../composables/useTonConnect'
 import { useCurrency } from '../composables/useCurrency'
+import { useToast } from '../composables/useToast'
 import { stakingGetStats } from '../api/client'
 import TonIcon from '../components/TonIcon.vue'
 
 
 const { user, initWebApp } = useTelegram()
 const tonConnect = useTonConnect()
+const { success, error: showError } = useToast()
 
 // User data from Telegram
 const username = computed(() => user.value?.username || user.value?.first_name || 'Player')
@@ -314,8 +318,6 @@ const showWalletMenu = ref(false)
 const showDepositModal = ref(false)
 const depositAmount = ref<number>(1)
 const depositLoading = ref(false)
-const depositStatus = ref('')
-const depositStatusClass = ref('')
 const projectWalletAddress = 'UQBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' // TODO: Replace with actual project wallet
 
 const openDepositModal = () => {
@@ -323,33 +325,33 @@ const openDepositModal = () => {
     connectWallet()
     return
   }
-  depositStatus.value = ''
   showDepositModal.value = true
 }
 
 const closeDepositModal = () => {
   showDepositModal.value = false
-  depositStatus.value = ''
 }
 
 const connectWallet = async () => {
   try {
     await tonConnect.connect()
+    success('Кошелёк подключен')
   } catch (e) {
     console.error('Wallet connection failed:', e)
+    showError('Не удалось подключить кошелёк')
   }
 }
 
 const disconnectWallet = async () => {
   showWalletMenu.value = false
   await tonConnect.disconnect()
+  success('Кошелёк отключен')
 }
 
 const handleDeposit = async () => {
   if (!tonConnect.isConnected.value || !depositAmount.value || depositAmount.value < 0.1) return
 
   depositLoading.value = true
-  depositStatus.value = ''
 
   try {
     // Convert TON to nanotons (1 TON = 10^9 nanotons)
@@ -363,8 +365,8 @@ const handleDeposit = async () => {
       }],
     })
 
-    depositStatus.value = 'Transaction sent! Balance will update shortly.'
-    depositStatusClass.value = 'status-success'
+    success('Транзакция отправлена! Баланс обновится через несколько секунд')
+    closeDepositModal()
 
     // Refresh balance after a delay
     setTimeout(() => {
@@ -375,11 +377,9 @@ const handleDeposit = async () => {
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Unknown error'
     if (msg.includes('Rejected') || msg.includes('rejected') || msg.includes('cancel')) {
-      depositStatus.value = 'Transaction cancelled'
-      depositStatusClass.value = 'status-cancelled'
+      showError('Транзакция отменена')
     } else {
-      depositStatus.value = 'Transaction failed: ' + msg
-      depositStatusClass.value = 'status-error'
+      showError('Ошибка транзакции: ' + msg)
     }
   } finally {
     depositLoading.value = false
@@ -1092,6 +1092,13 @@ onMounted(async () => {
 }
 
 /* Wallet Pill (connected state) */
+.mb-wallet-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .mb-wallet-pill {
   display: flex;
   align-items: center;
@@ -1116,19 +1123,28 @@ onMounted(async () => {
   font-size: 12px;
 }
 
+/* Wallet Dropdown Backdrop */
+.mb-wallet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  background: transparent;
+}
+
 /* Wallet Dropdown */
 .mb-wallet-dropdown {
   position: absolute;
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-top: 4px;
+  margin-top: -8px;
   background: #1a1a1a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
   overflow: hidden;
   z-index: 10;
   min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .mb-wallet-dropdown-item {
@@ -1141,12 +1157,14 @@ onMounted(async () => {
   border: none;
   color: #ef4444;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: background 0.2s;
+  text-align: left;
 }
 
 .mb-wallet-dropdown-item:active {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(239, 68, 68, 0.1);
 }
 
 /* Deposit Amount Section */
