@@ -114,6 +114,25 @@ async def get_user_by_telegram_init_data(
 # ENDPOINTS
 # ============================================================
 
+@router.get("/games/plinko/config")
+async def get_plinko_config():
+    """
+    Get Plinko game configuration.
+
+    Returns multiplier sets, valid risk levels, row counts, and bet limits.
+    """
+    from app.config import MULTIPLIER_SETS, VALID_RISK_LEVELS, VALID_ROW_COUNTS
+
+    return {
+        "multiplier_sets": MULTIPLIER_SETS,
+        "valid_risk_levels": list(VALID_RISK_LEVELS),
+        "valid_row_counts": list(VALID_ROW_COUNTS),
+        "min_bet_stars": 10,
+        "max_bet_stars": 10000,
+        "max_balls_per_play": 10,
+    }
+
+
 @router.post("/games/plinko/play", response_model=PlinkoPlayResponse)
 async def play_plinko(
     request: PlinkoPlayRequest,
