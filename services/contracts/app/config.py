@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     SERVER_SEED_LENGTH: int = 128  # hex characters
 
     # CORS
-    CORS_ORIGINS: list = ["*"]
+    CORS_ORIGINS: list = []
 
     # JWT/Auth (if using separate auth service)
     JWT_SECRET_KEY: str = "your-secret-key-change-in-production"

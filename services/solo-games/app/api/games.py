@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from app.core.ratelimit import limiter
 from pydantic import BaseModel
 from typing import Optional
 
 from ..services.plinko import PlinkoService
 from ..services.gonka import GonkaService
 from ..services.escape import EscapeService
+from ..core.auth import require_internal_key
 
 router = APIRouter(prefix="/api", tags=["solo-games"])
 
@@ -36,6 +38,7 @@ class PlinkoBuyResponse(BaseModel):
     server_seed: str
     server_seed_hash: str
     nonce: int
+    round_id: str
 
 
 @router.get("/solo-plinko-game/active")
@@ -80,7 +83,8 @@ async def plinko_ghost_games():
 
 
 @router.post("/solo-plinko-game/buy/ton", response_model=PlinkoBuyResponse)
-async def plinko_buy(request: PlinkoBuyRequest):
+@limiter.limit("30/minute")
+async def plinko_buy(request: PlinkoBuyRequest, _: None = Depends(require_internal_key)):
     """Place a plinko bet and get result"""
     if request.amount <= 0:
         raise HTTPException(status_code=400, detail="Invalid amount")
@@ -92,7 +96,7 @@ async def plinko_buy(request: PlinkoBuyRequest):
         nonce=request.nonce
     )
 
-    return PlinkoBuyResponse(**result)
+    return PlinkoBuyResponse(**result, round_id=f"solo-plinko-{request.user_id}-{request.nonce}")
 
 
 # --- Gonka (Race) ---
@@ -133,7 +137,8 @@ async def gonka_configs():
 
 
 @router.post("/solo-race-game/buy/ton", response_model=GonkaBuyResponse)
-async def gonka_buy(request: GonkaBuyRequest):
+@limiter.limit("30/minute")
+async def gonka_buy(request: GonkaBuyRequest, _: None = Depends(require_internal_key)):
     """Place a Gonka bet and get result"""
     if request.amount <= 0:
         raise HTTPException(status_code=400, detail="Invalid amount")
@@ -178,7 +183,8 @@ async def escape_active():
 
 
 @router.post("/solo-escape-game/buy/ton", response_model=EscapeBuyResponse)
-async def escape_buy(request: EscapeBuyRequest):
+@limiter.limit("30/minute")
+async def escape_buy(request: EscapeBuyRequest, _: None = Depends(require_internal_key)):
     """Place a Ball Escape bet and get result"""
     if request.amount <= 0:
         raise HTTPException(status_code=400, detail="Invalid amount")

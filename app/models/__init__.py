@@ -7,9 +7,13 @@ from app.models.listing import Listing
 from app.models.market import Market
 from app.models.sale import Sale
 from app.models.user import User
+from app.models.ledger import BalanceOperation, OperationStatus, OperationType, BetCurrency
+from app.models.game_round import GameRound
 from app.models.referral import Referral, ReferralReward, ReferralTier
 from app.models.quest import Quest, UserQuest, Badge, UserBadge, QuestType, QuestStatus
 from app.models.leaderboard import LeaderboardEntry, GameHistory, LeaderboardType, LeaderboardCategory
+from app.models.inventory import UserGiftInventory, GiftAcquisitionSource
+from app.models.gift_transfer_log import GiftTransferLog, TransferReason, TransferStatus
 
 __all__ = [
     # NFT Models
@@ -20,6 +24,11 @@ __all__ = [
     "Sale",
     # User & Social
     "User",
+    "BalanceOperation",
+    "OperationStatus",
+    "OperationType",
+    "BetCurrency",
+    "GameRound",
     "Referral",
     "ReferralReward",
     "ReferralTier",
@@ -35,4 +44,10 @@ __all__ = [
     "GameHistory",
     "LeaderboardType",
     "LeaderboardCategory",
+    # Gift Inventory & Transfers
+    "UserGiftInventory",
+    "GiftAcquisitionSource",
+    "GiftTransferLog",
+    "TransferReason",
+    "TransferStatus",
 ]

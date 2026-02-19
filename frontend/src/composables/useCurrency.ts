@@ -13,20 +13,6 @@ const balanceTon = ref(0)
 const balanceStars = ref(0)
 const balanceLoaded = ref(false)
 
-// Test account with infinite balance
-const TEST_USER_ID = 1301598469
-const INFINITE_BALANCE_TON = 999999
-const INFINITE_BALANCE_STARS = 999999
-
-function isTestUser(): boolean {
-  try {
-    const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id
-    return userId === TEST_USER_ID
-  } catch {
-    return false
-  }
-}
-
 export function useCurrency() {
   const toggleCurrency = () => {
     selectedCurrency.value = selectedCurrency.value === 'ton' ? 'stars' : 'ton'
@@ -37,10 +23,6 @@ export function useCurrency() {
   }
 
   const currentBalance = computed(() => {
-    // Test user always has infinite balance
-    if (isTestUser()) {
-      return selectedCurrency.value === 'ton' ? INFINITE_BALANCE_TON : INFINITE_BALANCE_STARS
-    }
     return selectedCurrency.value === 'ton' ? balanceTon.value : balanceStars.value
   })
 
@@ -57,14 +39,6 @@ export function useCurrency() {
 
   /** Fetch balance from backend API */
   const fetchBalance = async () => {
-    // Test user gets infinite balance
-    if (isTestUser()) {
-      balanceTon.value = INFINITE_BALANCE_TON
-      balanceStars.value = INFINITE_BALANCE_STARS
-      balanceLoaded.value = true
-      return
-    }
-
     try {
       const data = await getUserBalance()
       balanceTon.value = data.balance_ton
@@ -77,11 +51,6 @@ export function useCurrency() {
 
   /** Deduct from current currency balance (after bet) */
   const deductBalance = (amount: number) => {
-    // Test user balance never decreases
-    if (isTestUser()) {
-      return
-    }
-
     if (selectedCurrency.value === 'ton') {
       balanceTon.value = Math.max(0, +(balanceTon.value - amount).toFixed(4))
     } else {
@@ -91,11 +60,6 @@ export function useCurrency() {
 
   /** Add to current currency balance (after win) */
   const addBalance = (amount: number) => {
-    // Test user balance stays at max
-    if (isTestUser()) {
-      return
-    }
-
     if (selectedCurrency.value === 'ton') {
       balanceTon.value = +(balanceTon.value + amount).toFixed(4)
     } else {
@@ -105,14 +69,6 @@ export function useCurrency() {
 
   /** Set balance directly (from server response) */
   const setBalance = (ton: number, stars: number) => {
-    // Test user always has infinite balance
-    if (isTestUser()) {
-      balanceTon.value = INFINITE_BALANCE_TON
-      balanceStars.value = INFINITE_BALANCE_STARS
-      balanceLoaded.value = true
-      return
-    }
-
     balanceTon.value = ton
     balanceStars.value = stars
     balanceLoaded.value = true

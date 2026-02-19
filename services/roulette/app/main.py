@@ -4,6 +4,7 @@ Roulette Service - FastAPI Application.
 Provably fair European roulette with TON integration.
 """
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -44,9 +45,11 @@ app = FastAPI(
 )
 
 # CORS middleware
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+allowed_origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()] or (["*"] if settings.DEBUG else [])
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

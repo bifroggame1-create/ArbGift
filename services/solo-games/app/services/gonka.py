@@ -1,5 +1,5 @@
 import hashlib
-import random
+import secrets
 
 
 class GonkaService:
@@ -45,7 +45,7 @@ class GonkaService:
     }
 
     def generate_seeds(self) -> tuple[str, str]:
-        server_seed = hashlib.sha256(str(random.random()).encode()).hexdigest()
+        server_seed = secrets.token_hex(32)
         server_seed_hash = hashlib.sha256(server_seed.encode()).hexdigest()
         return server_seed, server_seed_hash
 

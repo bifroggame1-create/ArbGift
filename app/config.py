@@ -47,6 +47,16 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # ============================================================
+    # CORS
+    # ============================================================
+    ALLOWED_ORIGINS: str = "https://arb-gift-test.vercel.app,https://localhost:3000,http://localhost:3000,http://localhost:5173"
+
+    # ============================================================
+    # ADMIN
+    # ============================================================
+    ADMIN_SECRET_KEY: str = ""
+
+    # ============================================================
     # DATABASE
     # ============================================================
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/ton_gifts"
@@ -118,10 +128,15 @@ class Settings(BaseSettings):
     # ============================================================
     # TELEGRAM MTPROTO (Telethon)
     # ============================================================
-    TELEGRAM_API_ID: int = 35905408
-    TELEGRAM_API_HASH: str = "b7da0a94afbba393d358f0a214b24779"
+    TELEGRAM_API_ID: int = 0  # Required from .env
+    TELEGRAM_API_HASH: str = ""  # Required from .env
     TELEGRAM_SESSION_NAME: str = "gift_indexer"
     TELEGRAM_SYNC_DELAY: float = 0.5  # Delay between API calls (seconds)
+
+    # ============================================================
+    # TELEGRAM BOT (for WebApp authentication)
+    # ============================================================
+    TELEGRAM_BOT_TOKEN: str = ""  # Required from .env for initData verification
 
     # ============================================================
     # MARKET ADAPTERS
@@ -169,6 +184,10 @@ class Settings(BaseSettings):
     SOLO_GAMES_SERVICE_URL: str = "http://localhost:8002"
     TRADING_SERVICE_URL: str = "http://localhost:8003"
     PVP_SERVICE_URL: str = "http://localhost:8004"
+    INTERNAL_API_KEY: str = ""
+    # Internal auth for game services
+    INTERNAL_API_HEADER: str = "X-Internal-Key"
+    MAIN_API_URL: str = "http://localhost:8000"
 
     class Config:
         env_file = ".env"

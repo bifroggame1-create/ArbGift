@@ -7,6 +7,7 @@ Provides REST API for:
 - User rankings and position tracking
 """
 import logging
+import os
 from decimal import Decimal
 from datetime import datetime
 from typing import Optional, List
@@ -17,6 +18,8 @@ from sqlalchemy import select, func, and_, or_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
+from app.core.auth import get_verified_telegram_id
+from app.config import settings
 from app.models.user import User
 from app.models.leaderboard import LeaderboardEntry, LeaderboardType, LeaderboardCategory
 
@@ -101,7 +104,6 @@ async def get_leaderboard(
     type: str = Query("WEEKLY", pattern="^(ALL_TIME|WEEKLY|MONTHLY|DAILY)$"),
     category: str = Query("TOTAL_PROFIT", pattern="^(TOTAL_PROFIT|BIGGEST_WIN|WIN_STREAK|TOTAL_WAGERED|STAKING_REWARDS|REFERRAL_EARNINGS)$"),
     limit: int = Query(100, ge=1, le=500),
-    telegram_id: Optional[int] = Header(None, alias="X-Telegram-User-Id"),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -192,7 +194,7 @@ async def get_leaderboard(
 
 @router.get("/my-rankings", response_model=List[UserRankingSchema])
 async def get_my_rankings(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     type: Optional[str] = Query(None, pattern="^(ALL_TIME|WEEKLY|MONTHLY|DAILY)$"),
     session: AsyncSession = Depends(get_db_session),
 ):
@@ -290,9 +292,9 @@ async def update_leaderboard_entry(
     Recalculates user's score across all leaderboards.
     This should be called periodically or after significant user activity.
     """
-    # TODO: Implement proper admin authentication
-    if not admin_key:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    ADMIN_KEY = os.getenv("ADMIN_SECRET_KEY") or settings.ADMIN_SECRET_KEY
+    if not admin_key or not ADMIN_KEY or admin_key != ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Invalid admin key")
 
     user = await get_user_by_telegram_id(session, telegram_id)
     if not user:

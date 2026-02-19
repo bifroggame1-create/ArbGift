@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     ANIMATION_DURATION_MS: int = 3000  # 3 seconds
 
     # CORS
-    CORS_ORIGINS: list = ["*"]
+    CORS_ORIGINS: list = []
 
     # JWT/Auth
     JWT_SECRET_KEY: str = "your-secret-key-change-in-production"

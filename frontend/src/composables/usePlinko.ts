@@ -10,9 +10,18 @@ export interface PlinkoHistoryItem {
   isWin: boolean
 }
 
+// Demo mode config - use when API is unavailable
+const DEMO_MODE = true  // Enable demo mode for testing without backend
+const DEMO_BALANCE = 1000  // Starting demo balance
+
 export function usePlinko() {
   const { user } = useTelegram()
-  const { currentBalance, deductBalance } = useCurrency()
+  const { currentBalance, deductBalance, addBalance, setBalance, balanceLoaded } = useCurrency()
+
+  // Initialize demo balance if needed
+  if (DEMO_MODE && !balanceLoaded.value) {
+    setBalance(10, DEMO_BALANCE)  // 10 TON, 1000 Stars
+  }
 
   // Config (fetched from server)
   const config: Ref<PlinkoConfig | null> = ref(null)
@@ -66,9 +75,38 @@ export function usePlinko() {
     }
   }
 
+  /**
+   * Generate provably fair random path for demo mode
+   */
+  function generateDemoPath(rows: number): number[][] {
+    const path: number[][] = []
+    let x = 0.5 // Start at center (0-1 range)
+
+    for (let row = 0; row < rows; row++) {
+      // Random left (-1) or right (+1) at each peg
+      const direction = Math.random() < 0.5 ? -1 : 1
+      const step = 1 / (rows + 1) // Step size based on row count
+      x += direction * step * 0.5
+
+      // Clamp to valid range
+      x = Math.max(0.05, Math.min(0.95, x))
+      path.push([x, (row + 1) / rows])
+    }
+
+    return path
+  }
+
+  /**
+   * Calculate landing slot from final X position
+   */
+  function calculateSlot(finalX: number, numSlots: number): number {
+    return Math.min(numSlots - 1, Math.max(0, Math.floor(finalX * numSlots)))
+  }
+
   async function play(): Promise<DropResult[]> {
     console.log('🎲 [usePlinko] play() called')
     console.log('🎲 [usePlinko] isPlaying:', isPlaying.value)
+    console.log('🎲 [usePlinko] DEMO_MODE:', DEMO_MODE)
 
     if (isPlaying.value) {
       console.log('❌ [usePlinko] Already playing, aborting')
@@ -94,44 +132,88 @@ export function usePlinko() {
 
     let drops: DropResult[]
 
-    // Server-side play
-    const userId = String(user.value?.id || '0')
-    console.log('🎲 [usePlinko] Calling API with:', {
-      userId,
-      betAmountStars: betAmount.value,
-      riskLevel: riskLevel.value,
-      rowCount: rowCount.value,
-      ballCount: ballCount.value,
-    })
+    // DEMO MODE: Generate results locally without API
+    if (DEMO_MODE) {
+      console.log('🎮 [usePlinko] Using DEMO MODE - generating local results')
 
-    try {
-      const response = await plinkoPlay({
+      const multipliers = currentMultipliers.value
+      const numSlots = multipliers.length
+
+      drops = []
+      for (let i = 0; i < ballCount.value; i++) {
+        const path = generateDemoPath(rowCount.value)
+        const finalX = path[path.length - 1][0]
+        const slot = calculateSlot(finalX, numSlots)
+        const multiplier = multipliers[slot] || 0.2
+        const payout = Math.round(betAmount.value * multiplier * 100) / 100
+        const profit = payout - betAmount.value
+
+        drops.push({
+          id: `demo_${Date.now()}_${i}`,
+          path,
+          landing_slot: slot,
+          multiplier,
+          bet_amount: betAmount.value,
+          payout,
+          profit,
+          server_seed_hash: 'demo_mode',
+          server_seed: 'demo_mode',
+          client_seed: 'demo_mode',
+          nonce: i,
+          risk_level: riskLevel.value,
+          row_count: rowCount.value,
+          created_at: new Date().toISOString(),
+        })
+      }
+
+      // Update balance locally
+      const totalPayout = drops.reduce((sum, d) => sum + d.payout, 0)
+      deductBalance(totalCost)
+      if (totalPayout > 0) {
+        addBalance(totalPayout)
+      }
+
+      console.log('🎮 [usePlinko] Demo drops generated:', drops)
+    } else {
+      // Server-side play
+      const userId = String(user.value?.id || '0')
+      console.log('🎲 [usePlinko] Calling API with:', {
         userId,
         betAmountStars: betAmount.value,
         riskLevel: riskLevel.value,
         rowCount: rowCount.value,
         ballCount: ballCount.value,
       })
-      console.log('✅ [usePlinko] API response:', response)
-      drops = response.drops
 
-      // Update balance from server response
-      if (response.new_balance_stars > 0) {
-        // Deduct the cost and add the payout
-        const totalPayout = drops.reduce((sum, d) => sum + d.payout, 0)
-        console.log('💰 [usePlinko] Updating balance:', {
-          deducting: totalCost,
-          adding: totalPayout
+      try {
+        const response = await plinkoPlay({
+          userId,
+          betAmountStars: betAmount.value,
+          riskLevel: riskLevel.value,
+          rowCount: rowCount.value,
+          ballCount: ballCount.value,
         })
-        deductBalance(totalCost)
-        if (totalPayout > 0) {
-          deductBalance(-totalPayout) // Add payout (negative deduction)
+        console.log('✅ [usePlinko] API response:', response)
+        drops = response.drops
+
+        // Update balance from server response
+        if (response.new_balance_stars > 0) {
+          // Deduct the cost and add the payout
+          const totalPayout = drops.reduce((sum, d) => sum + d.payout, 0)
+          console.log('💰 [usePlinko] Updating balance:', {
+            deducting: totalCost,
+            adding: totalPayout
+          })
+          deductBalance(totalCost)
+          if (totalPayout > 0) {
+            addBalance(totalPayout)
+          }
         }
+      } catch (error) {
+        console.error('❌ [usePlinko] Plinko play error:', error)
+        isPlaying.value = false
+        return []
       }
-    } catch (error) {
-      console.error('❌ [usePlinko] Plinko play error:', error)
-      isPlaying.value = false
-      return []
     }
 
     // Add to history

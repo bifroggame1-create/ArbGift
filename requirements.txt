@@ -30,6 +30,8 @@ meilisearch==0.31.0
 # Utilities
 python-dotenv==1.0.1
 python-multipart==0.0.9
+slowapi==0.1.8
+limits==3.5.0
 
 # Development
 pytest==7.4.4

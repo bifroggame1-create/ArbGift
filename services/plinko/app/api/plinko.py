@@ -7,17 +7,23 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings, MULTIPLIER_SETS, VALID_RISK_LEVELS, VALID_ROW_COUNTS
+from app.core.auth import require_internal_key
+from app.core.ratelimit import limiter
 from app.database import get_db_session
 from app.models.drop import PlinkoDrop
 from app.services.plinko_engine import PlinkoEngine
 
-router = APIRouter(prefix="/api/v1", tags=["plinko"])
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["plinko"],
+    dependencies=[Depends(require_internal_key)],
+)
 
 engine = PlinkoEngine()
 
@@ -103,7 +109,8 @@ class HistoryItem(BaseModel):
 # ============================================================
 
 @router.get("/config", response_model=ConfigResponse)
-async def get_config():
+@limiter.limit("60/minute")
+async def get_config(request: Request):
     """Get full game configuration including all multiplier sets."""
     # Convert int keys to string for JSON serialization
     serializable = {}
@@ -121,8 +128,10 @@ async def get_config():
 
 
 @router.post("/play", response_model=PlayResponse)
+@limiter.limit("30/minute")
 async def play_plinko(
     request: PlayRequest,
+    req: Request,
     user_id: str = Query(..., description="Telegram user ID"),
     session: AsyncSession = Depends(get_db_session),
 ):
@@ -221,16 +230,17 @@ async def play_plinko(
 
 
 @router.post("/verify", response_model=VerifyResponse)
-async def verify_drop(request: VerifyRequest):
+@limiter.limit("60/minute")
+async def verify_drop(request: Request, body: VerifyRequest):
     """Verify a drop result is provably fair."""
     try:
         result = engine.generate_drop(
-            server_seed=request.server_seed,
-            client_seed=request.client_seed,
-            nonce=request.nonce,
-            bet_amount=request.bet_amount,
-            risk_level=request.risk_level,
-            row_count=request.row_count,
+            server_seed=body.server_seed,
+            client_seed=body.client_seed,
+            nonce=body.nonce,
+            bet_amount=body.bet_amount,
+            risk_level=body.risk_level,
+            row_count=body.row_count,
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -244,7 +254,9 @@ async def verify_drop(request: VerifyRequest):
 
 
 @router.get("/history", response_model=List[HistoryItem])
+@limiter.limit("60/minute")
 async def get_history(
+    request: Request,
     user_id: str = Query(..., description="Telegram user ID"),
     limit: int = Query(50, ge=1, le=200),
     session: AsyncSession = Depends(get_db_session),
@@ -276,7 +288,9 @@ async def get_history(
 
 
 @router.get("/stats")
+@limiter.limit("60/minute")
 async def get_stats(
+    request: Request,
     user_id: str = Query(..., description="Telegram user ID"),
     session: AsyncSession = Depends(get_db_session),
 ):

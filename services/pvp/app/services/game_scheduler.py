@@ -11,6 +11,8 @@ from app.models import RoomStatus
 from app.repositories.room_repository import RoomRepository
 from app.services.engine import PvPGameEngine
 from app.services.websocket_manager import ws_manager
+import httpx
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -123,50 +125,15 @@ class GameScheduler:
                 None,
             )
 
-            # Calculate payout
-            winnings, fee = self.engine.calculate_winnings(
-                room.total_pool_ton,
-                room.house_fee_percent,
-            )
-
-            # Update room
-            await repo.update_room(
-                room.room_code,
-                status=RoomStatus.FINISHED,
-                winner_user_id=result.winner_user_id,
-                winner_ticket=result.winning_ticket,
-                winning_spin_degree=result.spin_degree,
-                finished_at=datetime.now(timezone.utc),
-            )
-
-            # Update user stats
-            for bet in room.bets:
-                user_wagered = bet.gift_value_ton
-                if bet.user_id == result.winner_user_id:
-                    await repo.update_stats_win(bet.user_id, user_wagered, winnings)
-                else:
-                    await repo.update_stats_loss(bet.user_id, user_wagered)
-
-            # Broadcast result
-            await ws_manager.broadcast(room.room_code, {
-                "type": "spin_result",
-                "data": {
-                    "winner_user_id": result.winner_user_id,
-                    "winner_user_name": winner_bet.user_name if winner_bet else "Unknown",
-                    "winning_ticket": result.winning_ticket,
-                    "total_tickets": sum(b.tickets_count for b in room.bets),
-                    "spin_degree": str(result.spin_degree),
-                    "winnings_ton": str(winnings),
-                    "house_fee_ton": str(fee),
-                    "server_seed": room.server_seed,
-                },
-            })
-
-            logger.info(
-                f"Room {room.room_code} finished. "
-                f"Winner: {result.winner_user_id}, "
-                f"Pool: {room.total_pool_ton} TON"
-            )
+            # Let main API handle payouts (ledger) via internal call
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                try:
+                    await client.post(
+                        f"{settings.MAIN_API_URL}/api/v1/games/pvp/rooms/{room.room_code}/spin",
+                        headers={settings.INTERNAL_API_HEADER: settings.INTERNAL_API_KEY},
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify main API for payout: {e}")
 
         except Exception as e:
             logger.error(f"Auto-spin failed for {room.room_code}: {e}")

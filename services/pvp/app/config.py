@@ -32,6 +32,7 @@ class Settings(BaseSettings):
 
     # JWT for auth (from main app)
     JWT_SECRET_KEY: str = "change-me-in-production"
+    INTERNAL_API_KEY: str = ""
 
     # TON API for NFT data
     TONAPI_KEY: str = ""

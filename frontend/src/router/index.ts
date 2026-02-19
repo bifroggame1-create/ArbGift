@@ -98,11 +98,6 @@ const router = createRouter({
       component: () => import('../views/ContractsView.vue'),
     },
     {
-      path: '/upgrade',
-      name: 'upgrade',
-      component: () => import('../views/UpgradeView.vue'),
-    },
-    {
       path: '/aviator',
       name: 'aviator',
       component: () => import('../views/AviatorView.vue'),
@@ -121,11 +116,6 @@ const router = createRouter({
       path: '/rocket',
       name: 'rocket',
       component: () => import('../views/RocketView.vue'),
-    },
-    {
-      path: '/lucky',
-      name: 'lucky',
-      component: () => import('../views/LuckyView.vue'),
     },
     // Admin Panel
     {

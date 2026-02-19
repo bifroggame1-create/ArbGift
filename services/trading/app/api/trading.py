@@ -17,6 +17,7 @@ from app.models.game import TradingGame, GameStatus
 from app.models.bet import TradingBet, BetStatus, UserTradingStats
 from app.websocket.manager import manager
 from app.services.game_engine import TradingGameEngine
+from app.core.auth import require_internal_key
 
 router = APIRouter(prefix="/api/trading", tags=["Trading"])
 
@@ -115,6 +116,7 @@ async def get_current_game(
 async def place_bet(
     req: PlaceBetRequest,
     session: AsyncSession = Depends(get_db_session),
+    _: None = Depends(require_internal_key),
 ):
     """Place a bet on the current game."""
     # Get current game
@@ -197,6 +199,7 @@ async def cash_out(
     req: CashOutRequest,
     user_id: int,
     session: AsyncSession = Depends(get_db_session),
+    _: None = Depends(require_internal_key),
 ):
     """Cash out an active bet."""
     # Get bet

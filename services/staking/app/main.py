@@ -4,6 +4,7 @@ Staking Service - Main Entry Point.
 Стейкинг NFT гифтов для получения наград.
 """
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -41,9 +42,10 @@ app = FastAPI(
 )
 
 # CORS
+allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()] or (["*"] if settings.DEBUG else [])
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

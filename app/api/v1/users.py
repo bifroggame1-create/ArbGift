@@ -19,6 +19,9 @@ from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
+from app.core.auth import get_verified_telegram_id
+from app.core.ratelimit import limiter
+from app.core.auth import get_verified_telegram_id
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -152,6 +155,7 @@ async def get_user_by_referral_code(
 # ============================================================
 
 @router.post("/register", response_model=UserProfileSchema, status_code=201)
+@limiter.limit("5/minute")
 async def register_user(
     request: UserCreateRequest,
     session: AsyncSession = Depends(get_db_session),
@@ -212,13 +216,13 @@ async def register_user(
 
 @router.get("/me", response_model=UserProfileSchema)
 async def get_current_user(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
     Get current user profile.
 
-    Requires X-Telegram-User-Id header with Telegram user ID.
+    Requires valid Telegram initData.
     """
     user = await get_user_by_telegram_id(session, telegram_id)
     if not user:
@@ -251,7 +255,7 @@ async def get_user_profile(
 @router.patch("/me", response_model=UserProfileSchema)
 async def update_user_profile(
     request: UserUpdateRequest,
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -284,7 +288,7 @@ async def update_user_profile(
 
 @router.get("/me/stats", response_model=UserStatsSchema)
 async def get_user_stats(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -359,7 +363,7 @@ async def get_top_users(
 @router.post("/me/balance", response_model=UserProfileSchema)
 async def update_user_balance(
     request: BalanceUpdateRequest,
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     admin_key: str = Header(..., alias="X-Admin-Key"),
     session: AsyncSession = Depends(get_db_session),
 ):
@@ -373,10 +377,9 @@ async def update_user_balance(
     - subtract: Subtract from current balance
     - set: Set balance to specific value
     """
-    # TODO: Implement proper admin authentication
-    # For now, just check if admin_key is provided
-    if not admin_key:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    ADMIN_KEY = os.getenv("ADMIN_SECRET_KEY") or settings.ADMIN_SECRET_KEY
+    if not admin_key or not ADMIN_KEY or admin_key != ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Invalid admin key")
 
     user = await get_user_by_telegram_id(session, telegram_id)
     if not user:

@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     # JWT
     JWT_SECRET_KEY: str = "change-me-in-production"
+    INTERNAL_API_KEY: str = ""
 
     class Config:
         env_file = ".env"

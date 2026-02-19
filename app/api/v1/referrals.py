@@ -11,12 +11,13 @@ from decimal import Decimal
 from datetime import datetime
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, Query, HTTPException, Header
+from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
+from app.core.auth import get_verified_telegram_id
 from app.models.user import User
 from app.models.referral import Referral, ReferralReward, ReferralTier
 
@@ -145,7 +146,7 @@ async def get_user_by_telegram_id(
 
 @router.get("/my-referrals", response_model=ReferralListResponse)
 async def get_my_referrals(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     status: Optional[str] = Query(None, pattern="^(active|inactive)$"),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
@@ -219,7 +220,7 @@ async def get_my_referrals(
 
 @router.get("/stats", response_model=ReferralStatsSchema)
 async def get_referral_stats(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -296,7 +297,7 @@ async def get_referral_stats(
 
 @router.get("/rewards", response_model=List[ReferralRewardSchema])
 async def get_referral_rewards(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db_session),
@@ -325,7 +326,7 @@ async def get_referral_rewards(
 
 @router.post("/claim")
 async def claim_referral_rewards(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     session: AsyncSession = Depends(get_db_session),
 ):
     """

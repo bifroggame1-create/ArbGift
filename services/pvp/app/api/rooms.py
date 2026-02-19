@@ -17,6 +17,10 @@ from app.repositories.room_repository import RoomRepository
 from app.services import PvPGameEngine, ProvablyFairEngine
 from app.services.escrow import EscrowService
 from app.services.websocket_manager import ws_manager
+from app.core.auth import require_internal_key
+from app.core.ratelimit import limiter
+from app.core.auth import require_internal_key
+from app.core.auth import require_internal_key
 
 router = APIRouter(prefix="/api/pvp", tags=["PvP"])
 
@@ -126,11 +130,13 @@ async def create_room(
 
 
 @router.post("/rooms/{room_code}/bet")
+@limiter.limit("20/minute")
 async def place_bet(
     room_code: str,
     req: PlaceBetRequest,
     db: AsyncSession = Depends(get_db),
     x_wallet_address: Optional[str] = Header(None),
+    _: None = Depends(require_internal_key),
 ):
     """
     Place bet in room.
@@ -283,10 +289,12 @@ async def get_room(
 
 
 @router.post("/rooms/{room_code}/spin", response_model=SpinResultResponse)
+@limiter.limit("20/minute")
 async def spin_wheel(
     room_code: str,
     client_seed: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_internal_key),
 ):
     """Spin wheel manually (auto-spin handles this normally)."""
     repo = RoomRepository(db)

@@ -5,9 +5,13 @@ from decimal import Decimal
 
 from sqlalchemy import String, BigInteger, Integer, Numeric, Boolean, DateTime, func, Index
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import TYPE_CHECKING
 
 from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.models.inventory import UserGiftInventory
 
 
 class User(Base):
@@ -54,6 +58,9 @@ class User(Base):
     total_lost_ton: Mapped[Decimal] = mapped_column(Numeric(18, 9), default=Decimal("0"))
     games_played: Mapped[int] = mapped_column(Integer, default=0)
     games_won: Mapped[int] = mapped_column(Integer, default=0)
+    current_win_streak: Mapped[int] = mapped_column(Integer, default=0)
+    best_win_streak: Mapped[int] = mapped_column(Integer, default=0)
+    biggest_win_ton: Mapped[Decimal] = mapped_column(Numeric(18, 9), default=Decimal("0"))
 
     # Staking stats
     total_staked_value_ton: Mapped[Decimal] = mapped_column(Numeric(18, 9), default=Decimal("0"))
@@ -72,6 +79,13 @@ class User(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         onupdate=func.now(),
+    )
+
+    # Relationships
+    gift_inventory: Mapped[list["UserGiftInventory"]] = relationship(
+        "UserGiftInventory",
+        back_populates="user",
+        lazy="dynamic",
     )
 
     __table_args__ = (

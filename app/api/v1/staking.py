@@ -13,6 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 import httpx
 from pydantic import BaseModel, Field
 
+from app.core.auth import get_verified_telegram_id
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -169,7 +171,7 @@ async def proxy_to_staking_service(
 @router.post("/stakes", response_model=StakeSchema, status_code=201)
 async def create_stake(
     request: StakeCreateRequest,
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
 ):
     """
     Create new stake.
@@ -188,7 +190,7 @@ async def create_stake(
 
 @router.get("/stakes", response_model=StakeListResponse)
 async def get_user_stakes(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     status: Optional[str] = None,
     limit: int = 100,
     offset: int = 0,
@@ -219,7 +221,7 @@ async def get_user_stakes(
 @router.get("/stakes/{stake_id}", response_model=StakeSchema)
 async def get_stake_detail(
     stake_id: int,
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
 ):
     """
     Get stake details by ID.
@@ -237,7 +239,7 @@ async def get_stake_detail(
 @router.post("/stakes/{stake_id}/claim", response_model=StakeSchema)
 async def claim_stake_rewards(
     stake_id: int,
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
 ):
     """
     Claim stake rewards.
@@ -257,7 +259,7 @@ async def claim_stake_rewards(
 @router.post("/stakes/{stake_id}/compound", response_model=StakeSchema)
 async def compound_stake_rewards(
     stake_id: int,
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
 ):
     """
     Compound stake rewards.
@@ -277,7 +279,7 @@ async def compound_stake_rewards(
 @router.delete("/stakes/{stake_id}")
 async def cancel_stake(
     stake_id: int,
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
 ):
     """
     Cancel stake (emergency unstake).
@@ -296,7 +298,7 @@ async def cancel_stake(
 
 @router.get("/stakes/me/stats", response_model=StakeStatsSchema)
 async def get_user_staking_stats(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
 ):
     """
     Get user's staking statistics.

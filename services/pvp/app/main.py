@@ -4,10 +4,13 @@ PvP Service — рулетка на гифтах (Rolls.codes).
 PostgreSQL + WebSocket + Provably Fair.
 """
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.api.rooms import router as rooms_router
 from app.api.inventory import router as inventory_router
@@ -15,6 +18,7 @@ from app.api.websocket import router as ws_router
 from app.config import settings
 from app.database import init_db
 from app.services.game_scheduler import game_scheduler
+from app.core.ratelimit import limiter
 
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
@@ -43,9 +47,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()] or (["*"] if settings.DEBUG else []),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

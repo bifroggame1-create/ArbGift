@@ -4,11 +4,13 @@ Trading Service - Main Entry Point.
 Crash/Trading game with provably fair mechanics.
 """
 import logging
+import os
 from contextlib import asynccontextmanager
 import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.core.auth import require_internal_key
 
 from app.api import trading
 from app.config import settings
@@ -61,9 +63,11 @@ app = FastAPI(
 )
 
 # CORS
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+allowed_origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()] or (["*"] if settings.DEBUG else [])
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

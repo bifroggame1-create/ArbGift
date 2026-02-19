@@ -4,9 +4,12 @@ TON Gift Aggregator - FastAPI Application
 Main entry point for the REST API.
 """
 import logging
+import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Header, HTTPException
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -20,6 +23,8 @@ from app.api.v1.referrals import router as referrals_router
 from app.api.v1.quests import router as quests_router
 from app.api.v1.leaderboards import router as leaderboards_router
 from app.api.v1.games import router as games_router
+from app.api.v1.inventory import router as inventory_router
+from app.core.ratelimit import limiter
 
 # Optional dependencies: search (Meilisearch) and websocket (Redis)
 try:
@@ -99,10 +104,25 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
 )
 
+# Rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # CORS middleware
+# Parse ALLOWED_ORIGINS from settings (comma-separated)
+allowed_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()] if settings.ALLOWED_ORIGINS else []
+
+# In DEBUG mode, allow all origins for easier development
+if settings.DEBUG and not allowed_origins:
+    allowed_origins = ["*"]
+
+# Log configured origins
+logger.info(f"CORS allowed origins: {allowed_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
+    allow_origins=allowed_origins if allowed_origins != ["*"] else ["*"],
+    allow_origin_regex=r"https://.*\.vercel\.app" if not settings.DEBUG else None,  # Allow all Vercel preview URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -188,6 +208,12 @@ app.include_router(
     games_router,
     prefix="/api/v1",
     tags=["Games"],
+)
+
+app.include_router(
+    inventory_router,
+    prefix="/api/v1/inventory",
+    tags=["Inventory"],
 )
 
 if search_router:
@@ -283,14 +309,21 @@ async def get_stats():
 # SYNC ENDPOINTS (БЕЗ CELERY)
 # =====================================
 
+def _require_admin_key(admin_key: str | None):
+    key = os.getenv("ADMIN_SECRET_KEY") or settings.ADMIN_SECRET_KEY
+    if not key or admin_key != key:
+        raise HTTPException(status_code=403, detail="Invalid admin key")
+
+
 @app.post("/api/v1/admin/sync", tags=["Admin"])
-async def sync_all_markets():
+async def sync_all_markets(admin_key: str = Header(None, alias="X-Admin-Key")):
     """
     Синхронизировать данные со всех маркетов.
 
     Запускает синхронный загрузчик (без Celery).
     Загружает данные с Portals.tg и Major.tg.
     """
+    _require_admin_key(admin_key)
     from app.sync import run_sync
     try:
         stats = await run_sync()
@@ -304,8 +337,9 @@ async def sync_all_markets():
 
 
 @app.post("/api/v1/admin/sync/portals", tags=["Admin"])
-async def sync_portals_market(max_items: int = 500):
+async def sync_portals_market(max_items: int = 500, admin_key: str = Header(None, alias="X-Admin-Key")):
     """Синхронизировать только Portals.tg."""
+    _require_admin_key(admin_key)
     from app.sync import get_loader
     try:
         loader = await get_loader()
@@ -321,8 +355,9 @@ async def sync_portals_market(max_items: int = 500):
 
 
 @app.post("/api/v1/admin/sync/major", tags=["Admin"])
-async def sync_major_market(max_items: int = 500):
+async def sync_major_market(max_items: int = 500, admin_key: str = Header(None, alias="X-Admin-Key")):
     """Синхронизировать только Major.tg."""
+    _require_admin_key(admin_key)
     from app.sync import get_loader
     try:
         loader = await get_loader()
@@ -338,8 +373,9 @@ async def sync_major_market(max_items: int = 500):
 
 
 @app.post("/api/v1/admin/sync/getgems", tags=["Admin"])
-async def sync_getgems_market(max_items: int = 1000):
+async def sync_getgems_market(max_items: int = 1000, admin_key: str = Header(None, alias="X-Admin-Key")):
     """Синхронизировать GetGems (GraphQL API)."""
+    _require_admin_key(admin_key)
     from app.sync import get_loader
     try:
         loader = await get_loader()
@@ -355,8 +391,9 @@ async def sync_getgems_market(max_items: int = 1000):
 
 
 @app.post("/api/v1/admin/sync/fragment", tags=["Admin"])
-async def sync_fragment_market(max_items: int = 1000):
+async def sync_fragment_market(max_items: int = 1000, admin_key: str = Header(None, alias="X-Admin-Key")):
     """Синхронизировать Fragment (TON API / blockchain)."""
+    _require_admin_key(admin_key)
     from app.sync import get_loader
     try:
         loader = await get_loader()

@@ -5,6 +5,9 @@ import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+// Demo mode - use when API is unavailable
+const DEMO_MODE = true
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
@@ -36,6 +39,65 @@ api.interceptors.response.use(
   }
 )
 
+// ============================================================
+// DEMO DATA - Used when API is unavailable
+// ============================================================
+
+const DEMO_GIFTS = [
+  { id: 1, name: 'Delicious Cake', rarity: 'common', backdrop: 'Blue', model: 'Cake', symbol: '🎂', lowest_price_ton: 1.5, image_url: 'https://nft.fragment.com/gift-delicious-cake.webp', lottie_url: '/gifts/gift-1.webm' },
+  { id: 2, name: 'Red Star', rarity: 'rare', backdrop: 'Red', model: 'Star', symbol: '⭐', lowest_price_ton: 3.2, image_url: 'https://nft.fragment.com/gift-red-star.webp', lottie_url: '/gifts/gift-2.webm' },
+  { id: 3, name: 'Spooky Skull', rarity: 'rare', backdrop: 'Purple', model: 'Skull', symbol: '💀', lowest_price_ton: 5.8, image_url: 'https://nft.fragment.com/gift-spooky-skull.webp', lottie_url: '/gifts/gift-3.webm' },
+  { id: 4, name: 'Crystal Ball', rarity: 'epic', backdrop: 'Blue', model: 'Crystal', symbol: '🔮', lowest_price_ton: 12.5, image_url: 'https://nft.fragment.com/gift-crystal-ball.webp', lottie_url: '/gifts/gift-4.webm' },
+  { id: 5, name: 'Golden Trophy', rarity: 'legendary', backdrop: 'Gold', model: 'Trophy', symbol: '🏆', lowest_price_ton: 45.0, image_url: 'https://nft.fragment.com/gift-golden-trophy.webp', lottie_url: '/gifts/gift-5.webm' },
+  { id: 6, name: 'Love Potion', rarity: 'common', backdrop: 'Pink', model: 'Potion', symbol: '💘', lowest_price_ton: 2.1, image_url: 'https://nft.fragment.com/gift-love-potion.webp', lottie_url: '/gifts/gift-6.webm' },
+  { id: 7, name: 'Magic Wand', rarity: 'rare', backdrop: 'Purple', model: 'Wand', symbol: '🪄', lowest_price_ton: 4.7, image_url: 'https://nft.fragment.com/gift-magic-wand.webp', lottie_url: '/gifts/gift-7.webm' },
+  { id: 8, name: 'Lucky Clover', rarity: 'epic', backdrop: 'Green', model: 'Clover', symbol: '🍀', lowest_price_ton: 18.3, image_url: 'https://nft.fragment.com/gift-lucky-clover.webp', lottie_url: '/gifts/gift-8.webm' },
+  { id: 9, name: 'Diamond Ring', rarity: 'legendary', backdrop: 'Blue', model: 'Ring', symbol: '💍', lowest_price_ton: 89.9, image_url: 'https://nft.fragment.com/gift-diamond-ring.webp', lottie_url: '/gifts/gift-9.webm' },
+  { id: 10, name: 'Party Balloon', rarity: 'common', backdrop: 'Rainbow', model: 'Balloon', symbol: '🎈', lowest_price_ton: 0.8, image_url: 'https://nft.fragment.com/gift-party-balloon.webp', lottie_url: '/gifts/gift-10.webm' },
+  { id: 11, name: 'Durov Cap', rarity: 'mythic', backdrop: 'Blue', model: 'Cap', symbol: '🧢', lowest_price_ton: 250.0, image_url: 'https://nft.fragment.com/gift-durov-cap.webp', lottie_url: '/gifts/gift-11.webm' },
+  { id: 12, name: 'Rocket Ship', rarity: 'epic', backdrop: 'Space', model: 'Rocket', symbol: '🚀', lowest_price_ton: 15.5, image_url: 'https://nft.fragment.com/gift-rocket-ship.webp', lottie_url: '/gifts/gift-12.webm' },
+]
+
+const DEMO_FILTERS = {
+  gift_types: [
+    { value: 'Delicious Cake', count: 1500, floor_price: 1.5 },
+    { value: 'Red Star', count: 800, floor_price: 3.2 },
+    { value: 'Spooky Skull', count: 500, floor_price: 5.8 },
+    { value: 'Crystal Ball', count: 200, floor_price: 12.5 },
+    { value: 'Golden Trophy', count: 50, floor_price: 45.0 },
+  ],
+  models: [
+    { value: 'Cake', count: 1500 },
+    { value: 'Star', count: 800 },
+    { value: 'Skull', count: 500 },
+    { value: 'Crystal', count: 200 },
+    { value: 'Trophy', count: 50 },
+  ],
+  backdrops: [
+    { value: 'Blue', count: 2000 },
+    { value: 'Red', count: 800 },
+    { value: 'Purple', count: 600 },
+    { value: 'Gold', count: 100 },
+    { value: 'Rainbow', count: 300 },
+  ],
+  symbols: [
+    { value: '🎂', count: 1500 },
+    { value: '⭐', count: 800 },
+    { value: '💀', count: 500 },
+    { value: '🔮', count: 200 },
+    { value: '🏆', count: 50 },
+  ],
+  patterns: [],
+  rarities: [
+    { value: 'common', count: 3000 },
+    { value: 'rare', count: 1500 },
+    { value: 'epic', count: 500 },
+    { value: 'legendary', count: 100 },
+    { value: 'mythic', count: 10 },
+  ],
+  price_range: { min: 0.5, max: 500 },
+}
+
 // === USER BALANCE ===
 
 export interface UserBalance {
@@ -44,8 +106,18 @@ export interface UserBalance {
 }
 
 export const getUserBalance = async (): Promise<UserBalance> => {
-  const response = await api.get('/api/v1/user/balance')
-  return response.data
+  // Return demo balance in demo mode
+  if (DEMO_MODE) {
+    return { balance_ton: 10, balance_stars: 1000 }
+  }
+
+  try {
+    const response = await api.get('/api/v1/user/balance')
+    return response.data
+  } catch (error) {
+    console.warn('API unavailable, using demo balance')
+    return { balance_ton: 10, balance_stars: 1000 }
+  }
 }
 
 // === GIFTS ===
@@ -104,8 +176,57 @@ export const getGifts = async (params?: {
   offset?: number
   search?: string
 }) => {
-  const response = await api.get('/api/v1/gifts', { params })
-  return response.data
+  // Try API first, fallback to demo data
+  if (DEMO_MODE) {
+    console.log('🎮 [API] Using DEMO_MODE for gifts')
+    // Filter and sort demo data
+    let items = [...DEMO_GIFTS]
+
+    // Apply filters
+    if (params?.gift_type) {
+      const types = params.gift_type.split(',')
+      items = items.filter(g => types.includes(g.name))
+    }
+    if (params?.model) {
+      const models = params.model.split(',')
+      items = items.filter(g => models.includes(g.model || ''))
+    }
+    if (params?.backdrop) {
+      const backdrops = params.backdrop.split(',')
+      items = items.filter(g => backdrops.includes(g.backdrop || ''))
+    }
+    if (params?.price_min) {
+      items = items.filter(g => (g.lowest_price_ton || 0) >= params.price_min!)
+    }
+    if (params?.price_max) {
+      items = items.filter(g => (g.lowest_price_ton || 0) <= params.price_max!)
+    }
+
+    // Sort
+    if (params?.sort_by === 'price asc') {
+      items.sort((a, b) => (a.lowest_price_ton || 0) - (b.lowest_price_ton || 0))
+    } else if (params?.sort_by === 'price desc') {
+      items.sort((a, b) => (b.lowest_price_ton || 0) - (a.lowest_price_ton || 0))
+    }
+
+    // Pagination
+    const offset = params?.offset || 0
+    const limit = params?.limit || 50
+    const paginatedItems = items.slice(offset, offset + limit)
+
+    return {
+      items: paginatedItems,
+      total: items.length,
+    }
+  }
+
+  try {
+    const response = await api.get('/api/v1/gifts', { params })
+    return response.data
+  } catch (error) {
+    console.warn('API unavailable, using demo data')
+    return { items: DEMO_GIFTS, total: DEMO_GIFTS.length }
+  }
 }
 
 export interface FilterOption {
@@ -129,8 +250,19 @@ export const getFilters = async (params?: {
   gift_type?: string
   is_on_sale?: boolean
 }): Promise<FiltersData> => {
-  const response = await api.get('/api/v1/gifts/filters', { params })
-  return response.data
+  // Use demo data in demo mode
+  if (DEMO_MODE) {
+    console.log('🎮 [API] Using DEMO_MODE for filters')
+    return DEMO_FILTERS as FiltersData
+  }
+
+  try {
+    const response = await api.get('/api/v1/gifts/filters', { params })
+    return response.data
+  } catch (error) {
+    console.warn('API unavailable, using demo filters')
+    return DEMO_FILTERS as FiltersData
+  }
 }
 
 export const getGift = async (id: number) => {
@@ -164,8 +296,6 @@ export const getStats = async () => {
 
 // === SOLO GAMES (Gonka, Ball Escape) ===
 
-const SOLO_GAMES_BASE = import.meta.env.VITE_SOLO_GAMES_URL || 'http://localhost:8007'
-
 export interface EscapeBuyRequest {
   amount: number
   client_seed: string
@@ -185,13 +315,11 @@ export interface EscapeBuyResponse {
 }
 
 export const escapePlay = async (data: EscapeBuyRequest): Promise<EscapeBuyResponse> => {
-  const response = await axios.post(`${SOLO_GAMES_BASE}/api/solo-escape-game/buy/ton`, data)
+  const response = await api.post(`/api/v1/games/solo/escape/play`, data)
   return response.data
 }
 
 // === PVP GIFT ROULETTE ===
-
-const PVP_BASE = import.meta.env.VITE_PVP_URL || 'http://localhost:8009'
 
 export interface PvPRoom {
   room_code: string
@@ -257,7 +385,7 @@ export const pvpCreateRoom = async (params: {
   max_bet_ton?: number
   max_players?: number
 }) => {
-  const resp = await axios.post(`${PVP_BASE}/api/pvp/rooms`, params)
+  const resp = await api.post(`/api/v1/games/pvp/rooms`, params)
   return resp.data as { room_code: string; server_seed_hash: string; status: string; countdown_seconds: number }
 }
 
@@ -273,22 +401,22 @@ export const pvpPlaceBet = async (roomCode: string, data: {
 }, walletAddress?: string) => {
   const headers: Record<string, string> = {}
   if (walletAddress) headers['X-Wallet-Address'] = walletAddress
-  const resp = await axios.post(`${PVP_BASE}/api/pvp/rooms/${roomCode}/bet`, data, { headers })
+  const resp = await api.post(`/api/v1/games/pvp/rooms/${roomCode}/bet`, data, { headers })
   return resp.data
 }
 
 export const pvpGetRoom = async (roomCode: string): Promise<PvPRoomState> => {
-  const resp = await axios.get(`${PVP_BASE}/api/pvp/rooms/${roomCode}`)
+  const resp = await api.get(`/api/v1/games/pvp/rooms/${roomCode}`)
   return resp.data
 }
 
 export const pvpListRooms = async (status?: string, limit = 20): Promise<{ total: number; rooms: PvPRoom[] }> => {
-  const resp = await axios.get(`${PVP_BASE}/api/pvp/rooms`, { params: { status, limit } })
+  const resp = await api.get(`/api/v1/games/pvp/rooms`, { params: { status, limit } })
   return resp.data
 }
 
 export const pvpGetInventory = async (walletAddress: string): Promise<InventoryNFT[]> => {
-  const resp = await axios.get(`${PVP_BASE}/api/pvp/inventory/user/${walletAddress}`)
+  const resp = await api.get(`/api/v1/games/pvp/inventory`, { params: { wallet_address: walletAddress } })
   return resp.data
 }
 

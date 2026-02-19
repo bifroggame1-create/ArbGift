@@ -12,12 +12,14 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, Query, HTTPException, Header
+from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, and_, or_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
+from app.core.auth import get_verified_telegram_id
+from app.core.auth import get_verified_telegram_id
 from app.models.user import User
 from app.models.quest import Quest, UserQuest, QuestType, QuestStatus
 
@@ -211,7 +213,7 @@ async def check_and_reset_quests(
 
 @router.get("/daily", response_model=QuestListResponse)
 async def get_daily_quests(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -285,7 +287,7 @@ async def get_daily_quests(
 
 @router.get("/weekly", response_model=QuestListResponse)
 async def get_weekly_quests(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -359,7 +361,7 @@ async def get_weekly_quests(
 
 @router.get("/achievements", response_model=QuestListResponse)
 async def get_achievements(
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -428,7 +430,7 @@ async def get_achievements(
 @router.post("/claim/{user_quest_id}", response_model=QuestClaimResponse)
 async def claim_quest_reward(
     user_quest_id: int,
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -496,7 +498,7 @@ async def claim_quest_reward(
 async def update_quest_progress(
     quest_id: str,
     increment: int = 1,
-    telegram_id: int = Header(..., alias="X-Telegram-User-Id"),
+    telegram_id: int = Depends(get_verified_telegram_id),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
