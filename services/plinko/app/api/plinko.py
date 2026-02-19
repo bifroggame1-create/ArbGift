@@ -41,6 +41,10 @@ class PlayRequest(BaseModel):
     row_count: int = Field(12)
     ball_count: int = Field(1, ge=1, le=10)
     client_seed: Optional[str] = None
+    server_seed: Optional[str] = Field(
+        None, description="Server seed provided by orchestrator for commit/reveal"
+    )
+    round_id: Optional[str] = None
 
 
 class DropResult(BaseModel):
@@ -52,12 +56,12 @@ class DropResult(BaseModel):
     payout: float
     profit: float
     server_seed_hash: str
-    server_seed: str
     client_seed: str
     nonce: int
     risk_level: str
     row_count: int
     created_at: datetime
+    round_id: str
 
 
 class PlayResponse(BaseModel):
@@ -65,6 +69,7 @@ class PlayResponse(BaseModel):
     new_balance_stars: int
     total_payout: float
     total_profit: float
+    round_id: str
 
 
 class ConfigResponse(BaseModel):
@@ -152,6 +157,9 @@ async def play_plinko(
     # TODO: check user balance from main app DB and deduct
 
     client_seed = request.client_seed or secrets.token_hex(16)
+    server_seed = request.server_seed or secrets.token_hex(32)
+    server_seed_hash = hashlib.sha256(server_seed.encode()).hexdigest()
+    round_id = request.round_id or f"plinko-{uuid.uuid4()}"
 
     # Get/increment nonce
     if user_id not in user_nonces:
@@ -164,9 +172,6 @@ async def play_plinko(
     for i in range(request.ball_count):
         nonce = user_nonces[user_id]
         user_nonces[user_id] += 1
-
-        server_seed = secrets.token_hex(32)
-        server_seed_hash = hashlib.sha256(server_seed.encode()).hexdigest()
 
         result = engine.generate_drop(
             server_seed=server_seed,
@@ -208,12 +213,12 @@ async def play_plinko(
             payout=result["payout"],
             profit=result["profit"],
             server_seed_hash=server_seed_hash,
-            server_seed=server_seed,
             client_seed=client_seed,
             nonce=nonce,
             risk_level=request.risk_level,
             row_count=request.row_count,
             created_at=datetime.utcnow(),
+            round_id=round_id,
         )
         drops.append(drop_result)
         total_payout += result["payout"]
@@ -226,6 +231,7 @@ async def play_plinko(
         new_balance_stars=0,  # TODO: return actual balance after deduction
         total_payout=round(total_payout, 2),
         total_profit=round(total_profit, 2),
+        round_id=round_id,
     )
 
 

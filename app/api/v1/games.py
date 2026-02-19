@@ -11,6 +11,8 @@ import logging
 import os
 import json
 import hashlib
+import secrets
+import uuid
 from urllib.parse import parse_qs
 from typing import Optional
 from decimal import Decimal
@@ -134,6 +136,15 @@ class PlinkoPlayRequest(BaseModel):
     row_count: int = Field(12, ge=8, le=16)
     ball_count: int = Field(1, ge=1, le=10)
     client_seed: Optional[str] = None
+    round_id: Optional[str] = Field(
+        None,
+        description="Optional pre-committed round id; if omitted server will create commit"
+    )
+
+
+class PlinkoCommitResponse(BaseModel):
+    round_id: str
+    server_seed_hash: str
 
 
 @router.get("/games/plinko/config")
@@ -146,6 +157,28 @@ async def get_plinko_config():
         except httpx.HTTPError as e:
             logger.error(f"Plinko config error: {e}")
             raise HTTPException(status_code=503, detail="Game service unavailable")
+
+
+@router.post("/games/plinko/commit", response_model=PlinkoCommitResponse)
+@limiter.limit("30/minute")
+async def commit_plinko_round(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """Pre-commit server seed for a Plinko round and return hash."""
+    server_seed = secrets.token_hex(32)
+    server_seed_hash = hashlib.sha256(server_seed.encode()).hexdigest()
+    round_id = f"plinko-{uuid.uuid4()}"
+
+    await _commit_round(
+        session,
+        "plinko",
+        round_id,
+        server_seed,
+        server_seed_hash,
+    )
+    await session.commit()
+    return PlinkoCommitResponse(round_id=round_id, server_seed_hash=server_seed_hash)
 
 
 @router.post("/games/plinko/play")
@@ -174,6 +207,20 @@ async def play_plinko(
         "ball_count": request.ball_count,
         "client_seed": request.client_seed,
     }
+
+    # Ensure commit exists or create one
+    round_id = request.round_id or f"plinko-{uuid.uuid4()}"
+    commit_seed = None
+    commit_hash = None
+    existing_commit = await session.execute(select(GameRound).where(GameRound.round_id == round_id))
+    commit_row = existing_commit.scalar_one_or_none()
+    if commit_row:
+        commit_seed = commit_row.server_seed
+        commit_hash = commit_row.server_seed_hash
+    else:
+        commit_seed = secrets.token_hex(32)
+        commit_hash = hashlib.sha256(commit_seed.encode()).hexdigest()
+        await _commit_round(session, "plinko", round_id, commit_seed, commit_hash)
 
     # Lock user row for balance update
     user = await lock_user(session, user)
@@ -210,6 +257,8 @@ async def play_plinko(
                     "row_count": request.row_count,
                     "ball_count": request.ball_count,
                     "client_seed": request.client_seed,
+                    "server_seed": commit_seed,
+                    "round_id": round_id,
                 }
             )
             response.raise_for_status()
@@ -247,21 +296,14 @@ async def play_plinko(
         result["new_balance_stars"] = user.balance_stars
         op.response_json = result
 
-    # Commit round for reveal
-    await _commit_round(
-        session,
-        "plinko",
-        result.get("round_id", f"plinko-{user.id}-{request.client_seed or request.ball_count}"),
-        result.get("server_seed", ""),
-        result.get("server_seed_hash", ""),
-    )
-
     await session.commit()
     await session.refresh(user)
 
     # Return result with updated balance
     result["new_balance_stars"] = user.balance_stars
-    result.setdefault("round_id", f"plinko-{user.id}-{request.client_seed or request.ball_count}")
+    result["round_id"] = round_id
+    result["server_seed_hash"] = commit_hash
+    result.pop("server_seed", None)
 
     logger.info(
         f"Plinko play: user={user.telegram_id}, "
@@ -721,6 +763,21 @@ async def pvp_spin(
 
     await session.commit()
     return result
+
+
+@router.get("/games/reveal/{round_id}")
+@limiter.limit("60/minute")
+async def reveal_round(round_id: str, session: AsyncSession = Depends(get_db_session)):
+    """Reveal server seed for a committed round."""
+    res = await session.execute(select(GameRound).where(GameRound.round_id == round_id))
+    row = res.scalar_one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="Round not found")
+    return {
+        "round_id": row.round_id,
+        "server_seed_hash": row.server_seed_hash,
+        "server_seed": row.server_seed,
+    }
 
 
 @router.post("/games/trading/sell")
