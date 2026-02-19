@@ -26,12 +26,12 @@ export interface DropResult {
   payout: number
   profit: number
   server_seed_hash: string
-  server_seed: string
   client_seed: string
   nonce: number
   risk_level: string
   row_count: number
   created_at: string
+  round_id: string
 }
 
 export interface PlayResponse {
@@ -39,6 +39,8 @@ export interface PlayResponse {
   new_balance_stars: number
   total_payout: number
   total_profit: number
+  round_id: string
+  server_seed_hash: string
 }
 
 export interface PlinkoConfig {
@@ -77,6 +79,11 @@ export async function plinkoGetConfig(): Promise<PlinkoConfig> {
   return data
 }
 
+export async function plinkoCommit(): Promise<{ round_id: string; server_seed_hash: string }> {
+  const { data } = await plinkoApi.post('/api/v1/games/plinko/commit')
+  return data
+}
+
 export async function plinkoPlay(params: {
   userId: string
   betAmountStars: number
@@ -84,6 +91,7 @@ export async function plinkoPlay(params: {
   rowCount: number
   ballCount: number
   clientSeed?: string
+  roundId?: string
 }): Promise<PlayResponse> {
   // Use main API orchestration endpoint
   const { data } = await plinkoApi.post('/api/v1/games/plinko/play', {
@@ -92,6 +100,7 @@ export async function plinkoPlay(params: {
     row_count: params.rowCount,
     ball_count: params.ballCount,
     client_seed: params.clientSeed,
+    round_id: params.roundId,
   })
   return data
 }

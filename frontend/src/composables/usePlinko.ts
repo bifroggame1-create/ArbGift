@@ -1,5 +1,5 @@
 import { ref, computed, type Ref } from 'vue'
-import { plinkoPlay, plinkoGetConfig, type DropResult, type PlinkoConfig } from '@/api/plinko'
+import { plinkoPlay, plinkoGetConfig, plinkoCommit, revealRound, type DropResult, type PlinkoConfig } from '@/api/plinko'
 import { useTelegram } from '@/composables/useTelegram'
 import { useCurrency } from '@/composables/useCurrency'
 
@@ -11,7 +11,7 @@ export interface PlinkoHistoryItem {
 }
 
 // Demo mode config - use when API is unavailable
-const DEMO_MODE = true  // Enable demo mode for testing without backend
+const DEMO_MODE = false  // Enable backend mode by default
 const DEMO_BALANCE = 1000  // Starting demo balance
 
 export function usePlinko() {
@@ -33,6 +33,9 @@ export function usePlinko() {
   const ballCount = ref(1)
   const isPlaying = ref(false)
   const history = ref<PlinkoHistoryItem[]>([])
+  const lastRoundId = ref<string | null>(null)
+  const lastHash = ref<string | null>(null)
+  const lastReveal = ref<{ server_seed: string; server_seed_hash: string } | null>(null)
 
   // Last result for win popup
   const lastDrops = ref<DropResult[]>([])
@@ -186,28 +189,26 @@ export function usePlinko() {
       })
 
       try {
+        const commit = await plinkoCommit()
+        lastRoundId.value = commit.round_id
+        lastHash.value = commit.server_seed_hash
+
         const response = await plinkoPlay({
           userId,
           betAmountStars: betAmount.value,
           riskLevel: riskLevel.value,
           rowCount: rowCount.value,
           ballCount: ballCount.value,
+          roundId: commit.round_id,
         })
         console.log('✅ [usePlinko] API response:', response)
         drops = response.drops
+        lastRoundId.value = response.round_id || commit.round_id
+        lastHash.value = response.server_seed_hash || commit.server_seed_hash
 
         // Update balance from server response
-        if (response.new_balance_stars > 0) {
-          // Deduct the cost and add the payout
-          const totalPayout = drops.reduce((sum, d) => sum + d.payout, 0)
-          console.log('💰 [usePlinko] Updating balance:', {
-            deducting: totalCost,
-            adding: totalPayout
-          })
-          deductBalance(totalCost)
-          if (totalPayout > 0) {
-            addBalance(totalPayout)
-          }
+        if (typeof response.new_balance_stars === 'number') {
+          setBalance(currentBalance.value, response.new_balance_stars)
         }
       } catch (error) {
         console.error('❌ [usePlinko] Plinko play error:', error)
@@ -268,9 +269,18 @@ export function usePlinko() {
     lastDrops,
     showWinPopup,
     gameNumber,
+    lastRoundId,
+    lastHash,
+    lastReveal,
 
     // Actions
     play,
     onAnimationComplete,
+    async reveal() {
+      if (!lastRoundId.value) return null
+      const rev = await revealRound(lastRoundId.value)
+      lastReveal.value = rev
+      return rev
+    },
   }
 }

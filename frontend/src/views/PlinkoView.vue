@@ -17,6 +17,14 @@
         <button class="balance-plus">+</button>
       </div>
     </header>
+    <div class="hash-banner" v-if="lastHash">
+      <span class="hash-label">hash</span>
+      <code class="hash">{{ hashShort }}</code>
+      <button class="hash-copy" @click="copyHash">⧉</button>
+      <button class="hash-reveal" :disabled="!lastRoundId || revealLoading" @click="revealSeed">
+        {{ revealLoading ? '...' : 'Reveal' }}
+      </button>
+    </div>
 
     <!-- Board Container -->
     <div class="board-wrapper">
@@ -122,6 +130,10 @@ const {
   currentMultipliers,
   lastDrops,
   showWinPopup,
+  lastRoundId,
+  lastHash,
+  lastReveal,
+  reveal,
   play,
   onAnimationComplete,
   fetchConfig,
@@ -141,6 +153,9 @@ const betAmounts = computed(() => {
 const currencyClass = computed(() => {
   return selectedCurrency.value === 'stars' ? 'stars-mode' : 'ton-mode'
 })
+
+const hashShort = computed(() => lastHash.value ? `${lastHash.value.slice(0, 6)}…${lastHash.value.slice(-6)}` : '')
+const revealLoading = ref(false)
 
 const bestWinDrop = computed(() => {
   if (!lastDrops.value.length) return null
@@ -197,6 +212,22 @@ function handleSwap() {
 function handleDeposit() {
   // Navigate to deposit/top-up page
   hapticImpact?.('light')
+}
+
+async function revealSeed() {
+  if (!lastRoundId.value) return
+  revealLoading.value = true
+  try {
+    await reveal()
+  } finally {
+    revealLoading.value = false
+  }
+}
+
+async function copyHash() {
+  if (lastHash.value) {
+    try { await navigator.clipboard.writeText(lastHash.value) } catch {}
+  }
 }
 
 onMounted(() => {
