@@ -6,7 +6,7 @@ import axios from 'axios'
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 // Demo mode - use when API is unavailable
-const DEMO_MODE = true
+const DEMO_MODE = false
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -418,6 +418,62 @@ export const pvpListRooms = async (status?: string, limit = 20): Promise<{ total
 export const pvpGetInventory = async (walletAddress: string): Promise<InventoryNFT[]> => {
   const resp = await api.get(`/api/v1/games/pvp/inventory`, { params: { wallet_address: walletAddress } })
   return resp.data
+}
+
+// === INVENTORY (MAIN API) ===
+
+export interface InventoryItem {
+  id: number
+  gift_id: number
+  gift: Gift
+  telegram_msg_id?: number
+  telegram_slug?: string
+  acquired_at: string
+  source: string
+  floor_price_ton_at_acquisition: number
+  current_floor_price_ton: number
+  profit_loss_ton: number
+  is_staked: boolean
+  is_locked: boolean
+  locked_reason?: string
+  is_transferable: boolean
+  transfer_fee_stars: number
+  is_available_for_betting: boolean
+}
+
+export interface InventorySummary {
+  total_gifts: number
+  total_value_ton: number
+  available_for_betting: number
+  staked_count: number
+  locked_count: number
+  total_profit_loss_ton: number
+}
+
+export const inventoryGetMy = async (availableOnly = false): Promise<InventoryItem[]> => {
+  const resp = await api.get('/api/v1/inventory/me', { params: { available_only: availableOnly } })
+  return resp.data
+}
+
+export const inventoryGetSummary = async (): Promise<InventorySummary> => {
+  const resp = await api.get('/api/v1/inventory/me/summary')
+  return resp.data
+}
+
+export const inventoryLock = async (inventoryId: number, reason = 'pvp_bet') => {
+  const resp = await api.post('/api/v1/inventory/lock', { inventory_id: inventoryId, reason })
+  return resp.data
+}
+
+export const inventoryUnlock = async (inventoryId: number) => {
+  const resp = await api.post(`/api/v1/inventory/unlock/${inventoryId}`)
+  return resp.data
+}
+
+// === PROVABLY FAIR REVEAL ===
+export const revealRound = async (roundId: string) => {
+  const resp = await api.get(`/api/v1/games/reveal/${roundId}`)
+  return resp.data as { round_id: string; server_seed_hash: string; server_seed: string }
 }
 
 // === STAKING SERVICE ===

@@ -243,78 +243,14 @@
     </div>
 
 
-    <!-- Bet Modal -->
-    <Teleport to="body">
-      <div v-if="showBetModal" class="modal-overlay" @click.self="showBetModal = false">
-        <div class="bet-modal">
-          <div class="modal-handle"></div>
-          <div class="modal-header">
-            <h3>Выберите подарок</h3>
-            <button class="modal-close" @click="showBetModal = false">×</button>
-          </div>
-
-          <div class="modal-tabs">
-            <button :class="['tab', { active: giftTab === 'ton' }]" @click="giftTab = 'ton'">
-              <CurrencyIcon :currency="'ton'" :size="14" />
-              TON Гифты
-            </button>
-            <button :class="['tab', { active: giftTab === 'stars' }]" @click="giftTab = 'stars'">
-              <img src="/icons/stars.png" alt="Stars" class="tab-icon-img" width="14" height="14" />
-              Stars Гифты
-            </button>
-          </div>
-
-          <div class="modal-search">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-            </svg>
-            <input type="text" placeholder="Поиск гифта или ID гифта" v-model="giftSearch" />
-          </div>
-
-          <div class="gifts-section">
-            <h4 class="section-title">🔥 В тренде</h4>
-            <div class="gifts-grid">
-              <div
-                v-for="gift in trendingGifts"
-                :key="gift.id"
-                :class="['gift-card', { selected: selectedGift?.id === gift.id }]"
-                @click="selectedGift = gift"
-              >
-                <div class="gift-radio" :class="{ checked: selectedGift?.id === gift.id }"></div>
-                <img :src="gift.image" :alt="gift.name" class="gift-img" />
-                <span class="gift-name">{{ gift.name }}</span>
-                <span class="gift-price">
-                  <CurrencyIcon :currency="giftTab === 'ton' ? 'ton' : 'stars'" :size="10" /> {{ gift.price }} {{ giftTab === 'ton' ? 'TON' : 'Stars' }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div class="gifts-section">
-            <h4 class="section-title">🎁 Все</h4>
-            <div class="gifts-grid">
-              <div
-                v-for="gift in allGifts"
-                :key="gift.id"
-                :class="['gift-card', { selected: selectedGift?.id === gift.id }]"
-                @click="selectedGift = gift"
-              >
-                <div class="gift-radio" :class="{ checked: selectedGift?.id === gift.id }"></div>
-                <img :src="gift.image" :alt="gift.name" class="gift-img" />
-                <span class="gift-name">{{ gift.name }}</span>
-                <span class="gift-price">
-                  <CurrencyIcon :currency="giftTab === 'ton' ? 'ton' : 'stars'" :size="10" /> {{ gift.price }} {{ giftTab === 'ton' ? 'TON' : 'Stars' }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <button class="modal-submit" :disabled="!selectedGift" @click="placeBet">
-            Поставить
-          </button>
-        </div>
-      </div>
-    </Teleport>
+    <GiftBetModal
+      :open="showBetModal"
+      :items="inventoryItems"
+      :loading="inventoryLoading"
+      :server-seed-hash="pvp.currentRoom.value?.server_seed_hash || ''"
+      @close="showBetModal = false"
+      @confirm="handleGiftBet"
+    />
 
     <!-- Winner Modal -->
     <Teleport to="body">
@@ -367,6 +303,8 @@ import { useTelegram } from '@/composables/useTelegram'
 import CurrencySwitcher from '@/components/CurrencySwitcher.vue'
 import CurrencyIcon from '@/components/CurrencyIcon.vue'
 import { useCurrency } from '@/composables/useCurrency'
+import GiftBetModal from '@/components/GiftBetModal.vue'
+import { inventoryGetMy, inventoryLock, inventoryUnlock, type InventoryItem } from '@/api/client'
 
 const { selectedCurrency } = useCurrency()
 
@@ -378,14 +316,6 @@ interface Player {
   bet: number
   chance: number
   color: string
-}
-
-interface PvPGiftItem {
-  id: number | string
-  name: string
-  image: string
-  price: number
-  address?: string
 }
 
 const route = useRoute()
@@ -407,9 +337,9 @@ const wheelRotation = ref(0)
 const isSpinning = ref(false)
 const showBetModal = ref(false)
 const showWinnerModal = ref(false)
-const giftTab = ref<'ton' | 'stars'>('ton')
-const giftSearch = ref('')
-const selectedGift = ref<PvPGiftItem | null>(null)
+const inventoryItems = ref<InventoryItem[]>([])
+const inventoryLoading = ref(false)
+const selectedInventory = ref<InventoryItem | null>(null)
 const userBalance = ref(0)
 const winner = ref<Player | null>(null)
 const winAmount = ref(0)
@@ -471,27 +401,6 @@ const players = computed<Player[]>(() => {
   return Array.from(userMap.values())
 })
 
-// Gifts from inventory
-const trendingGifts = computed<PvPGiftItem[]>(() =>
-  pvp.inventory.value.slice(0, 3).map((nft, i) => ({
-    id: nft.address || i,
-    name: nft.name,
-    image: nft.image_url || '/gifts/default.webp',
-    price: nft.price_ton ? parseFloat(nft.price_ton) : 0,
-    address: nft.address,
-  }))
-)
-
-const allGifts = computed<PvPGiftItem[]>(() =>
-  pvp.inventory.value.slice(3).map((nft, i) => ({
-    id: nft.address || i + 3,
-    name: nft.name,
-    image: nft.image_url || '/gifts/default.webp',
-    price: nft.price_ton ? parseFloat(nft.price_ton) : 0,
-    address: nft.address,
-  }))
-)
-
 // Pre-generate star styles
 const starStyles = Array.from({ length: 30 }, () => ({
   left: `${Math.random() * 100}%`,
@@ -540,12 +449,18 @@ const polarToCartesian = (cx: number, cy: number, r: number, angle: number) => {
 }
 
 // Actions
-const placeBet = async () => {
-  if (!selectedGift.value) return
+const handleGiftBet = async (item: InventoryItem) => {
+  selectedInventory.value = item
 
   const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user
   const userId = tgUser?.id || Math.floor(Math.random() * 100000)
   const userName = tgUser?.username || tgUser?.first_name || 'Player'
+
+  try {
+    await inventoryLock(item.id, 'pvp_bet')
+  } catch (e) {
+    return
+  }
 
   const result = await pvp.placeBet(
     roomCode.value,
@@ -553,19 +468,21 @@ const placeBet = async () => {
       user_id: userId,
       user_telegram_id: userId,
       user_name: userName,
-      gift_address: selectedGift.value.address || `gift_${selectedGift.value.id}`,
-      gift_name: selectedGift.value.name,
-      gift_image_url: selectedGift.value.image,
-      gift_value_ton: selectedGift.value.price,
+      gift_address: item.gift.address || `gift_${item.id}`,
+      gift_name: item.gift.name,
+      gift_image_url: item.gift.image_url,
+      gift_value_ton: Number(item.current_floor_price_ton ?? 0),
     },
     tonConnect.address.value || undefined,
   )
 
-  if (result) {
-    telegram.hapticNotification('success')
-    showBetModal.value = false
-    selectedGift.value = null
+  if (!result) {
+    await inventoryUnlock(item.id)
+    return
   }
+
+  telegram.hapticNotification('success')
+  showBetModal.value = false
 }
 
 // WebSocket event handlers
@@ -584,16 +501,18 @@ pvp.onSpinResult.value = (result) => {
     winAmount.value = parseFloat(result.winnings_ton)
     showWinnerModal.value = true
     telegram.hapticNotification('success')
+    if (selectedInventory.value) {
+      inventoryUnlock(selectedInventory.value.id).catch(() => undefined)
+      selectedInventory.value = null
+    }
   }, 8000)
 }
 
 // Init
 onMounted(async () => {
-  // Initialize TON Connect
   await tonConnect.init('giftmarket_bot')
 
   if (!roomCode.value) {
-    // Auto-create room if none specified
     const room = await pvp.createRoom({ min_bet_ton: 0.01, max_players: 10 })
     if (room) roomCode.value = room.room_code
   }
@@ -603,9 +522,11 @@ onMounted(async () => {
     pvp.connectWS(roomCode.value)
   }
 
-  // Load inventory if wallet connected
-  if (tonConnect.isConnected.value && tonConnect.address.value) {
-    await pvp.fetchInventory(tonConnect.address.value)
+  inventoryLoading.value = true
+  try {
+    inventoryItems.value = await inventoryGetMy(true)
+  } finally {
+    inventoryLoading.value = false
   }
 })
 </script>

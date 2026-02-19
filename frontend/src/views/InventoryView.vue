@@ -159,18 +159,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTonConnect } from '../composables/useTonConnect'
-import { pvpGetInventory, type InventoryNFT } from '../api/client'
-
-interface InventoryItem {
-  id: string  // NFT address
-  name: string
-  image: string
-  price: number
-  rarity: 'common' | 'rare' | 'epic' | 'legendary'
-  bgColor: string
-  type: 'gift'
-  collectionName: string
-}
+import { inventoryGetMy, inventoryGetSummary, type InventoryItem as ApiInventoryItem } from '../api/client'
 
 const router = useRouter()
 const { init, connect, isConnected, address, shortAddress } = useTonConnect()
@@ -189,7 +178,8 @@ const tabs = [
   { id: 'gift', label: 'Гифты', icon: '🎁' },
 ]
 
-const items = ref<InventoryItem[]>([])
+const items = ref<ApiInventoryItem[]>([])
+const summary = ref<{ total_value_ton: number }>({ total_value_ton: 0 })
 
 // Determine rarity from price
 const getRarityFromPrice = (price: number): 'common' | 'rare' | 'epic' | 'legendary' => {
@@ -199,32 +189,32 @@ const getRarityFromPrice = (price: number): 'common' | 'rare' | 'epic' | 'legend
   return 'common'
 }
 
+const viewItems = computed(() =>
+  items.value.map((item) => {
+    const price = Number(item.current_floor_price_ton || 0)
+    return {
+      id: String(item.id),
+      name: item.gift.name,
+      image: item.gift.image_url || '/gifts/default.webp',
+      price,
+      rarity: getRarityFromPrice(price),
+      bgColor: '#1a1a2e',
+      type: 'gift' as const,
+      inventoryId: item.id,
+    }
+  })
+)
+
 // Fetch inventory from API
 const fetchInventory = async () => {
-  if (!address.value) return
-
   loading.value = true
   error.value = null
 
   try {
-    const nfts = await pvpGetInventory(address.value)
-
-    items.value = nfts.map((nft: InventoryNFT) => {
-      const price = nft.price_ton ? parseFloat(nft.price_ton) : 0
-      return {
-        id: nft.address,
-        name: nft.name,
-        image: nft.image_url || '/gifts/default.webp',
-        price,
-        rarity: getRarityFromPrice(price),
-        bgColor: '#1a1a2e',
-        type: 'gift' as const,
-        collectionName: nft.collection_name,
-      }
-    })
-
-    // Calculate total portfolio value
-    balance.value = items.value.reduce((sum, item) => sum + item.price, 0)
+    items.value = await inventoryGetMy(false)
+    const s = await inventoryGetSummary()
+    summary.value = s
+    balance.value = s.total_value_ton || 0
   } catch (e: any) {
     error.value = e.message || 'Не удалось загрузить инвентарь'
     console.error('Inventory fetch error:', e)
@@ -252,12 +242,12 @@ onMounted(async () => {
 })
 
 const getTabCount = (tabId: string) => {
-  if (tabId === 'all') return items.value.length
-  return items.value.filter(i => i.type === tabId).length
+  if (tabId === 'all') return viewItems.value.length
+  return viewItems.value.filter(i => i.type === tabId).length
 }
 
 const filteredItems = computed(() => {
-  let result = items.value
+  let result = viewItems.value
 
   // Filter by tab
   if (activeTab.value !== 'all') {
@@ -279,7 +269,7 @@ const filteredItems = computed(() => {
 })
 
 const selectedValue = computed(() => {
-  return items.value
+  return viewItems.value
     .filter(i => selectedItems.value.includes(i.id))
     .reduce((sum, i) => sum + i.price, 0)
 })
