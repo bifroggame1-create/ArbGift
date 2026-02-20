@@ -1,9 +1,5 @@
-import os
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-# Ensure empty .env exists so SlowAPI/Starlette Config does not fail
-if not os.path.exists('.env'):
-    open('.env', 'a').close()
-
+# In production we avoid starlette Config; Limiter just uses env directly
 limiter = Limiter(key_func=get_remote_address)
