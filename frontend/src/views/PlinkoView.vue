@@ -70,15 +70,23 @@
           <span class="icon-label">Сменить</span>
         </button>
 
+        <button class="icon-btn" @click="openGiftModal" style="margin-right: 8px;">
+          <div class="icon-circle gift-mode">
+            <span style="font-size: 14px;">🎁</span>
+          </div>
+          <span class="icon-label">Gift</span>
+        </button>
+
         <button
           class="main-btn play-btn"
-          :class="currencyClass"
-          :disabled="isPlaying || currentBalance < betAmount"
+          :class="selectedGift ? 'gift-mode' : currencyClass"
+          :disabled="isPlaying || (!selectedGift && currentBalance < betAmount)"
           @click="handlePlay"
         >
-          <span class="btn-text-main">{{ isPlaying ? 'Играем...' : 'Играть' }}</span>
+          <span class="btn-text-main">{{ isPlaying ? 'Играем...' : (selectedGift ? selectedGift.gift.name : 'Играть') }}</span>
           <span class="btn-text-sub">
-            <CurrencyIcon :currency="selectedCurrency" :size="13" />
+            <span v-if="selectedGift">🎁</span>
+            <CurrencyIcon v-else :currency="selectedCurrency" :size="13" />
             {{ formatAmount(betAmount) }}
           </span>
         </button>
@@ -104,6 +112,15 @@
       :payout="bestWinDrop.payout"
       @close="showWinPopup = false"
     />
+
+    <GiftBetModal
+      :open="showGiftModal"
+      :items="inventoryItems"
+      :loading="inventoryLoading"
+      :server-seed-hash="lastHash || ''"
+      @close="showGiftModal = false"
+      @confirm="handleGiftBet"
+    />
   </div>
 </template>
 
@@ -116,6 +133,13 @@ import PlinkoBoard from '@/components/plinko/PlinkoBoard.vue'
 import PlinkoWinFeed from '@/components/plinko/PlinkoWinFeed.vue'
 import WinPopup from '@/components/plinko/WinPopup.vue'
 import CurrencyIcon from '@/components/CurrencyIcon.vue'
+import GiftBetModal from '@/components/GiftBetModal.vue'
+import {
+  inventoryGetMy,
+  inventoryLock,
+  inventoryUnlock,
+  type InventoryItem
+} from '@/api/client'
 
 import '@/styles/plinko-theme.css'
 
@@ -142,6 +166,12 @@ const {
 const { hapticImpact } = useTelegram()
 
 const boardRef = ref<InstanceType<typeof PlinkoBoard> | null>(null)
+
+// Gift betting
+const showGiftModal = ref(false)
+const inventoryItems = ref<InventoryItem[]>([])
+const inventoryLoading = ref(false)
+const selectedGift = ref<InventoryItem | null>(null)
 
 // Currency-specific presets
 const betAmounts = computed(() => {
@@ -174,11 +204,26 @@ async function handlePlay() {
   console.log('🎮 [PlinkoView] isPlaying:', isPlaying.value)
   console.log('🎮 [PlinkoView] boardRef:', boardRef.value)
 
+  // Lock gift if betting with gift
+  if (selectedGift.value) {
+    try {
+      await inventoryLock(selectedGift.value.id, 'plinko_bet')
+    } catch (error) {
+      console.error('Failed to lock gift:', error)
+      return
+    }
+  }
+
   const drops = await play()
   console.log('🎮 [PlinkoView] Drops received:', drops)
 
   if (!drops.length) {
     console.log('❌ [PlinkoView] No drops returned, aborting')
+    // Unlock gift on error
+    if (selectedGift.value) {
+      await inventoryUnlock(selectedGift.value.id).catch(() => {})
+      selectedGift.value = null
+    }
     return
   }
 
@@ -201,6 +246,12 @@ function onBallLanded(_slotIndex: number, _dropIndex: number) {
 function onAllLanded() {
   if (landedCount >= (lastDrops.value?.length || 1)) {
     onAnimationComplete()
+
+    // Unlock gift after game complete
+    if (selectedGift.value) {
+      inventoryUnlock(selectedGift.value.id).catch(() => {})
+      selectedGift.value = null
+    }
   }
 }
 
@@ -228,6 +279,30 @@ async function copyHash() {
   if (lastHash.value) {
     try { await navigator.clipboard.writeText(lastHash.value) } catch {}
   }
+}
+
+async function loadInventory() {
+  try {
+    inventoryLoading.value = true
+    inventoryItems.value = await inventoryGetMy(true)
+  } catch (error) {
+    console.error('Failed to load inventory:', error)
+  } finally {
+    inventoryLoading.value = false
+  }
+}
+
+async function handleGiftBet(item: InventoryItem) {
+  selectedGift.value = item
+  betAmount.value = Number(item.current_floor_price_ton)
+  showGiftModal.value = false
+  hapticImpact?.('medium')
+}
+
+function openGiftModal() {
+  loadInventory()
+  showGiftModal.value = true
+  hapticImpact?.('light')
 }
 
 onMounted(() => {
@@ -474,6 +549,17 @@ onMounted(() => {
   background: linear-gradient(135deg, #34CDEF 0%, #0EA5E9 100%);
   color: #000;
   box-shadow: 0 0 24px rgba(52, 205, 239, 0.4);
+}
+
+.play-btn.gift-mode {
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  color: #fff;
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.4);
+}
+
+.icon-circle.gift-mode {
+  background: rgba(168, 85, 247, 0.15);
+  color: #a855f7;
 }
 
 .btn-text-main {
