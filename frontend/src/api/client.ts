@@ -518,3 +518,67 @@ export const stakingGetStats = async (userId: number): Promise<StakingStats> => 
   const resp = await axios.get(`${STAKING_BASE}/api/staking/stats/${userId}`)
   return resp.data
 }
+
+// === P2P MARKET ===
+
+export interface P2PTradeListing {
+  id: number
+  seller_id: number
+  seller_username?: string
+  gift: Gift
+  price_ton: number
+  floor_price_ton: number
+  discount_percent?: number
+  status: string
+  created_at: string
+  views_count: number
+}
+
+export interface P2PTradeListResponse {
+  total: number
+  active_count: number
+  listings: P2PTradeListing[]
+}
+
+export interface CreateListingRequest {
+  inventory_id: number
+  price_ton: number
+}
+
+export interface PurchaseResponse {
+  success: boolean
+  trade_id: number
+  gift_transferred: boolean
+  message: string
+}
+
+export const p2pGetListings = async (params?: {
+  limit?: number
+  offset?: number
+  min_price?: number
+  max_price?: number
+  rarity?: string
+  sort_by?: string
+}): Promise<P2PTradeListResponse> => {
+  const resp = await api.get('/api/v1/p2p/listings', { params })
+  return resp.data
+}
+
+export const p2pGetMyListings = async (statusFilter?: string): Promise<P2PTradeListResponse> => {
+  const resp = await api.get('/api/v1/p2p/my-listings', { params: { status_filter: statusFilter } })
+  return resp.data
+}
+
+export const p2pCreateListing = async (request: CreateListingRequest): Promise<P2PTradeListing> => {
+  const resp = await api.post('/api/v1/p2p/listings', request)
+  return resp.data
+}
+
+export const p2pCancelListing = async (tradeId: number): Promise<void> => {
+  await api.delete(`/api/v1/p2p/listings/${tradeId}`)
+}
+
+export const p2pPurchaseListing = async (tradeId: number): Promise<PurchaseResponse> => {
+  const resp = await api.post(`/api/v1/p2p/listings/${tradeId}/purchase`)
+  return resp.data
+}

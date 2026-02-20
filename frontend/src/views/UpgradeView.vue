@@ -199,12 +199,12 @@ const selectedInputItem = ref<InventoryItem | null>(null)
 // Computed
 const inputValue = computed(() => {
   if (!inputGift.value) return 0
-  return parseFloat(String(inputGift.value.min_price_ton || 0))
+  return parseFloat(String(inputGift.value.lowest_price_ton || 0))
 })
 
 const targetValue = computed(() => {
   if (!targetGift.value) return 0
-  return parseFloat(String(targetGift.value.min_price_ton || 0))
+  return parseFloat(String(targetGift.value.lowest_price_ton || 0))
 })
 
 const probability = computed(() => {
@@ -258,7 +258,7 @@ const onInputGiftSelected = (item: InventoryItem) => {
   selectedInputItem.value = item
   inputGift.value = {
     ...item.gift,
-    min_price_ton: item.current_floor_price_ton
+    lowest_price_ton: item.current_floor_price_ton
   } as Gift
   showInputModal.value = false
 }

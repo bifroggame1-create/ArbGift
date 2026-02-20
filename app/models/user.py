@@ -87,6 +87,12 @@ class User(Base):
         back_populates="user",
         lazy="dynamic",
     )
+    p2p_listings: Mapped[list["P2PTrade"]] = relationship(
+        "P2PTrade",
+        foreign_keys="P2PTrade.seller_id",
+        back_populates="seller",
+        lazy="dynamic",
+    )
 
     __table_args__ = (
         Index("ix_user_level_xp", "level", "xp"),

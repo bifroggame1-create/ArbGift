@@ -14,6 +14,7 @@ from app.models.quest import Quest, UserQuest, Badge, UserBadge, QuestType, Ques
 from app.models.leaderboard import LeaderboardEntry, GameHistory, LeaderboardType, LeaderboardCategory
 from app.models.inventory import UserGiftInventory, GiftAcquisitionSource
 from app.models.gift_transfer_log import GiftTransferLog, TransferReason, TransferStatus
+from app.models.p2p_trade import P2PTrade, TradeStatus
 
 __all__ = [
     # NFT Models
@@ -50,4 +51,7 @@ __all__ = [
     "GiftTransferLog",
     "TransferReason",
     "TransferStatus",
+    # P2P Market
+    "P2PTrade",
+    "TradeStatus",
 ]

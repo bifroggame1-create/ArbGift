@@ -1,5 +1,5 @@
 import { ref, computed, type Ref } from 'vue'
-import { plinkoPlay, plinkoGetConfig, plinkoCommit, revealRound, type DropResult, type PlinkoConfig } from '@/api/plinko'
+import { plinkoPlay, plinkoGetConfig, plinkoCommit, type DropResult, type PlinkoConfig } from '@/api/plinko'
 import { useTelegram } from '@/composables/useTelegram'
 import { useCurrency } from '@/composables/useCurrency'
 
@@ -160,12 +160,12 @@ export function usePlinko() {
           payout,
           profit,
           server_seed_hash: 'demo_mode',
-          server_seed: 'demo_mode',
           client_seed: 'demo_mode',
           nonce: i,
           risk_level: riskLevel.value,
           row_count: rowCount.value,
           created_at: new Date().toISOString(),
+          round_id: 'demo_round',
         })
       }
 
@@ -278,9 +278,9 @@ export function usePlinko() {
     onAnimationComplete,
     async reveal() {
       if (!lastRoundId.value) return null
-      const rev = await revealRound(lastRoundId.value)
-      lastReveal.value = rev
-      return rev
+      // TODO: Implement reveal endpoint if needed
+      console.warn('Reveal not implemented yet')
+      return null
     },
   }
 }

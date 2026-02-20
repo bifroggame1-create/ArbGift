@@ -222,7 +222,7 @@ const userGifts = computed(() => {
     .map(item => ({
       ...item.gift,
       inventory_id: item.id,
-      min_price_ton: item.current_floor_price_ton,
+      lowest_price_ton: item.current_floor_price_ton,
     }))
 })
 

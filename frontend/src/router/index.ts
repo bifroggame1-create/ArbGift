@@ -73,6 +73,11 @@ const router = createRouter({
       component: () => import('../views/TradingView.vue'),
     },
     {
+      path: '/p2p',
+      name: 'p2p-market',
+      component: () => import('../views/P2PMarketView.vue'),
+    },
+    {
       path: '/plinko',
       name: 'plinko',
       component: () => import('../views/PlinkoView.vue'),

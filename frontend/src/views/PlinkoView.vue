@@ -156,7 +156,6 @@ const {
   showWinPopup,
   lastRoundId,
   lastHash,
-  lastReveal,
   reveal,
   play,
   onAnimationComplete,

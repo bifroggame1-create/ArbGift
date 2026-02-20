@@ -162,7 +162,7 @@ import { useTonConnect } from '../composables/useTonConnect'
 import { inventoryGetMy, inventoryGetSummary, type InventoryItem as ApiInventoryItem } from '../api/client'
 
 const router = useRouter()
-const { init, connect, isConnected, address, shortAddress } = useTonConnect()
+const { init, connect, isConnected, shortAddress } = useTonConnect()
 
 // State
 const balance = ref(0)

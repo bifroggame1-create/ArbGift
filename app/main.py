@@ -25,6 +25,7 @@ from app.api.v1.quests import router as quests_router
 from app.api.v1.leaderboards import router as leaderboards_router
 from app.api.v1.games import router as games_router
 from app.api.v1.inventory import router as inventory_router
+from app.api.v1.p2p import router as p2p_router
 from app.core.ratelimit import limiter
 
 # Optional dependencies: search (Meilisearch) and websocket (Redis)
@@ -216,6 +217,12 @@ app.include_router(
     inventory_router,
     prefix="/api/v1/inventory",
     tags=["Inventory"],
+)
+
+app.include_router(
+    p2p_router,
+    prefix="/api/v1",
+    tags=["P2P Market"],
 )
 
 if search_router:
