@@ -114,7 +114,16 @@
       </div>
     </div>
 
-    <!-- Gift Selection Modal -->
+    <!-- Input Gift Selection (Inventory) -->
+    <GiftBetModal
+      :open="showInputModal"
+      :items="inventoryItems"
+      :loading="inventoryLoading"
+      @close="showInputModal = false"
+      @confirm="onInputGiftSelected"
+    />
+
+    <!-- Target Gift Selection (Marketplace) -->
     <GiftSelectionModal
       v-if="showGiftSelector"
       :mode="selectionMode"
@@ -162,8 +171,10 @@ import { useCurrency } from '../composables/useCurrency'
 import TelegramGiftCard from '../components/TelegramGiftCard.vue'
 import ProbabilityWheel from '../components/ProbabilityWheel.vue'
 import GiftSelectionModal from '../components/GiftSelectionModal.vue'
+import GiftBetModal from '../components/GiftBetModal.vue'
 import UpgradeResultModal from '../components/UpgradeResultModal.vue'
 import type { Gift } from '../api/client'
+import { inventoryGetMy, inventoryLock, inventoryUnlock, type InventoryItem } from '../api/client'
 
 const router = useRouter()
 const { hapticImpact } = useTelegram()
@@ -178,6 +189,12 @@ const isSpinning = ref(false)
 const resultAngle = ref(0)
 const showResult = ref(false)
 const upgradeResult = ref<any>(null)
+
+// Gift inventory for input selection
+const showInputModal = ref(false)
+const inventoryItems = ref<InventoryItem[]>([])
+const inventoryLoading = ref(false)
+const selectedInputItem = ref<InventoryItem | null>(null)
 
 // Computed
 const inputValue = computed(() => {
@@ -207,10 +224,19 @@ const canSpin = computed(() => {
 })
 
 // Methods
-const selectInputGift = () => {
+const selectInputGift = async () => {
   hapticImpact('light')
-  selectionMode.value = 'input'
-  showGiftSelector.value = true
+  // Load inventory and show input modal
+  try {
+    inventoryLoading.value = true
+    inventoryItems.value = await inventoryGetMy(true)
+  } catch (error) {
+    console.error('Failed to load inventory:', error)
+    inventoryItems.value = []
+  } finally {
+    inventoryLoading.value = false
+  }
+  showInputModal.value = true
 }
 
 const selectTargetGift = () => {
@@ -228,8 +254,27 @@ const onGiftSelected = (gift: Gift) => {
   showGiftSelector.value = false
 }
 
+const onInputGiftSelected = (item: InventoryItem) => {
+  selectedInputItem.value = item
+  inputGift.value = {
+    ...item.gift,
+    min_price_ton: item.current_floor_price_ton
+  } as Gift
+  showInputModal.value = false
+}
+
 const spinWheel = async () => {
   if (!canSpin.value) return
+
+  // Lock input gift if from inventory
+  if (selectedInputItem.value) {
+    try {
+      await inventoryLock(selectedInputItem.value.id, 'upgrade_input')
+    } catch (error) {
+      console.error('Failed to lock gift:', error)
+      return
+    }
+  }
 
   hapticImpact('heavy')
   isSpinning.value = true
@@ -276,7 +321,13 @@ const spinWheel = async () => {
   animate()
 }
 
-const closeResult = () => {
+const closeResult = async () => {
+  // Unlock gift after upgrade
+  if (selectedInputItem.value) {
+    await inventoryUnlock(selectedInputItem.value.id).catch(() => {})
+    selectedInputItem.value = null
+  }
+
   showResult.value = false
   inputGift.value = null
   targetGift.value = null
