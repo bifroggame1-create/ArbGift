@@ -133,13 +133,32 @@
           <span class="icon-label">Сменить</span>
         </button>
 
+        <!-- Gift Button -->
+        <button class="icon-btn" @click="openGiftModal" :disabled="gameState === 'flying'">
+          <div class="icon-circle" :class="selectedGift ? 'gift-mode' : currencyClass">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="8" width="18" height="4" rx="1"/>
+              <rect x="3" y="12" width="18" height="9" rx="1"/>
+              <path d="M12 8V4m0 0c0-1.1-.9-2-2-2s-2 .9-2 2h4zm0 0c0-1.1.9-2 2-2s2 .9 2 2h-4z"/>
+            </svg>
+          </div>
+          <span class="icon-label">Гифт</span>
+        </button>
+
         <button
-          :class="['main-btn', 'play-btn-new', currencyClass, actionBtnClass]"
+          :class="['main-btn', 'play-btn-new', selectedGift ? 'gift-mode' : currencyClass, actionBtnClass]"
           @click="handleAction"
           :disabled="actionDisabled"
         >
           <span class="btn-text-main">{{ actionBtnTextMain }}</span>
-          <span class="btn-text-sub" v-if="gameState === 'waiting' && !hasBet">
+          <span class="btn-text-sub" v-if="gameState === 'waiting' && !hasBet && selectedGift">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="8" width="18" height="4" rx="1"/>
+              <rect x="3" y="12" width="18" height="9" rx="1"/>
+            </svg>
+            {{ selectedGift.gift.name }}
+          </span>
+          <span class="btn-text-sub" v-else-if="gameState === 'waiting' && !hasBet">
             <CurrencyIcon :currency="selectedCurrency" :size="13" />
             {{ formatAmount(betAmount) }}
           </span>
@@ -188,6 +207,15 @@
         </div>
       </div>
     </div>
+
+    <!-- Gift Bet Modal -->
+    <GiftBetModal
+      :open="showGiftModal"
+      :items="inventoryItems"
+      :loading="inventoryLoading"
+      @close="showGiftModal = false"
+      @confirm="handleGiftBet"
+    />
   </div>
 </template>
 
@@ -195,9 +223,17 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
 import TgsPlayer from '../components/TgsPlayer.vue'
+import GiftBetModal from '../components/GiftBetModal.vue'
 import { useCurrency } from '../composables/useCurrency'
+import { inventoryGetMy, inventoryLock, inventoryUnlock, type InventoryItem } from '../api/client'
 
 const { selectedCurrency, currentBalance, formatAmount, toggleCurrency } = useCurrency()
+
+// Gift betting
+const showGiftModal = ref(false)
+const inventoryItems = ref<InventoryItem[]>([])
+const inventoryLoading = ref(false)
+const selectedGift = ref<InventoryItem | null>(null)
 
 const ROCKET_MODELS_COUNT = 50
 const rocketModelIndex = ref(0)
@@ -315,8 +351,17 @@ function handleDeposit() {
   // Navigate to deposit/top-up page
 }
 
-function handleAction() {
+async function handleAction() {
   if (gameState.value === 'waiting') {
+    if (!hasBet.value && selectedGift.value) {
+      // Lock gift when placing bet
+      try {
+        await inventoryLock(selectedGift.value.id, 'rocket_bet')
+      } catch (error) {
+        console.error('Failed to lock gift:', error)
+        return
+      }
+    }
     hasBet.value = !hasBet.value
   } else if (gameState.value === 'flying' && hasBet.value && !hasCashedOut.value) {
     hasCashedOut.value = true
@@ -424,12 +469,43 @@ function startFlight() {
       currentMultiplier.value = crashPoint.value
       history.value.unshift(crashPoint.value)
       if (history.value.length > 10) history.value.pop()
+
+      // Unlock gift after crash
+      if (selectedGift.value) {
+        inventoryUnlock(selectedGift.value.id).catch(() => {})
+        selectedGift.value = null
+      }
+
       setTimeout(() => { hasBet.value = false; startGameCycle() }, 3000)
     }
   }, 50)
 }
 
 let onlineInterval: number | null = null
+
+// Gift betting helpers
+async function loadInventory() {
+  try {
+    inventoryLoading.value = true
+    inventoryItems.value = await inventoryGetMy(true)
+  } catch (error) {
+    console.error('Failed to load inventory:', error)
+    inventoryItems.value = []
+  } finally {
+    inventoryLoading.value = false
+  }
+}
+
+async function handleGiftBet(item: InventoryItem) {
+  selectedGift.value = item
+  showGiftModal.value = false
+}
+
+function openGiftModal() {
+  if (gameState.value === 'flying') return
+  loadInventory()
+  showGiftModal.value = true
+}
 
 onMounted(() => {
   startGameCycle()
@@ -625,6 +701,11 @@ onUnmounted(() => {
   color: #34CDEF;
 }
 
+.icon-circle.gift-mode {
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  color: #fff;
+}
+
 .icon-label {
   font-size: 11px;
   font-weight: 500;
@@ -668,6 +749,12 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #34CDEF 0%, #0EA5E9 100%);
   color: #000;
   box-shadow: 0 0 24px rgba(52, 205, 239, 0.4);
+}
+
+.play-btn-new.gift-mode {
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  color: #fff;
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.4);
 }
 
 .play-btn-new.cancel {
