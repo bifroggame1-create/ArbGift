@@ -169,8 +169,8 @@ import { useCurrency } from '../composables/useCurrency'
 import TelegramGiftCard from '../components/TelegramGiftCard.vue'
 import RiskButton from '../components/RiskButton.vue'
 import ContractResultModal from '../components/ContractResultModal.vue'
-import type { Gift } from '../api/client'
-import { getGifts } from '../api/client'
+import type { Gift, InventoryItem } from '../api/client'
+import { inventoryGetMy, inventoryLock, inventoryUnlock } from '../api/client'
 
 const router = useRouter()
 const { hapticImpact } = useTelegram()
@@ -208,18 +208,29 @@ const riskLevels = [
 ]
 
 // State
-const selectedGifts = ref<number[]>([])
+const selectedGifts = ref<number[]>([]) // inventory item IDs
 const selectedRisk = ref<string>('')
-const userGifts = ref<Gift[]>([])
+const inventoryItems = ref<InventoryItem[]>([])
 const loading = ref(true)
 const showResult = ref(false)
 const contractResult = ref<any>(null)
 
+// Map inventory items to Gift format for display
+const userGifts = computed(() => {
+  return inventoryItems.value
+    .filter(item => item.is_available_for_betting)
+    .map(item => ({
+      ...item.gift,
+      inventory_id: item.id,
+      min_price_ton: item.current_floor_price_ton,
+    }))
+})
+
 // Computed
 const totalValue = computed(() => {
-  return selectedGifts.value.reduce((sum, id) => {
-    const gift = userGifts.value.find(g => g.id === id)
-    const price = parseFloat(String(gift?.min_price_ton || 0))
+  return selectedGifts.value.reduce((sum, inventoryId) => {
+    const item = inventoryItems.value.find(i => i.id === inventoryId)
+    const price = item ? parseFloat(String(item.current_floor_price_ton || 0)) : 0
     return sum + price
   }, 0)
 })
@@ -254,16 +265,21 @@ const selectRisk = (level: string) => {
 }
 
 const toggleGift = (gift: Gift) => {
-  const index = selectedGifts.value.indexOf(gift.id)
+  const inventoryId = (gift as any).inventory_id
+  if (!inventoryId) return
+
+  const index = selectedGifts.value.indexOf(inventoryId)
   if (index > -1) {
     selectedGifts.value.splice(index, 1)
   } else if (selectedGifts.value.length < 10) {
-    selectedGifts.value.push(gift.id)
+    selectedGifts.value.push(inventoryId)
   }
 }
 
 const isSelected = (giftId: number) => {
-  return selectedGifts.value.includes(giftId)
+  const gift = userGifts.value.find(g => g.id === giftId)
+  const inventoryId = (gift as any)?.inventory_id
+  return inventoryId ? selectedGifts.value.includes(inventoryId) : false
 }
 
 const clearSelection = () => {
@@ -278,14 +294,29 @@ const executeContract = async () => {
   hapticImpact('heavy')
 
   try {
-    // TODO: API call to create and execute contract
+    // Lock all selected gifts
+    for (const inventoryId of selectedGifts.value) {
+      try {
+        await inventoryLock(inventoryId, 'contract_input')
+      } catch (error) {
+        console.error(`Failed to lock gift ${inventoryId}:`, error)
+        // Unlock previously locked gifts
+        for (const prevId of selectedGifts.value) {
+          if (prevId === inventoryId) break
+          await inventoryUnlock(prevId)
+        }
+        return
+      }
+    }
+
+    // TODO: Replace with real API call to contracts service
     // const result = await createContract({
-    //   gift_ids: selectedGifts.value,
+    //   inventory_ids: selectedGifts.value,
     //   risk_level: selectedRisk.value,
     //   client_seed: generateClientSeed()
     // })
 
-    // Mock result for now
+    // Mock result for demonstration
     const won = Math.random() < (selectedRiskLevel.value?.probability || 0)
     contractResult.value = {
       won,
@@ -296,8 +327,17 @@ const executeContract = async () => {
     }
 
     showResult.value = true
+
+    // Unlock gifts after execution (in real app, would be done after transfer)
+    for (const inventoryId of selectedGifts.value) {
+      await inventoryUnlock(inventoryId).catch(() => {})
+    }
   } catch (error) {
     console.error('Failed to execute contract:', error)
+    // Unlock all on error
+    for (const inventoryId of selectedGifts.value) {
+      await inventoryUnlock(inventoryId).catch(() => {})
+    }
   }
 }
 
@@ -311,12 +351,10 @@ const closeResult = () => {
 const loadGifts = async () => {
   try {
     loading.value = true
-    // TODO: Load user's owned gifts from API
-    // For now, load from marketplace as mock data
-    const response = await getGifts({ limit: 20 })
-    userGifts.value = response.gifts || []
+    inventoryItems.value = await inventoryGetMy(true)
   } catch (error) {
-    console.error('Failed to load gifts:', error)
+    console.error('Failed to load inventory:', error)
+    inventoryItems.value = []
   } finally {
     loading.value = false
   }
