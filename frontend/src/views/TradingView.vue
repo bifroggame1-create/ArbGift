@@ -124,16 +124,35 @@
           <span class="icon-label">Сменить</span>
         </button>
 
+        <!-- Gift Button -->
+        <button class="icon-btn" @click="openGiftModal" :disabled="playerBet !== null">
+          <div class="icon-circle" :class="selectedGift ? 'gift-mode' : currencyClass">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="8" width="18" height="4" rx="1"/>
+              <rect x="3" y="12" width="18" height="9" rx="1"/>
+              <path d="M12 8V4m0 0c0-1.1-.9-2-2-2s-2 .9-2 2h4zm0 0c0-1.1.9-2 2-2s2 .9 2 2h-4z"/>
+            </svg>
+          </div>
+          <span class="icon-label">Гифт</span>
+        </button>
+
         <!-- Main Action Button -->
         <button
           v-if="!playerBet"
           class="main-btn buy-btn"
-          :class="currencyClass"
+          :class="selectedGift ? 'gift-mode' : currencyClass"
           :disabled="!canBuy"
           @click="placeBet"
         >
           <span class="btn-text-main">Купить</span>
-          <span class="btn-text-sub">
+          <span class="btn-text-sub" v-if="selectedGift">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="8" width="18" height="4" rx="1"/>
+              <rect x="3" y="12" width="18" height="9" rx="1"/>
+            </svg>
+            {{ selectedGift.gift.name }}
+          </span>
+          <span class="btn-text-sub" v-else>
             <CurrencyIcon :currency="selectedCurrency" :size="13" />
             {{ formatAmount(selectedBet) }}
           </span>
@@ -215,6 +234,16 @@
         </div>
       </div>
     </div>
+
+    <!-- Gift Bet Modal -->
+    <GiftBetModal
+      :open="showGiftModal"
+      :items="inventoryItems"
+      :loading="inventoryLoading"
+      :server-seed-hash="gameHash"
+      @close="showGiftModal = false"
+      @confirm="handleGiftBet"
+    />
   </div>
 </template>
 
@@ -222,11 +251,24 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi, ColorType } from 'lightweight-charts'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
+import GiftBetModal from '../components/GiftBetModal.vue'
 import { useCurrency } from '../composables/useCurrency'
 import { useTelegram } from '../composables/useTelegram'
+import {
+  inventoryGetMy,
+  inventoryLock,
+  inventoryUnlock,
+  type InventoryItem
+} from '../api/client'
 
 const { selectedCurrency, currentBalance, deductBalance, addBalance, formatAmount, toggleCurrency } = useCurrency()
 const { user, hapticImpact } = useTelegram()
+
+// Gift betting
+const showGiftModal = ref(false)
+const inventoryItems = ref<InventoryItem[]>([])
+const inventoryLoading = ref(false)
+const selectedGift = ref<InventoryItem | null>(null)
 
 const currencyClass = computed(() => {
   return selectedCurrency.value === 'stars' ? 'stars-mode' : 'ton-mode'
@@ -703,6 +745,13 @@ function endGameLose() {
       me.exited = true
       me.profit = -me.bet
     }
+
+    // Unlock gift on lose
+    if (selectedGift.value) {
+      inventoryUnlock(selectedGift.value.id).catch(() => {})
+      selectedGift.value = null
+    }
+
     playerBet.value = null
   }
 
@@ -715,33 +764,55 @@ function endGameLose() {
 }
 
 // ======= Player Actions =======
-function placeBet() {
+async function placeBet() {
   if (!canBuy.value) return
+
+  // Lock gift if betting with gift
+  if (selectedGift.value) {
+    try {
+      await inventoryLock(selectedGift.value.id, 'trading_bet')
+    } catch (error) {
+      console.error('Failed to lock gift:', error)
+      return
+    }
+  }
+
   playerBet.value = selectedBet.value
-  deductBalance(selectedBet.value)
+  if (!selectedGift.value) {
+    deductBalance(selectedBet.value)
+  }
 
   traders.value.push({
     id: Date.now(),
     name: 'you',
     bet: selectedBet.value,
-    color: '#34CDEF',
+    color: selectedGift.value ? '#a855f7' : '#34CDEF',
     exited: false,
     profit: 0,
     photoUrl: user.value?.photo_url || '',
   })
 }
 
-function cashOut() {
+async function cashOut() {
   if (gameState.value !== 'running' || !playerBet.value) return
 
   const payout = playerBet.value * currentMultiplier.value
   const profit = payout - playerBet.value
-  addBalance(payout)
+
+  if (!selectedGift.value) {
+    addBalance(payout)
+  }
 
   const me = traders.value.find(t => t.name === 'you')
   if (me) {
     me.exited = true
     me.profit = +profit.toFixed(2)
+  }
+
+  // Unlock gift on cashout (win)
+  if (selectedGift.value) {
+    await inventoryUnlock(selectedGift.value.id).catch(() => {})
+    selectedGift.value = null
   }
 
   playerBet.value = null
@@ -754,6 +825,31 @@ function handleSwap() {
 
 function handleDeposit() {
   // Navigate to deposit/top-up page
+  hapticImpact?.('light')
+}
+
+// ======= Gift Betting =======
+async function loadInventory() {
+  try {
+    inventoryLoading.value = true
+    inventoryItems.value = await inventoryGetMy(true)
+  } catch (error) {
+    console.error('Failed to load inventory:', error)
+  } finally {
+    inventoryLoading.value = false
+  }
+}
+
+async function handleGiftBet(item: InventoryItem) {
+  selectedGift.value = item
+  selectedBet.value = Number(item.current_floor_price_ton)
+  showGiftModal.value = false
+  hapticImpact?.('medium')
+}
+
+function openGiftModal() {
+  loadInventory()
+  showGiftModal.value = true
   hapticImpact?.('light')
 }
 
@@ -1175,6 +1271,22 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.5);
   font-weight: 500;
   white-space: nowrap;
+}
+
+/* Gift Mode */
+.icon-circle.gift-mode {
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  color: #fff;
+}
+
+.buy-btn.gift-mode {
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.buy-btn.gift-mode:not(:disabled):active {
+  transform: scale(0.97);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Main Action Button */
