@@ -292,7 +292,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTonConnect } from '@/composables/useTonConnect'
-import { api } from '@/api/client'
+import { api, inventoryGetMy, type InventoryItem } from '@/api/client'
 import TonIcon from '@/components/TonIcon.vue'
 
 const router = useRouter()
@@ -386,13 +386,23 @@ async function loadUserStakes() {
 }
 
 async function loadAvailableGifts() {
-  if (!walletConnected.value || !wallet.value) return
-
   try {
-    const response = await api.get(`/gifts/owned/${wallet.value.account.address}`)
-    availableGifts.value = response.data.gifts || []
+    // Load from inventory - only available (not locked/staked)
+    const items = await inventoryGetMy(true)
+
+    // Map inventory items to gift format for existing UI
+    availableGifts.value = items.map((item: InventoryItem) => ({
+      id: item.gift.id,
+      address: item.gift.address,
+      name: item.gift.name,
+      image_url: item.gift.image_url,
+      rarity: item.gift.rarity,
+      floor_price: item.current_floor_price_ton,
+      inventory_id: item.id, // Store for later use
+    }))
   } catch (error) {
     console.error('Failed to load gifts:', error)
+    availableGifts.value = []
   }
 }
 
