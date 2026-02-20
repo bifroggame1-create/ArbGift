@@ -73,16 +73,35 @@
           <span class="icon-label">Сменить</span>
         </button>
 
+        <!-- Gift Button -->
+        <button class="icon-btn" @click="openGiftModal" :disabled="gameState === 'playing'">
+          <div class="icon-circle" :class="selectedGift ? 'gift-mode' : currencyClass">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="8" width="18" height="4" rx="1"/>
+              <rect x="3" y="12" width="18" height="9" rx="1"/>
+              <path d="M12 8V4m0 0c0-1.1-.9-2-2-2s-2 .9-2 2h4zm0 0c0-1.1.9-2 2-2s2 .9 2 2h-4z"/>
+            </svg>
+          </div>
+          <span class="icon-label">Гифт</span>
+        </button>
+
         <button
           class="main-btn play-btn-new"
-          :class="[currencyClass, { playing: gameState === 'playing' }]"
+          :class="[selectedGift ? 'gift-mode' : currencyClass, { playing: gameState === 'playing' }]"
           :disabled="gameState === 'playing' || currentBalance < selectedBet"
           @click="startGame"
         >
           <span class="btn-text-main" v-if="gameState === 'idle'">Играть</span>
           <span class="btn-text-main" v-else-if="gameState === 'playing'">{{ multiplier.toFixed(2) }}x</span>
           <span class="btn-text-main" v-else>Снова</span>
-          <span class="btn-text-sub">
+          <span class="btn-text-sub" v-if="selectedGift && gameState === 'idle'">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="8" width="18" height="4" rx="1"/>
+              <rect x="3" y="12" width="18" height="9" rx="1"/>
+            </svg>
+            {{ selectedGift.gift.name }}
+          </span>
+          <span class="btn-text-sub" v-else>
             <CurrencyIcon :currency="selectedCurrency" :size="13" />
             {{ formatAmount(selectedBet) }}
           </span>
@@ -102,16 +121,33 @@
       <!-- Hash Line -->
       <div class="hash-line"></div>
     </div>
+
+    <!-- Gift Bet Modal -->
+    <GiftBetModal
+      :open="showGiftModal"
+      :items="inventoryItems"
+      :loading="inventoryLoading"
+      :server-seed-hash="serverHash"
+      @close="showGiftModal = false"
+      @confirm="handleGiftBet"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { escapePlay } from '../api/client'
+import { escapePlay, inventoryGetMy, inventoryLock, inventoryUnlock, type InventoryItem } from '../api/client'
 import CurrencyIcon from '../components/CurrencyIcon.vue'
+import GiftBetModal from '../components/GiftBetModal.vue'
 import { useCurrency } from '../composables/useCurrency'
 
 const { selectedCurrency, currentBalance, deductBalance, addBalance, formatAmount, toggleCurrency } = useCurrency()
+
+// Gift betting
+const showGiftModal = ref(false)
+const inventoryItems = ref<InventoryItem[]>([])
+const inventoryLoading = ref(false)
+const selectedGift = ref<InventoryItem | null>(null)
 
 // Canvas
 const gameCanvas = ref<HTMLCanvasElement | null>(null)
@@ -229,10 +265,22 @@ async function startGame() {
 
   stopIdleAnimation()
 
+  // Lock gift if selected
+  if (selectedGift.value) {
+    try {
+      await inventoryLock(selectedGift.value.id, 'ball_escape_bet')
+    } catch (error) {
+      console.error('Failed to lock gift:', error)
+      return
+    }
+  }
+
   // Pick random ring color for this round (like MyBalls)
   currentRingColor = RING_COLORS[Math.floor(Math.random() * RING_COLORS.length)]
 
-  deductBalance(selectedBet.value)
+  if (!selectedGift.value) {
+    deductBalance(selectedBet.value)
+  }
   gameState.value = 'playing'
   multiplier.value = 1.0
   gameId.value = Math.floor(Math.random() * 900000) + 100000
@@ -528,16 +576,24 @@ function gameLoop() {
   animationId = requestAnimationFrame(gameLoop)
 }
 
-function endGame(escaped: boolean) {
+async function endGame(escaped: boolean) {
   if (animationId) cancelAnimationFrame(animationId)
 
   multiplier.value = targetMultiplier
 
   if (escaped) {
     gameState.value = 'won'
-    addBalance(selectedBet.value * targetMultiplier)
+    if (!selectedGift.value) {
+      addBalance(selectedBet.value * targetMultiplier)
+    }
   } else {
     gameState.value = 'lost'
+  }
+
+  // Unlock gift if it was used
+  if (selectedGift.value) {
+    await inventoryUnlock(selectedGift.value.id).catch(() => {})
+    selectedGift.value = null
   }
 
   draw()
@@ -807,6 +863,30 @@ function stopIdleAnimation() {
   }
 }
 
+// Gift betting helpers
+async function loadInventory() {
+  try {
+    inventoryLoading.value = true
+    inventoryItems.value = await inventoryGetMy(true)
+  } catch (error) {
+    console.error('Failed to load inventory:', error)
+    inventoryItems.value = []
+  } finally {
+    inventoryLoading.value = false
+  }
+}
+
+async function handleGiftBet(item: InventoryItem) {
+  selectedGift.value = item
+  showGiftModal.value = false
+}
+
+function openGiftModal() {
+  if (gameState.value === 'playing') return
+  loadInventory()
+  showGiftModal.value = true
+}
+
 onMounted(() => {
   startIdleAnimation()
 })
@@ -1004,6 +1084,11 @@ onUnmounted(() => {
   color: #34CDEF;
 }
 
+.icon-circle.gift-mode {
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  color: #fff;
+}
+
 .icon-label {
   font-size: 11px;
   font-weight: 500;
@@ -1047,6 +1132,12 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #34CDEF 0%, #0EA5E9 100%);
   color: #000;
   box-shadow: 0 0 24px rgba(52, 205, 239, 0.4);
+}
+
+.play-btn-new.gift-mode {
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  color: #fff;
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.4);
 }
 
 .play-btn-new.playing {
